@@ -4,14 +4,45 @@ import { describe, expect, it } from 'vitest'
 import {
   compilePage,
   createMdxPlugins,
+  normalizeFrontmatter,
   type CompiledPage,
 } from '../src/node/mdx'
+import { scanRoutes } from '../src/node/routes'
+import type { RouteRecord } from '../src/shared/page'
 
 const fixture = 'tests/fixtures/mdx/page.mdx'
+const fixtureRoute: RouteRecord = {
+  path: '/page',
+  relativeFile: 'page.mdx',
+  file: fixture,
+}
+
+async function loadMdxModule(file: string) {
+  const server = await createServer({
+    appType: 'custom',
+    configFile: false,
+    logLevel: 'silent',
+    plugins: createMdxPlugins(),
+    root: process.cwd(),
+    server: { middlewareMode: true },
+  })
+
+  try {
+    const loaded: unknown = await server.ssrLoadModule(`/${file}`)
+    return loaded as {
+      default: unknown
+      frontmatter: Record<string, unknown>
+      headings: unknown
+      links: unknown
+    }
+  } finally {
+    await server.close()
+  }
+}
 
 describe('MDX compilation', () => {
   it('compiles the complete page contract with deterministic metadata', async () => {
-    const page: CompiledPage = await compilePage(fixture)
+    const page: CompiledPage = await compilePage(fixtureRoute)
     const { source, ...metadata } = page
 
     expect(source).toContain('title: Getting Started')
@@ -34,13 +65,42 @@ describe('MDX compilation', () => {
   })
 
   it('uses deterministic title and description fallbacks', async () => {
-    const page = await compilePage(
-      path.resolve('tests/fixtures/routes/guide/getting-started.mdx'),
+    const root = path.resolve('tests/fixtures/routes')
+    const route = (await scanRoutes(root)).find(
+      (record) => record.relativeFile === 'guide/getting-started.mdx',
     )
+    expect(route).toBeDefined()
+
+    const page = await compilePage(route!)
 
     expect(page.title).toBe('Getting started')
     expect(page.description).toBe('')
-    expect(page.route).toBe('/getting-started')
+    expect(page.route).toBe('/guide/getting-started')
+  })
+
+  it('preserves canonical nested page and index routes', async () => {
+    const routeFixtures = await scanRoutes(
+      path.resolve('tests/fixtures/routes'),
+    )
+    const mdxFixtures = await scanRoutes(path.resolve('tests/fixtures/mdx'))
+    const nestedPage = routeFixtures.find(
+      (route) => route.relativeFile === 'guide/getting-started.mdx',
+    )
+    const nestedIndex = mdxFixtures.find(
+      (route) => route.relativeFile === 'guide/index.mdx',
+    )
+    expect(nestedPage).toBeDefined()
+    expect(nestedIndex).toBeDefined()
+
+    const pages = await Promise.all([
+      compilePage(nestedPage!),
+      compilePage(nestedIndex!),
+    ])
+
+    expect(pages.map((page) => page.route)).toEqual([
+      '/guide/getting-started',
+      '/guide/',
+    ])
   })
 
   it('composes a metadata pre-transform before the official MDX plugin', () => {
@@ -54,40 +114,51 @@ describe('MDX compilation', () => {
   })
 
   it('loads typed metadata exports and a default component through Vite', async () => {
-    const server = await createServer({
-      appType: 'custom',
-      configFile: false,
-      logLevel: 'silent',
-      plugins: createMdxPlugins(),
-      root: process.cwd(),
-      server: { middlewareMode: true },
+    const pageModule = await loadMdxModule(fixture)
+
+    expect(pageModule.frontmatter).toEqual({
+      title: 'Getting Started',
+      description: 'Install Silen in a new project.',
+      draft: false,
     })
+    expect(pageModule.headings).toEqual([
+      { depth: 2, title: 'Install', slug: 'install' },
+      { depth: 2, title: 'Install', slug: 'install-1' },
+    ])
+    expect(pageModule.links).toEqual([
+      '/guide/configuration',
+      'https://example.com/packages',
+    ])
+    expect(pageModule.default).toBeTypeOf('function')
+  })
 
-    try {
-      const loaded: unknown = await server.ssrLoadModule(`/${fixture}`)
-      const pageModule = loaded as {
-        default: unknown
-        frontmatter: Record<string, unknown>
-        headings: unknown
-        links: unknown
-      }
-
-      expect(pageModule.frontmatter).toEqual({
-        title: 'Getting Started',
-        description: 'Install Silen in a new project.',
-        draft: false,
-      })
-      expect(pageModule.headings).toEqual([
-        { depth: 2, title: 'Install', slug: 'install' },
-        { depth: 2, title: 'Install', slug: 'install-1' },
-      ])
-      expect(pageModule.links).toEqual([
-        '/guide/configuration',
-        'https://example.com/packages',
-      ])
-      expect(pageModule.default).toBeTypeOf('function')
-    } finally {
-      await server.close()
+  it('shares JSON-safe frontmatter between static and Vite results', async () => {
+    const file = 'tests/fixtures/mdx/json-safe.mdx'
+    const route: RouteRecord = {
+      path: '/json-safe',
+      relativeFile: 'json-safe.mdx',
+      file,
     }
+
+    const [page, pageModule] = await Promise.all([
+      compilePage(route),
+      loadMdxModule(file),
+    ])
+
+    expect(page.frontmatter).toEqual({
+      published: '2026-07-13T00:00:00.000Z',
+      values: {
+        notANumber: null,
+        positiveInfinity: null,
+        negativeInfinity: null,
+      },
+    })
+    expect(pageModule.frontmatter).toEqual(page.frontmatter)
+  })
+
+  it('reports frontmatter values that cannot be normalized', () => {
+    expect(() => normalizeFrontmatter({ unsupported: 1n })).toThrow(
+      'Failed to normalize frontmatter as JSON',
+    )
   })
 })

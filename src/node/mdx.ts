@@ -1,18 +1,16 @@
 import { readFile } from 'node:fs/promises'
-import path from 'node:path'
 import mdx from '@mdx-js/rollup'
 import matter from 'gray-matter'
 import GithubSlugger from 'github-slugger'
 import type { Plugin } from 'vite'
-import type { Heading } from '../shared/page.js'
-import { fileToRoute } from './routes.js'
+import type { Heading, JsonObject, RouteRecord } from '../shared/page.js'
 import { remarkPageData } from './remark-page-data.js'
 
 export interface CompiledPage {
   file: string
   route: string
   source: string
-  frontmatter: Record<string, unknown>
+  frontmatter: JsonObject
   headings: Heading[]
   links: string[]
   title: string
@@ -20,20 +18,42 @@ export interface CompiledPage {
 }
 
 interface AnalyzedPage {
-  frontmatter: Record<string, unknown>
+  frontmatter: JsonObject
   headings: Heading[]
   links: string[]
 }
 
-function asFrontmatter(value: unknown): Record<string, unknown> {
+export function normalizeFrontmatter(value: unknown): JsonObject {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return {}
   }
-  return value as Record<string, unknown>
+
+  try {
+    const serialized = JSON.stringify(value)
+    if (serialized === undefined) {
+      throw new TypeError('the root value is not JSON-serializable')
+    }
+
+    const normalized: unknown = JSON.parse(serialized)
+    if (
+      typeof normalized !== 'object' ||
+      normalized === null ||
+      Array.isArray(normalized)
+    ) {
+      throw new TypeError('the normalized root value is not an object')
+    }
+
+    return normalized as JsonObject
+  } catch (cause) {
+    const detail = cause instanceof Error ? `: ${cause.message}` : ''
+    throw new TypeError(`Failed to normalize frontmatter as JSON${detail}`, {
+      cause,
+    })
+  }
 }
 
 function stringField(
-  frontmatter: Record<string, unknown>,
+  frontmatter: JsonObject,
   field: string,
 ): string | undefined {
   const value = frontmatter[field]
@@ -42,8 +62,9 @@ function stringField(
 
 function analyzePageSource(
   content: string,
-  frontmatter: Record<string, unknown>,
+  frontmatter: unknown,
 ): AnalyzedPage {
+  const normalizedFrontmatter = normalizeFrontmatter(frontmatter)
   const slugger = new GithubSlugger()
   const headings: Heading[] = []
   const links: string[] = []
@@ -66,7 +87,7 @@ function analyzePageSource(
     if (url) links.push(url)
   }
 
-  return { frontmatter, headings, links }
+  return { frontmatter: normalizedFrontmatter, headings, links }
 }
 
 function fallbackTitle(content: string, headings: Heading[]): string {
@@ -74,21 +95,20 @@ function fallbackTitle(content: string, headings: Heading[]): string {
   return h1 ?? headings[0]?.title ?? ''
 }
 
-export async function compilePage(file: string): Promise<CompiledPage> {
-  const source = await readFile(file, 'utf8')
+export async function compilePage(route: RouteRecord): Promise<CompiledPage> {
+  const source = await readFile(route.file, 'utf8')
   const parsed = matter(source)
-  const frontmatter = asFrontmatter(parsed.data)
-  const analyzed = analyzePageSource(parsed.content, frontmatter)
+  const analyzed = analyzePageSource(parsed.content, parsed.data)
 
   return {
-    file,
-    route: fileToRoute(path.basename(file)),
+    file: route.file,
+    route: route.path,
     source,
     ...analyzed,
     title:
-      stringField(frontmatter, 'title') ??
+      stringField(analyzed.frontmatter, 'title') ??
       fallbackTitle(parsed.content, analyzed.headings),
-    description: stringField(frontmatter, 'description') ?? '',
+    description: stringField(analyzed.frontmatter, 'description') ?? '',
   }
 }
 
@@ -100,10 +120,7 @@ const pageDataPlugin: Plugin = {
     if (!cleanId || !/\.mdx?$/.test(cleanId)) return undefined
 
     const parsed = matter(source)
-    const analyzed = analyzePageSource(
-      parsed.content,
-      asFrontmatter(parsed.data),
-    )
+    const analyzed = analyzePageSource(parsed.content, parsed.data)
 
     return [
       parsed.content,
@@ -124,4 +141,9 @@ export function createMdxPlugins(): Plugin[] {
   return [pageDataPlugin, mdxPlugin]
 }
 
-export type { Heading } from '../shared/page.js'
+export type {
+  Heading,
+  JsonObject,
+  JsonPrimitive,
+  JsonValue,
+} from '../shared/page.js'

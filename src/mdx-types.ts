@@ -7,7 +7,12 @@ declare module '*.mdx' {
     slug: string
   }
 
-  export const frontmatter: Readonly<Record<string, unknown>>
+  type JsonPrimitive = string | number | boolean | null
+  type JsonValue =
+    JsonPrimitive | { readonly [key: string]: JsonValue } | readonly JsonValue[]
+  type JsonObject = { readonly [key: string]: JsonValue }
+
+  export const frontmatter: JsonObject
   export const headings: readonly Heading[]
   export const links: readonly string[]
 

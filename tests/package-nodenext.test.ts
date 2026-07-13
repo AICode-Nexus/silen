@@ -39,23 +39,17 @@ describe('packed package declarations', () => {
     expect(archive).toBeDefined()
 
     const consumerDirectory = join(temporaryDirectory, 'consumer')
-    const packageDirectory = join(consumerDirectory, 'node_modules', 'silen')
-    await mkdir(packageDirectory, { recursive: true })
-    await execa(
-      'tar',
-      [
-        '-xzf',
-        join(temporaryDirectory, archive!),
-        '-C',
-        packageDirectory,
-        '--strip-components=1',
-      ],
-      { reject: true },
-    )
+    await mkdir(consumerDirectory, { recursive: true })
+    const archivePath = join(temporaryDirectory, archive!)
 
     await writeFile(
       join(consumerDirectory, 'package.json'),
-      JSON.stringify({ private: true, type: 'module' }),
+      JSON.stringify({
+        private: true,
+        type: 'module',
+        dependencies: { silen: `file:${archivePath}` },
+        devDependencies: { '@types/react': '19.2.17' },
+      }),
     )
     await writeFile(
       join(consumerDirectory, 'tsconfig.json'),
@@ -67,17 +61,35 @@ describe('packed package declarations', () => {
           strict: true,
           target: 'ES2023',
         },
-        include: ['index.ts'],
+        include: ['index.ts', 'page.mdx'],
       }),
     )
     await writeFile(
       join(consumerDirectory, 'index.ts'),
-      `import { defineConfig, type UserConfig } from 'silen'
+      `import type { ComponentType } from 'react'
+import { defineConfig, type UserConfig } from 'silen'
+import Page, { frontmatter, headings, links } from './page.mdx'
 
 const config: UserConfig = defineConfig({ title: 'Docs' })
+const component: ComponentType = Page
+const metadata: Readonly<Record<string, unknown>> = frontmatter
+const firstHeading: { depth: number; title: string; slug: string } | undefined = headings[0]
+const firstLink: string | undefined = links[0]
 void config
+void component
+void metadata
+void firstHeading
+void firstLink
 `,
     )
+    await writeFile(join(consumerDirectory, 'page.mdx'), '# Packed consumer')
+
+    const install = await execa(
+      'corepack',
+      ['pnpm', 'install', '--offline', '--ignore-scripts'],
+      { cwd: consumerDirectory, reject: false, all: true },
+    )
+    expect(install.exitCode, install.all).toBe(0)
 
     const typecheck = await execa(
       'corepack',
