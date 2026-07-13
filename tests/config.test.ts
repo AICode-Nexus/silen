@@ -4,9 +4,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveConfig } from '../src/node/config'
 
 describe('resolveConfig', () => {
-  const fixtureRoots = ['configured', 'invalid-base', 'reloadable'].map(
-    (name) => path.resolve('tests/fixtures', name),
-  )
+  const fixtureRoots = [
+    'configured',
+    'invalid-base',
+    'invalid-base-path',
+    'reloadable',
+  ].map((name) => path.resolve('tests/fixtures', name))
 
   afterEach(async () => {
     vi.restoreAllMocks()
@@ -30,6 +33,7 @@ describe('resolveConfig', () => {
       base: '/project/',
       outDir: path.join(root, '.silen/dist'),
       onBrokenLinks: 'error',
+      themeConfig: {},
       command: 'build',
       root,
       configFile: path.join(root, '.silen/config.ts'),
@@ -40,6 +44,12 @@ describe('resolveConfig', () => {
     await expect(
       resolveConfig(path.resolve('tests/fixtures/invalid-base'), 'build'),
     ).rejects.toThrow('base must start with /')
+  })
+
+  it('rejects base values with URL or traversal ambiguity', async () => {
+    await expect(
+      resolveConfig(path.resolve('tests/fixtures/invalid-base-path'), 'build'),
+    ).rejects.toThrow('base must be a normalized absolute pathname')
   })
 
   it('evaluates every concurrent load when Date.now collides', async () => {

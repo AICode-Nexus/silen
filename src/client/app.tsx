@@ -20,6 +20,7 @@ export interface PagePublicData {
   route: string
   frontmatter?: JsonObject
   headings?: readonly Heading[]
+  themeConfig?: JsonObject
 }
 
 export interface ResolvedPage {
@@ -119,6 +120,7 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
           lang: config.lang,
           base: config.base,
           route: request.route ?? request.pathname,
+          themeConfig: config.themeConfig,
         },
         Component: NotFound,
       },
@@ -141,6 +143,7 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
         route,
         frontmatter: module.frontmatter,
         headings: module.headings,
+        themeConfig: config.themeConfig,
       },
       Component: module.default,
     },

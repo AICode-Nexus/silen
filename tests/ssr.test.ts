@@ -14,6 +14,7 @@ const config: ResolvedConfig = {
   base: '/project/',
   outDir: path.join(fixtureRoot, '.silen/dist'),
   onBrokenLinks: 'error',
+  themeConfig: {},
   command: 'build',
   root: fixtureRoot,
   configFile: path.join(fixtureRoot, '.silen/config.ts'),

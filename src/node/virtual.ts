@@ -19,6 +19,7 @@ export interface VirtualModuleOptions {
   routes: readonly RouteRecord[]
   config: ResolvedConfig
   themeFile?: string
+  publicConfigOnly?: boolean
 }
 
 function quoteModuleString(value: string): string {
@@ -48,8 +49,20 @@ function defaultThemeFile(): string {
   )
 }
 
-function serializeConfig(config: ResolvedConfig): string {
-  const serialized = JSON.stringify(config)
+function serializeConfig(
+  config: ResolvedConfig,
+  publicConfigOnly: boolean,
+): string {
+  const value = publicConfigOnly
+    ? {
+        title: config.title,
+        description: config.description,
+        lang: config.lang,
+        base: config.base,
+        themeConfig: config.themeConfig,
+      }
+    : config
+  const serialized = JSON.stringify(value)
   if (serialized === undefined) {
     throw new TypeError('Failed to serialize the resolved config')
   }
@@ -71,6 +84,7 @@ export function createVirtualModules({
   routes,
   config,
   themeFile = defaultThemeFile(),
+  publicConfigOnly = false,
 }: VirtualModuleOptions): VirtualModules {
   const routeEntries = [...routes]
     .sort(
@@ -91,7 +105,7 @@ export function createVirtualModules({
       'export { routes }',
       'export default routes',
     ].join('\n'),
-    config: serializeConfig(config),
+    config: serializeConfig(config, publicConfigOnly),
     theme: [
       `export { default } from ${quoteModuleString(viteImportPath(themeFile))}`,
       `export * from ${quoteModuleString(viteImportPath(themeFile))}`,

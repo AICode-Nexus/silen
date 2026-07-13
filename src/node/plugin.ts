@@ -19,9 +19,20 @@ function moduleName(id: string): keyof VirtualModules | undefined {
   return undefined
 }
 
-export async function silenPlugin(config: ResolvedConfig): Promise<Plugin[]> {
+export interface SilenPluginOptions {
+  publicConfigOnly?: boolean
+}
+
+export async function silenPlugin(
+  config: ResolvedConfig,
+  options: SilenPluginOptions = {},
+): Promise<Plugin[]> {
   const routes = await scanRoutes(config.root)
-  const modules = createVirtualModules({ routes, config })
+  const modules = createVirtualModules({
+    routes,
+    config,
+    publicConfigOnly: options.publicConfigOnly ?? false,
+  })
 
   return [
     {

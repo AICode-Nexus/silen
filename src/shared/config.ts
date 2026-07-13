@@ -1,3 +1,5 @@
+import type { JsonObject } from './page.js'
+
 export interface UserConfig {
   title?: string
   description?: string
@@ -5,6 +7,7 @@ export interface UserConfig {
   base?: string
   outDir?: string
   onBrokenLinks?: 'error' | 'warn' | 'ignore'
+  themeConfig?: JsonObject
 }
 
 export interface ResolvedConfig extends Required<UserConfig> {

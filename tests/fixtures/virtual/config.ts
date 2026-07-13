@@ -5,11 +5,7 @@ const config: VirtualConfig = {
   description: '',
   lang: 'en-US',
   base: '/',
-  outDir: '.silen/dist',
-  onBrokenLinks: 'error',
-  command: 'build',
-  root: '/',
-  configFile: '/.silen/config.ts',
+  themeConfig: {},
 }
 
 export default config

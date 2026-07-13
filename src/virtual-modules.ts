@@ -26,16 +26,17 @@ declare module 'virtual:silen/routes' {
 }
 
 declare module 'virtual:silen/config' {
+  type JsonPrimitive = string | number | boolean | null
+  type JsonValue =
+    JsonPrimitive | { readonly [key: string]: JsonValue } | readonly JsonValue[]
+  type JsonObject = { readonly [key: string]: JsonValue }
+
   export interface VirtualConfig {
     title: string
     description: string
     lang: string
     base: string
-    outDir: string
-    onBrokenLinks: 'error' | 'warn' | 'ignore'
-    command: 'serve' | 'build'
-    root: string
-    configFile: string
+    themeConfig: JsonObject
   }
 
   const config: VirtualConfig

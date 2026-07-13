@@ -13,6 +13,7 @@ function resolvedConfig(root: string): ResolvedConfig {
     base: '/project/',
     outDir: path.join(root, '.silen/dist'),
     onBrokenLinks: 'error',
+    themeConfig: {},
     command: 'build',
     root,
     configFile: path.join(root, '.silen/config.ts'),
@@ -78,6 +79,34 @@ describe('virtual modules', () => {
     expect(Object.hasOwn(loaded.default, '__proto__')).toBe(true)
     expect(loaded.default.__proto__).toEqual({ polluted: true })
     expect(Object.prototype).not.toHaveProperty('polluted')
+  })
+
+  it('can emit only browser-public config fields for production', async () => {
+    const root = path.resolve('tests/fixtures/ssr')
+    const config = resolvedConfig(root) as ResolvedConfig &
+      Record<string, unknown>
+    config.privateToken = 'do-not-bundle'
+
+    const source = createVirtualModules({
+      routes: [],
+      config,
+      publicConfigOnly: true,
+    }).config
+    const loaded = (await importGeneratedModule(source)) as {
+      default: Record<string, unknown>
+    }
+
+    expect(loaded.default).toEqual({
+      title: 'Docs',
+      description: 'Project documentation',
+      lang: 'en-US',
+      base: '/project/',
+      themeConfig: {},
+    })
+    expect(source).not.toContain('do-not-bundle')
+    expect(source).not.toContain(root)
+    expect(source).not.toContain('configFile')
+    expect(source).not.toContain('outDir')
   })
 
   it('resolves and loads exactly the three public virtual IDs', async () => {
