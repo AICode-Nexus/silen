@@ -3,3 +3,9 @@ export interface RouteRecord {
   file: string
   relativeFile: string
 }
+
+export interface Heading {
+  depth: number
+  title: string
+  slug: string
+}
