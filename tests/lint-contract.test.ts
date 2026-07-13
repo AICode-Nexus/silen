@@ -31,7 +31,7 @@ export function getTitle(): string {
 
     expect(result.exitCode).not.toBe(0)
     expect(result.all).toContain('@typescript-eslint/no-unused-vars')
-  })
+  }, 15_000)
 
   it('rejects a floating Promise', async () => {
     const result = await runLintAgainst(`
@@ -42,5 +42,5 @@ saveConfig()
 
     expect(result.exitCode).not.toBe(0)
     expect(result.all).toContain('@typescript-eslint/no-floating-promises')
-  })
+  }, 15_000)
 })

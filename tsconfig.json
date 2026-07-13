@@ -13,5 +13,11 @@
     "paths": { "@/*": ["./src/*"] },
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "tests", "tooling", "*.ts"]
+  "include": [
+    "src",
+    "tests",
+    "tests/fixtures/**/.silen/*.ts",
+    "tooling",
+    "*.ts"
+  ]
 }
