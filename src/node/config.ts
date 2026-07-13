@@ -4,6 +4,8 @@ import { build } from 'esbuild'
 import { z } from 'zod'
 import type { ResolvedConfig, UserConfig } from '../shared/config.js'
 
+let configLoadId = 0
+
 const schema = z
   .object({
     title: z.string().default('Silen'),
@@ -35,7 +37,7 @@ export async function resolveConfig(
   })
 
   const loadedModule: unknown = await import(
-    `${pathToFileURL(bundled).href}?t=${Date.now()}`
+    `${pathToFileURL(bundled).href}?load=${configLoadId++}`
   )
   const loaded = (loadedModule as { default: UserConfig }).default
   const parsed = schema.parse(loaded)
