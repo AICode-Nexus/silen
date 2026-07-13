@@ -139,3 +139,37 @@ describe('static production build', () => {
     expect(clientSource).not.toContain('recentlyCreatedOwnerStacks')
   })
 })
+
+describe('canonical encoded base production build', () => {
+  const encodedBaseRoot = path.resolve('tests/fixtures/build-encoded-base')
+
+  afterAll(async () => {
+    await rm(path.join(encodedBaseRoot, '.silen/dist'), {
+      force: true,
+      recursive: true,
+    })
+    await rm(path.join(encodedBaseRoot, '.silen/.temp'), {
+      force: true,
+      recursive: true,
+    })
+  })
+
+  it('reuses the encoded base across client assets, SSR routing, and public data', async () => {
+    const encodedBase = '/%E6%96%87%E6%A1%A3%20docs/'
+    const encodedResult = await build(encodedBaseRoot)
+    const [encodedHome, encodedGuide] = await Promise.all([
+      readFile(path.join(encodedResult.outDir, 'index.html'), 'utf8'),
+      readFile(path.join(encodedResult.outDir, 'guide/index.html'), 'utf8'),
+    ])
+    const data = hydrationData(encodedHome)
+
+    expect(encodedHome).toContain('<h1>Encoded base home</h1>')
+    expect(encodedGuide).toContain('<h1>Encoded base guide</h1>')
+    expect(encodedHome).toMatch(
+      /src="\/%E6%96%87%E6%A1%A3%20docs\/assets\/.+\.js"/,
+    )
+    expect(data.base).toBe(encodedBase)
+    expect(data.route).toBe('/')
+    expect(encodedHome).not.toContain('src="/文档 docs/')
+  })
+})

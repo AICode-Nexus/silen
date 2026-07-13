@@ -103,6 +103,17 @@ describe('Link', () => {
     expect(router.go).toHaveBeenCalledWith(expected)
   })
 
+  it('matches a human-readable Unicode and space href against a canonical encoded base', () => {
+    const base = '/%E6%96%87%E6%A1%A3%20docs/'
+    window.history.replaceState(null, '', base)
+    const router = createRouter({ base, path: base })
+    renderLink(router, { href: '/文档 docs/guide' })
+
+    fireEvent.click(screen.getByRole('link', { name: 'Destination' }))
+
+    expect(router.go).toHaveBeenCalledWith('/文档 docs/guide')
+  })
+
   it('prefetches internal routes on focus and hover', () => {
     const router = createRouter()
     renderLink(router, { href: '/project/guide' })

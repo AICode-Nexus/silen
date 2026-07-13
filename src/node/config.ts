@@ -7,52 +7,75 @@ import type { ResolvedConfig, UserConfig } from '../shared/config.js'
 
 let configLoadId = 0
 
-function isNormalizedAbsoluteBase(value: string): boolean {
-  if (
-    !value.startsWith('/') ||
-    value.startsWith('//') ||
-    value.includes('\\') ||
-    value.includes('?') ||
-    value.includes('#') ||
-    value.includes('\0')
-  ) {
-    return false
+function invalidBase(reason: string): Error {
+  return new Error(`base must be a normalized absolute pathname: ${reason}`)
+}
+
+function canonicalBase(value: string): string {
+  if (!value.startsWith('/')) throw new Error('base must start with /')
+  if (value.includes('?') || value.includes('#')) {
+    throw invalidBase('query or hash')
   }
-  if (value === '/') return true
+  if (value.includes('\\')) throw invalidBase('backslashes')
+  if (value.includes('\0')) throw invalidBase('null bytes')
+  if (value.startsWith('//')) throw invalidBase('empty path segments')
+  if (value === '/') return value
 
-  const segments = value.split('/').slice(1)
-  if (segments.at(-1) === '') segments.pop()
-  if (segments.some((segment) => segment.length === 0)) return false
+  const withoutTrailingSlash = value.endsWith('/') ? value.slice(0, -1) : value
+  const segments = withoutTrailingSlash.slice(1).split('/')
+  if (segments.some((segment) => segment.length === 0)) {
+    throw invalidBase('empty path segments')
+  }
 
-  return segments.every((segment) => {
+  const canonicalSegments = segments.map((segment) => {
+    let decoded: string
     try {
-      const decoded = decodeURIComponent(segment)
-      return (
-        decoded !== '.' &&
-        decoded !== '..' &&
-        !decoded.includes('/') &&
-        !decoded.includes('\\') &&
-        !decoded.includes('\0')
-      )
+      decoded = decodeURIComponent(segment).normalize('NFC')
     } catch {
-      return false
+      throw invalidBase('malformed percent-encoding')
+    }
+    if (decoded === '.' || decoded === '..') {
+      throw invalidBase('dot segments')
+    }
+    if (decoded.includes('/') || decoded.includes('\\')) {
+      throw invalidBase('encoded path separators')
+    }
+    if (decoded.includes('\0')) throw invalidBase('null bytes')
+
+    try {
+      void encodeURIComponent(decoded)
+    } catch {
+      throw invalidBase('invalid Unicode')
+    }
+    return decoded.replaceAll('%', '%25')
+  })
+
+  const canonical = new URL('https://silen.local')
+  canonical.pathname = `/${canonicalSegments.join('/')}/`
+  return canonical.pathname
+}
+
+const baseSchema = z
+  .string()
+  .default('/')
+  .transform((value, context) => {
+    try {
+      return canonicalBase(value)
+    } catch (error) {
+      context.addIssue({
+        code: 'custom',
+        message: error instanceof Error ? error.message : String(error),
+      })
+      return z.NEVER
     }
   })
-}
 
 const schema = z
   .object({
     title: z.string().default('Silen'),
     description: z.string().default(''),
     lang: z.string().default('en-US'),
-    base: z
-      .string()
-      .default('/')
-      .refine((value) => value.startsWith('/'), 'base must start with /')
-      .refine(
-        isNormalizedAbsoluteBase,
-        'base must be a normalized absolute pathname',
-      ),
+    base: baseSchema,
     outDir: z.string().optional(),
     onBrokenLinks: z.enum(['error', 'warn', 'ignore']).default('error'),
     themeConfig: z.record(z.string(), z.json()).default({}),
@@ -87,14 +110,13 @@ export async function resolveConfig(
   }
   const loaded = (loadedModule as { default: UserConfig }).default
   const parsed = schema.parse(loaded)
-  const base = parsed.base.endsWith('/') ? parsed.base : `${parsed.base}/`
 
   return {
     ...parsed,
     command,
     root: absoluteRoot,
     configFile,
-    base,
+    base: parsed.base,
     outDir: path.resolve(absoluteRoot, parsed.outDir ?? '.silen/dist'),
   }
 }

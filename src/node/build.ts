@@ -37,6 +37,11 @@ interface RendererModule {
   render: (url: string) => Promise<RenderedPage>
 }
 
+interface PlannedRouteOutput {
+  relativeFile: string
+  route: RouteRecord
+}
+
 interface ErrorWithLocation extends Error {
   id?: unknown
   loc?: { file?: unknown }
@@ -151,6 +156,32 @@ export function routeOutputFile(outDir: string, route: string): string {
     throw new Error(`Static route ${route} escapes output directory ${outDir}`)
   }
   return destination
+}
+
+function planRouteOutputs(
+  outDir: string,
+  routes: readonly RouteRecord[],
+): PlannedRouteOutput[] {
+  const absoluteOutDir = path.resolve(outDir)
+  const seen = new Map<string, PlannedRouteOutput>()
+
+  return routes.map((route) => {
+    const destination = routeOutputFile(absoluteOutDir, route.path)
+    const key = path.normalize(destination)
+    const previous = seen.get(key)
+    if (previous) {
+      throw new Error(
+        `Static output collision at ${destination}: ${routeContext(previous.route)} and ${routeContext(route)} target the same normalized output path`,
+      )
+    }
+
+    const planned = {
+      relativeFile: path.relative(absoluteOutDir, destination),
+      route,
+    }
+    seen.set(key, planned)
+    return planned
+  })
 }
 
 async function compilePages(
@@ -391,12 +422,13 @@ async function loadRenderer(
 
 async function renderRoutes(
   config: ResolvedConfig,
-  routes: readonly RouteRecord[],
+  outputs: readonly PlannedRouteOutput[],
   renderer: RendererModule,
   manifest: Manifest,
   outDir: string,
 ): Promise<void> {
-  for (const route of routes) {
+  for (const output of outputs) {
+    const { route } = output
     try {
       const rendered = await renderer.render(routeUrl(config.base, route.path))
       if (rendered.status !== 200) {
@@ -407,7 +439,7 @@ async function renderRoutes(
         ...assets,
         base: config.base,
       })
-      const destination = routeOutputFile(outDir, route.path)
+      const destination = path.resolve(outDir, output.relativeFile)
       await mkdir(path.dirname(destination), { recursive: true })
       await writeFile(destination, document, 'utf8')
     } catch (error) {
@@ -456,6 +488,7 @@ export async function build(root: string): Promise<BuildResult> {
   const config = await resolveConfig(root, 'build')
   assertSafeOutDir(config)
   const routes = await scanRoutes(config.root)
+  const routeOutputs = planRouteOutputs(config.outDir, routes)
   const pages = await compilePages(routes)
   validateInternalLinks(routes, pages, config.onBrokenLinks, config.base)
 
@@ -478,7 +511,7 @@ export async function build(root: string): Promise<BuildResult> {
       readClientManifest(stagedOutDir, routes),
       loadRenderer(ssrEntry, routes),
     ])
-    await renderRoutes(config, routes, renderer, manifest, stagedOutDir)
+    await renderRoutes(config, routeOutputs, renderer, manifest, stagedOutDir)
     await installOutput(stagedOutDir, config.outDir, backupDir)
     installed = true
   } finally {

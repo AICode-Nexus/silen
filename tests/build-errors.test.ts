@@ -13,6 +13,7 @@ afterEach(async () => {
     [...touched].flatMap((root) => [
       rm(path.join(root, '.silen/dist'), { force: true, recursive: true }),
       rm(path.join(root, '.silen/.temp'), { force: true, recursive: true }),
+      rm(path.join(root, 'custom-output'), { force: true, recursive: true }),
     ]),
   )
   touched.clear()
@@ -32,6 +33,39 @@ describe('static build diagnostics and failure safety', () => {
     await expect(
       readFile(path.join(outDir, 'sentinel.txt'), 'utf8'),
     ).resolves.toBe('preserve me')
+  })
+
+  it('rejects route aliases targeting the same normalized custom output before replacing it', async () => {
+    const root = fixture('output-collision')
+    const outDir = path.join(root, 'custom-output/site')
+    const sentinel = path.join(outDir, 'sentinel.txt')
+    touched.add(root)
+    await mkdir(outDir, { recursive: true })
+    await writeFile(sentinel, 'preserve me', 'utf8')
+
+    let error: unknown
+    try {
+      await build(root)
+    } catch (caught) {
+      error = caught
+    }
+
+    expect(error).toBeInstanceOf(Error)
+    const message = error instanceof Error ? error.message : String(error)
+    expect(message).toContain(
+      `Static output collision at ${path.join(outDir, 'foo/index.html')}`,
+    )
+    expect(message).toContain(`route /foo (${path.join(root, 'foo.mdx')})`)
+    expect(message).toContain(
+      `route /foo/ (${path.join(root, 'foo/index.mdx')})`,
+    )
+    await expect(readFile(sentinel, 'utf8')).resolves.toBe('preserve me')
+    await expect(readdir(path.join(root, '.silen/.temp'))).resolves.toEqual([])
+    expect(
+      (await readdir(path.join(root, 'custom-output'))).filter((name) =>
+        name.includes('silen-stage'),
+      ),
+    ).toEqual([])
   })
 
   it('warns and completes when onBrokenLinks is warn', async () => {
