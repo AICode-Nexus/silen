@@ -661,6 +661,128 @@ describe('hydration and browser navigation', () => {
     act(() => root.unmount())
   })
 
+  it('preserves a same-page popstate destination when go interrupts its restoration', async () => {
+    window.history.replaceState(null, '', '/project/guide')
+    currentScrollY = 90
+    scrollIntoView.mockImplementation(function (this: Element) {
+      if (this.id === 'details') currentScrollY = 210
+    })
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/guide')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    const frames = useControlledAnimationFrames()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Details' }))
+    act(() => frames.flush())
+    currentScrollY = 360
+    fireEvent.scroll(window)
+    act(() => frames.flush())
+
+    window.addEventListener(
+      'popstate',
+      () => {
+        window.scrollTo(0, 0)
+      },
+      { once: true },
+    )
+    await traverseHistory('back')
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/guide',
+      scrollX: 0,
+      scrollY: 90,
+    })
+    expect(frames.pending()).toBe(1)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Details' }))
+
+    expect(window.location.hash).toBe('#details')
+    expect(currentScrollY).toBe(210)
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/guide#details',
+      scrollX: 0,
+      scrollY: 210,
+    })
+    expect(frames.pending()).toBe(0)
+    act(() => frames.flush())
+    expect(currentScrollY).toBe(210)
+
+    currentScrollY = 240
+    fireEvent.scroll(window)
+    expect(frames.pending()).toBe(1)
+    act(() => frames.flush())
+
+    await traverseHistory('back')
+    act(() => frames.flush())
+    expect(currentScrollY).toBe(90)
+
+    await traverseHistory('forward')
+    act(() => frames.flush())
+    expect(currentScrollY).toBe(240)
+
+    act(() => root.unmount())
+  })
+
+  it('preserves a loaded cross-page popstate destination when go interrupts its restoration', async () => {
+    const aboutModule = await routeMocks.aboutLoader()
+    const pendingAbout = deferred<typeof aboutModule>()
+    routeMocks.aboutLoader.mockReturnValueOnce(pendingAbout.promise)
+    currentScrollX = 5
+    currentScrollY = 40
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    const frames = useControlledAnimationFrames()
+    const destinationState = historyState('/project/about', 8, 64)
+    window.history.pushState(destinationState, '', '/project/about')
+
+    fireEvent.popState(window, { state: destinationState })
+    currentScrollX = 99
+    currentScrollY = 999
+    await act(async () => {
+      pendingAbout.resolve(aboutModule)
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('heading', { name: 'About' })).toBeTruthy()
+    expect(frames.pending()).toBe(1)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Home' }))
+    expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy()
+
+    expect(currentScrollX).toBe(0)
+    expect(currentScrollY).toBe(0)
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/',
+      scrollX: 0,
+      scrollY: 0,
+    })
+    expect(frames.pending()).toBe(0)
+    act(() => frames.flush())
+    expect(currentScrollY).toBe(0)
+
+    currentScrollY = 120
+    fireEvent.scroll(window)
+    expect(frames.pending()).toBe(1)
+    act(() => frames.flush())
+
+    await traverseHistory('back')
+    act(() => frames.flush())
+    expect(screen.getByRole('heading', { name: 'About' })).toBeTruthy()
+    expect(currentScrollX).toBe(8)
+    expect(currentScrollY).toBe(64)
+
+    await traverseHistory('forward')
+    act(() => frames.flush())
+    expect(screen.getByRole('heading', { name: 'Home' })).toBeTruthy()
+    expect(currentScrollX).toBe(0)
+    expect(currentScrollY).toBe(120)
+
+    act(() => root.unmount())
+  })
+
   it('cancels pending popstate restoration on unmount without saving its coordinates', async () => {
     const aboutModule = await routeMocks.aboutLoader()
     const pendingAbout = deferred<typeof aboutModule>()

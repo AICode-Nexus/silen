@@ -430,7 +430,7 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
       }
 
       if (samePage(interruptedPopstate ? renderedCurrent : current, url)) {
-        saveCurrentScroll(true)
+        if (!interruptedPopstate) saveCurrentScroll(true)
         window.history.pushState(
           recordHistoryPosition(null, {
             path: browserPath(url.href),
@@ -451,7 +451,7 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
 
       const match = await loadActiveRoute()
       if (!match) return
-      saveCurrentScroll(true)
+      if (!interruptedPopstate) saveCurrentScroll(true)
       window.history.pushState(
         recordHistoryPosition(null, {
           path: browserPath(url.href),
