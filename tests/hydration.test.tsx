@@ -3,11 +3,18 @@ import { cleanup, fireEvent, screen } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+interface RouteFixtureModule {
+  default: () => React.JSX.Element
+  frontmatter: Record<string, string>
+  headings: Array<{ depth: number; title: string; slug: string }>
+  links: string[]
+}
+
 const routeMocks = vi.hoisted(() => ({
-  aboutLoader: vi.fn(),
-  guideLoader: vi.fn(),
-  homeLoader: vi.fn(),
-  navigateDocument: vi.fn(),
+  aboutLoader: vi.fn<() => Promise<RouteFixtureModule>>(),
+  guideLoader: vi.fn<() => Promise<RouteFixtureModule>>(),
+  homeLoader: vi.fn<() => Promise<RouteFixtureModule>>(),
+  navigateDocument: vi.fn<(href: string) => void>(),
 }))
 
 vi.mock('../src/client/navigation', () => ({
@@ -159,6 +166,48 @@ async function captureUnhandledRejections(
   return rejections
 }
 
+function deferred<T>(): {
+  promise: Promise<T>
+  reject: (reason?: unknown) => void
+  resolve: (value: T) => void
+} {
+  let reject!: (reason?: unknown) => void
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    reject = promiseReject
+    resolve = promiseResolve
+  })
+  return { promise, reject, resolve }
+}
+
+function useControlledAnimationFrames(): {
+  flush: () => void
+  pending: () => number
+} {
+  let nextHandle = 1
+  const callbacks = new Map<number, FrameRequestCallback>()
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn((callback: FrameRequestCallback) => {
+      const handle = nextHandle++
+      callbacks.set(handle, callback)
+      return handle
+    }),
+  )
+  vi.stubGlobal(
+    'cancelAnimationFrame',
+    vi.fn((handle: number) => callbacks.delete(handle)),
+  )
+  return {
+    flush() {
+      const pending = [...callbacks.entries()]
+      callbacks.clear()
+      for (const [, callback] of pending) callback(performance.now())
+    },
+    pending: () => callbacks.size,
+  }
+}
+
 async function traverseHistory(direction: 'back' | 'forward'): Promise<void> {
   await act(async () => {
     const popped = new Promise<void>((resolve) => {
@@ -196,6 +245,14 @@ function storedHistoryPosition(): {
     scrollX: fields.scrollX,
     scrollY: fields.scrollY,
   }
+}
+
+function historyState(
+  path: string,
+  scrollX: number,
+  scrollY: number,
+): { __silen: { path: string; scrollX: number; scrollY: number } } {
+  return { __silen: { path, scrollX, scrollY } }
 }
 
 describe('hydration and browser navigation', () => {
@@ -370,6 +427,58 @@ describe('hydration and browser navigation', () => {
     act(() => root.unmount())
   })
 
+  it('ignores an older rejected click after a newer navigation succeeds', async () => {
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    const pendingAbout = deferred<never>()
+    routeMocks.aboutLoader.mockReturnValueOnce(pendingAbout.promise)
+
+    fireEvent.click(screen.getByRole('link', { name: 'About' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Guide' }))
+    expect(await screen.findByRole('heading', { name: 'Guide' })).toBeTruthy()
+
+    await act(async () => {
+      pendingAbout.reject(new Error('stale about failure'))
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+
+    expect(routeMocks.navigateDocument).not.toHaveBeenCalled()
+    expect(window.location.pathname).toBe('/project/guide')
+    expect(screen.getByRole('heading', { name: 'Guide' })).toBeTruthy()
+
+    act(() => root.unmount())
+  })
+
+  it('ignores an older rejected click after Back selects a newer destination', async () => {
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+
+    fireEvent.click(screen.getByRole('link', { name: 'Guide' }))
+    expect(await screen.findByRole('heading', { name: 'Guide' })).toBeTruthy()
+    const pendingAbout = deferred<never>()
+    routeMocks.aboutLoader.mockReturnValueOnce(pendingAbout.promise)
+    fireEvent.click(screen.getByRole('link', { name: 'About' }))
+
+    await traverseHistory('back')
+    expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy()
+    await act(async () => {
+      pendingAbout.reject(new Error('stale about failure'))
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+
+    expect(routeMocks.navigateDocument).not.toHaveBeenCalled()
+    expect(window.location.pathname).toBe('/project/')
+    expect(screen.getByRole('heading', { name: 'Home' })).toBeTruthy()
+
+    act(() => root.unmount())
+  })
+
   it('loads popstate content without pushing and restores saved scroll', async () => {
     const container = document.createElement('div')
     container.id = 'app'
@@ -420,6 +529,166 @@ describe('hydration and browser navigation', () => {
     expect(rejections).toEqual([])
 
     act(() => root.unmount())
+  })
+
+  it('cancels a queued source scroll save and suppresses writes while popstate loads', async () => {
+    const aboutModule = await routeMocks.aboutLoader()
+    const pendingAbout = deferred<typeof aboutModule>()
+    routeMocks.aboutLoader.mockReturnValueOnce(pendingAbout.promise)
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    const frames = useControlledAnimationFrames()
+
+    currentScrollY = 120
+    fireEvent.scroll(window)
+    expect(frames.pending()).toBe(1)
+    const destinationState = historyState('/project/about', 8, 64)
+    window.history.pushState(destinationState, '', '/project/about')
+    fireEvent.popState(window, { state: destinationState })
+    currentScrollY = 999
+    fireEvent.scroll(window)
+
+    frames.flush()
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/about',
+      scrollX: 8,
+      scrollY: 64,
+    })
+    expect(frames.pending()).toBe(0)
+
+    await act(async () => {
+      pendingAbout.resolve(aboutModule)
+      await Promise.resolve()
+    })
+    expect(frames.pending()).toBe(1)
+    act(() => frames.flush())
+
+    expect(screen.getByRole('heading', { name: 'About' })).toBeTruthy()
+    expect(scrollTo).toHaveBeenLastCalledWith(8, 64)
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/about',
+      scrollX: 8,
+      scrollY: 64,
+    })
+
+    act(() => root.unmount())
+  })
+
+  it('ignores saved coordinates whose history path does not match the selected URL', async () => {
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    const frames = useControlledAnimationFrames()
+    const staleState = historyState('/project/stale', 700, 900)
+    window.history.pushState(staleState, '', '/project/about')
+
+    fireEvent.popState(window, { state: staleState })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    act(() => frames.flush())
+
+    expect(screen.getByRole('heading', { name: 'About' })).toBeTruthy()
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 0)
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/about',
+      scrollX: 0,
+      scrollY: 0,
+    })
+
+    act(() => root.unmount())
+  })
+
+  it('keeps rapid popstate traversal isolated and resumes scroll saves for the winner', async () => {
+    const aboutModule = await routeMocks.aboutLoader()
+    const guideModule = await routeMocks.guideLoader()
+    const pendingAbout = deferred<typeof aboutModule>()
+    const pendingGuide = deferred<typeof guideModule>()
+    routeMocks.aboutLoader.mockReturnValueOnce(pendingAbout.promise)
+    routeMocks.guideLoader.mockReturnValueOnce(pendingGuide.promise)
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    const frames = useControlledAnimationFrames()
+
+    const aboutState = historyState('/project/about', 1, 100)
+    window.history.pushState(aboutState, '', '/project/about')
+    fireEvent.popState(window, { state: aboutState })
+    const guideState = historyState('/project/guide', 2, 200)
+    window.history.pushState(guideState, '', '/project/guide')
+    fireEvent.popState(window, { state: guideState })
+    currentScrollY = 999
+    fireEvent.scroll(window)
+    frames.flush()
+
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/guide',
+      scrollX: 2,
+      scrollY: 200,
+    })
+    await act(async () => {
+      pendingAbout.resolve(aboutModule)
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('heading', { name: 'Home' })).toBeTruthy()
+    expect(frames.pending()).toBe(0)
+
+    await act(async () => {
+      pendingGuide.resolve(guideModule)
+      await Promise.resolve()
+    })
+    act(() => frames.flush())
+    expect(screen.getByRole('heading', { name: 'Guide' })).toBeTruthy()
+    expect(scrollTo).toHaveBeenLastCalledWith(2, 200)
+
+    currentScrollY = 360
+    fireEvent.scroll(window)
+    expect(frames.pending()).toBe(1)
+    act(() => frames.flush())
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/guide',
+      scrollX: 2,
+      scrollY: 360,
+    })
+
+    act(() => root.unmount())
+  })
+
+  it('cancels pending popstate restoration on unmount without saving its coordinates', async () => {
+    const aboutModule = await routeMocks.aboutLoader()
+    const pendingAbout = deferred<typeof aboutModule>()
+    routeMocks.aboutLoader.mockReturnValueOnce(pendingAbout.promise)
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    const frames = useControlledAnimationFrames()
+    const replaceState = vi.spyOn(window.history, 'replaceState')
+    replaceState.mockClear()
+    const destinationState = historyState('/project/about', 4, 80)
+    window.history.pushState(destinationState, '', '/project/about')
+    fireEvent.popState(window, { state: destinationState })
+
+    await act(async () => {
+      pendingAbout.resolve(aboutModule)
+      await Promise.resolve()
+    })
+    expect(frames.pending()).toBe(1)
+    act(() => root.unmount())
+    expect(frames.pending()).toBe(0)
+    frames.flush()
+
+    expect(scrollTo).not.toHaveBeenCalledWith(4, 80)
+    expect(replaceState).not.toHaveBeenCalled()
+    expect(routeMocks.navigateDocument).not.toHaveBeenCalled()
   })
 
   it('persists anchor and manual scroll through a back and forward page cycle', async () => {

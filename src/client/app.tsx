@@ -257,6 +257,7 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
   const navigationSequence = useRef(0)
   const restorationFrame = useRef<number | undefined>(undefined)
   const scrollFrame = useRef<number | undefined>(undefined)
+  const suspendedScrollSequence = useRef<number | undefined>(undefined)
 
   const loadRoute = useCallback((url: URL): Promise<RouteMatch> => {
     const key = url.pathname
@@ -275,6 +276,7 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
       scrollX: window.scrollX,
       scrollY: window.scrollY,
     }
+    if (position.path !== browserPath(window.location.href)) return
     const recorded = historyPosition(window.history.state)
     if (
       !force &&
@@ -290,7 +292,20 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
     )
   }, [])
 
+  const cancelScheduledScrollSave = useCallback((): void => {
+    if (scrollFrame.current === undefined) return
+    window.cancelAnimationFrame(scrollFrame.current)
+    scrollFrame.current = undefined
+  }, [])
+
+  const cancelScheduledRestoration = useCallback((): void => {
+    if (restorationFrame.current === undefined) return
+    window.cancelAnimationFrame(restorationFrame.current)
+    restorationFrame.current = undefined
+  }, [])
+
   const scheduleCurrentScrollSave = useCallback((): void => {
+    if (suspendedScrollSequence.current !== undefined) return
     if (scrollFrame.current !== undefined) return
     scrollFrame.current = window.requestAnimationFrame(() => {
       scrollFrame.current = undefined
@@ -304,17 +319,24 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
       position: HistoryPosition | undefined,
       sequence: number,
     ): void => {
-      if (restorationFrame.current !== undefined) {
-        window.cancelAnimationFrame(restorationFrame.current)
-      }
+      cancelScheduledRestoration()
       restorationFrame.current = window.requestAnimationFrame(() => {
         restorationFrame.current = undefined
-        if (sequence !== navigationSequence.current) return
+        const path = browserPath(url.href)
+        if (
+          sequence !== navigationSequence.current ||
+          sequence !== suspendedScrollSequence.current ||
+          stateRef.current.path !== path ||
+          browserPath(window.location.href) !== path
+        ) {
+          return
+        }
         restoreNavigationPosition(url, position)
-        scheduleCurrentScrollSave()
+        saveCurrentScroll(true)
+        suspendedScrollSequence.current = undefined
       })
     },
-    [scheduleCurrentScrollSave],
+    [cancelScheduledRestoration, saveCurrentScroll],
   )
 
   const commitPage = useCallback(
@@ -342,6 +364,55 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
       if (!url) return
       const current = currentBrowserUrl()
       const sequence = ++navigationSequence.current
+      const interruptedPopstate = suspendedScrollSequence.current !== undefined
+      if (interruptedPopstate) {
+        cancelScheduledScrollSave()
+        cancelScheduledRestoration()
+        suspendedScrollSequence.current = sequence
+      }
+      const renderedCurrent = new URL(
+        stateRef.current.path,
+        window.location.origin,
+      )
+
+      const finishInterruptedPopstate = (): void => {
+        if (suspendedScrollSequence.current !== sequence) return
+        saveCurrentScroll(true)
+        suspendedScrollSequence.current = undefined
+      }
+
+      const loadActiveRoute = async (): Promise<RouteMatch | undefined> => {
+        try {
+          const match = await loadRoute(url)
+          return sequence === navigationSequence.current ? match : undefined
+        } catch (error) {
+          if (sequence !== navigationSequence.current) return undefined
+          throw error
+        }
+      }
+
+      if (interruptedPopstate && url.href === current.href) {
+        const recordedPosition = historyPosition(window.history.state)
+        const position =
+          recordedPosition?.path === browserPath(url.href)
+            ? recordedPosition
+            : undefined
+        if (samePage(renderedCurrent, url)) {
+          const nextState = {
+            ...stateRef.current,
+            path: browserPath(url.href),
+          }
+          flushSync(() => setState(nextState))
+          stateRef.current = nextState
+          restoreNavigationPosition(url, position)
+        } else {
+          const match = await loadActiveRoute()
+          if (!match) return
+          commitPage(url, match.page, position)
+        }
+        finishInterruptedPopstate()
+        return
+      }
 
       if (url.href === current.href) {
         window.history.replaceState(
@@ -354,10 +425,11 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
         )
         restoreNavigationPosition(url)
         scheduleCurrentScrollSave()
+        finishInterruptedPopstate()
         return
       }
 
-      if (samePage(current, url)) {
+      if (samePage(interruptedPopstate ? renderedCurrent : current, url)) {
         saveCurrentScroll(true)
         window.history.pushState(
           recordHistoryPosition(null, {
@@ -373,11 +445,12 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
         stateRef.current = nextState
         restoreNavigationPosition(url)
         scheduleCurrentScrollSave()
+        finishInterruptedPopstate()
         return
       }
 
-      const match = await loadRoute(url)
-      if (sequence !== navigationSequence.current) return
+      const match = await loadActiveRoute()
+      if (!match) return
       saveCurrentScroll(true)
       window.history.pushState(
         recordHistoryPosition(null, {
@@ -389,8 +462,16 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
         browserPath(url.href),
       )
       commitPage(url, match.page)
+      finishInterruptedPopstate()
     },
-    [commitPage, loadRoute, saveCurrentScroll, scheduleCurrentScrollSave],
+    [
+      cancelScheduledRestoration,
+      cancelScheduledScrollSave,
+      commitPage,
+      loadRoute,
+      saveCurrentScroll,
+      scheduleCurrentScrollSave,
+    ],
   )
 
   const prefetch = useCallback(
@@ -411,11 +492,18 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
     }
 
     const handlePopState = (event: PopStateEvent): void => {
+      cancelScheduledScrollSave()
+      cancelScheduledRestoration()
       const url = currentBrowserUrl()
       const sequence = ++navigationSequence.current
+      suspendedScrollSequence.current = sequence
       const navigate = async (): Promise<void> => {
         const current = new URL(stateRef.current.path, window.location.origin)
-        const position = historyPosition(event.state)
+        const recordedPosition = historyPosition(event.state)
+        const position =
+          recordedPosition?.path === browserPath(url.href)
+            ? recordedPosition
+            : undefined
         if (samePage(current, url)) {
           const nextState = {
             ...stateRef.current,
@@ -445,19 +533,16 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
     window.addEventListener('popstate', handlePopState)
     return () => {
       navigationSequence.current += 1
-      if (scrollFrame.current !== undefined) {
-        window.cancelAnimationFrame(scrollFrame.current)
-        scrollFrame.current = undefined
-      }
-      if (restorationFrame.current !== undefined) {
-        window.cancelAnimationFrame(restorationFrame.current)
-        restorationFrame.current = undefined
-      }
+      suspendedScrollSequence.current = undefined
+      cancelScheduledScrollSave()
+      cancelScheduledRestoration()
       window.removeEventListener('scroll', scheduleCurrentScrollSave)
       window.removeEventListener('popstate', handlePopState)
       window.history.scrollRestoration = initialRestoration
     }
   }, [
+    cancelScheduledRestoration,
+    cancelScheduledScrollSave,
     commitPage,
     loadRoute,
     saveCurrentScroll,
