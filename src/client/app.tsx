@@ -41,11 +41,11 @@ function NotFound(): React.JSX.Element {
   return <h1>404</h1>
 }
 
-function decodePathname(pathname: string): string {
+function decodePathname(pathname: string): string | undefined {
   try {
     return decodeURIComponent(pathname)
   } catch {
-    return pathname
+    return undefined
   }
 }
 
@@ -53,14 +53,17 @@ function routePathname(url: string): {
   pathname: string
   route: string | undefined
 } {
-  const pathname = decodePathname(new URL(url, 'https://silen.local').pathname)
-  if (config.base === '/') return { pathname, route: pathname }
+  const pathname = new URL(url, 'https://silen.local').pathname
+  if (config.base === '/') {
+    return { pathname, route: decodePathname(pathname) }
+  }
 
   const baseWithoutSlash = config.base.slice(0, -1)
   if (pathname === baseWithoutSlash) return { pathname, route: '/' }
   if (!pathname.startsWith(config.base)) return { pathname, route: undefined }
 
-  return { pathname, route: `/${pathname.slice(config.base.length)}` }
+  const suffix = decodePathname(pathname.slice(config.base.length))
+  return { pathname, route: suffix === undefined ? undefined : `/${suffix}` }
 }
 
 function routeCandidates(route: string): readonly string[] {

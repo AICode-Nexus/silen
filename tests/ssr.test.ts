@@ -109,8 +109,32 @@ describe('SSR entry', () => {
     },
   )
 
+  it.each([
+    '/project%2Fabout',
+    '/project%2fabout',
+    '/project%5Cabout',
+    '/project%5cabout',
+  ])(
+    'rejects encoded separators at the base mount boundary for %s',
+    async (url) => {
+      const rendered = await render(url)
+
+      expect(rendered.status).toBe(404)
+      expect(rendered.appHtml).toContain('<h1>404</h1>')
+    },
+  )
+
+  it('rejects malformed route encoding beneath the base without throwing', async () => {
+    const rendered = await render('/project/%E0%A4%A')
+
+    expect(rendered.status).toBe(404)
+    expect(rendered.appHtml).toContain('<h1>404</h1>')
+  })
+
   it('keeps bracket-named pages static instead of matching parameters', async () => {
-    const literal = await render('/project/literal/%5Bid%5D')
+    const literal = await render(
+      '/project/literal/%5Bid%5D?source=encoded#details',
+    )
     const parameterLike = await render('/project/literal/123')
 
     expect(literal.status).toBe(200)
