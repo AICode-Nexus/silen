@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-function Layout({ children }: { children: ReactNode }) {
+export function Layout({ children }: { children: ReactNode }): ReactNode {
   return children
 }
 

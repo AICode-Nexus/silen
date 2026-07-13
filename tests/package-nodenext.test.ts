@@ -68,6 +68,9 @@ describe('packed package declarations', () => {
       join(consumerDirectory, 'index.ts'),
       `import type { ComponentType } from 'react'
 import { defineConfig, type UserConfig } from 'silen'
+import type { VirtualConfig } from 'virtual:silen/config'
+import type { PageModule } from 'virtual:silen/routes'
+import type { Theme } from 'virtual:silen/theme'
 import Page, { frontmatter, headings, links } from './page.mdx'
 
 const config: UserConfig = defineConfig({ title: 'Docs' })
@@ -75,11 +78,20 @@ const component: ComponentType = Page
 const metadata: Readonly<Record<string, unknown>> = frontmatter
 const firstHeading: { depth: number; title: string; slug: string } | undefined = headings[0]
 const firstLink: string | undefined = links[0]
+declare const virtualConfig: VirtualConfig
+declare const pageModule: PageModule
+declare const theme: Theme
+const virtualBase: string = virtualConfig.base
+const virtualPage: ComponentType = pageModule.default
+const virtualLayout: Theme['Layout'] = theme.Layout
 void config
 void component
 void metadata
 void firstHeading
 void firstLink
+void virtualBase
+void virtualPage
+void virtualLayout
 `,
     )
     await writeFile(join(consumerDirectory, 'page.mdx'), '# Packed consumer')
