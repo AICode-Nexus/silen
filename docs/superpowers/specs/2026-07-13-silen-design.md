@@ -1,6 +1,6 @@
 # Silen Design Specification
 
-- Status: Proposed — design direction approved; document review pending
+- Status: Approved
 - Date: 2026-07-13
 - Repository: `AICode-Nexus/silen` (planned, public)
 - Package: `silen` (planned)
