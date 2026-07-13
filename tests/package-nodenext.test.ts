@@ -68,6 +68,7 @@ describe('packed package declarations', () => {
       join(consumerDirectory, 'index.ts'),
       `import type { ComponentType } from 'react'
 import { defineConfig, type UserConfig } from 'silen'
+import { Link, RouterProvider, useRoute, useRouter, type Router } from 'silen/client'
 import type { VirtualConfig } from 'virtual:silen/config'
 import type { PageModule } from 'virtual:silen/routes'
 import type { Theme } from 'virtual:silen/theme'
@@ -84,6 +85,12 @@ declare const theme: Theme
 const virtualBase: string = virtualConfig.base
 const virtualPage: ComponentType = pageModule.default
 const virtualLayout: Theme['Layout'] = theme.Layout
+const router: Router = {
+  path: '/guide',
+  go: async () => {},
+  prefetch: async () => {},
+}
+const clientExports = { Link, RouterProvider, useRoute, useRouter }
 void config
 void component
 void metadata
@@ -92,6 +99,8 @@ void firstLink
 void virtualBase
 void virtualPage
 void virtualLayout
+void router
+void clientExports
 `,
     )
     await writeFile(join(consumerDirectory, 'page.mdx'), '# Packed consumer')
