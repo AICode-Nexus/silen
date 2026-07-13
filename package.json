@@ -58,8 +58,6 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@babel/core": "8.0.1",
-    "@babel/eslint-parser": "8.0.1",
     "@playwright/test": "1.61.1",
     "@testing-library/react": "16.3.2",
     "@testing-library/user-event": "14.6.1",
@@ -70,7 +68,6 @@
     "eslint": "10.7.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "execa": "9.6.1",
-    "globals": "17.7.0",
     "jsdom": "29.1.1",
     "jiti": "2.7.0",
     "prettier": "3.9.5",
@@ -79,7 +76,6 @@
     "react-dom": "19.2.7",
     "tsup": "8.5.1",
     "typescript": "7.0.2",
-    "typescript-eslint": "8.63.0",
     "vitest": "4.1.10"
   }
 }

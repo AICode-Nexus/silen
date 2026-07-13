@@ -1,2 +1,6 @@
+packages:
+  - .
+  - tooling/eslint-compat
+
 allowBuilds:
   esbuild: true

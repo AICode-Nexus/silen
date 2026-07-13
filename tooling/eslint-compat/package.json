@@ -1,0 +1,15 @@
+{
+  "name": "@silen/eslint-compat",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Type-aware ESLint runtime pinned to the classic TypeScript compiler API while Silen builds with TypeScript 7.",
+  "type": "module",
+  "dependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.7.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.7.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.63.0"
+  }
+}
