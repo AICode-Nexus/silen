@@ -11,6 +11,7 @@ import config from 'virtual:silen/config'
 import routes from 'virtual:silen/routes'
 import Theme from 'virtual:silen/theme'
 import type { Heading, JsonObject } from '../shared/page.js'
+import { navigateDocument } from './navigation.js'
 import { resolveInternalUrl, RouterProvider, type Router } from './router.js'
 
 export interface PagePublicData {
@@ -254,6 +255,8 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
   const stateRef = useRef(state)
   const routeCache = useRef(new Map<string, Promise<RouteMatch>>())
   const navigationSequence = useRef(0)
+  const restorationFrame = useRef<number | undefined>(undefined)
+  const scrollFrame = useRef<number | undefined>(undefined)
 
   const loadRoute = useCallback((url: URL): Promise<RouteMatch> => {
     const key = url.pathname
@@ -266,28 +269,72 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
     return loaded
   }, [])
 
-  const commitPage = useCallback(
-    (url: URL, page: ResolvedPage, position?: HistoryPosition): void => {
-      const nextState = { path: browserPath(url.href), page }
-      flushSync(() => setState(nextState))
-      stateRef.current = nextState
-      setMetadata(page)
-      restoreNavigationPosition(url, position)
-    },
-    [],
-  )
-
-  const saveCurrentScroll = useCallback((): void => {
+  const saveCurrentScroll = useCallback((force = false): void => {
     const position: HistoryPosition = {
       path: stateRef.current.path,
       scrollX: window.scrollX,
       scrollY: window.scrollY,
+    }
+    const recorded = historyPosition(window.history.state)
+    if (
+      !force &&
+      recorded?.path === position.path &&
+      recorded.scrollX === position.scrollX &&
+      recorded.scrollY === position.scrollY
+    ) {
+      return
     }
     window.history.replaceState(
       recordHistoryPosition(window.history.state, position),
       '',
     )
   }, [])
+
+  const scheduleCurrentScrollSave = useCallback((): void => {
+    if (scrollFrame.current !== undefined) return
+    scrollFrame.current = window.requestAnimationFrame(() => {
+      scrollFrame.current = undefined
+      saveCurrentScroll()
+    })
+  }, [saveCurrentScroll])
+
+  const schedulePopstateRestoration = useCallback(
+    (
+      url: URL,
+      position: HistoryPosition | undefined,
+      sequence: number,
+    ): void => {
+      if (restorationFrame.current !== undefined) {
+        window.cancelAnimationFrame(restorationFrame.current)
+      }
+      restorationFrame.current = window.requestAnimationFrame(() => {
+        restorationFrame.current = undefined
+        if (sequence !== navigationSequence.current) return
+        restoreNavigationPosition(url, position)
+        scheduleCurrentScrollSave()
+      })
+    },
+    [scheduleCurrentScrollSave],
+  )
+
+  const commitPage = useCallback(
+    (
+      url: URL,
+      page: ResolvedPage,
+      position?: HistoryPosition,
+      restorePosition = true,
+    ): void => {
+      const nextState = { path: browserPath(url.href), page }
+      flushSync(() => setState(nextState))
+      stateRef.current = nextState
+      setMetadata(page)
+      if (restorePosition) {
+        restoreNavigationPosition(url, position)
+        scheduleCurrentScrollSave()
+      }
+    },
+    [scheduleCurrentScrollSave],
+  )
 
   const go = useCallback(
     async (href: string): Promise<void> => {
@@ -306,11 +353,12 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
           '',
         )
         restoreNavigationPosition(url)
+        scheduleCurrentScrollSave()
         return
       }
 
       if (samePage(current, url)) {
-        saveCurrentScroll()
+        saveCurrentScroll(true)
         window.history.pushState(
           recordHistoryPosition(null, {
             path: browserPath(url.href),
@@ -324,12 +372,13 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
         flushSync(() => setState(nextState))
         stateRef.current = nextState
         restoreNavigationPosition(url)
+        scheduleCurrentScrollSave()
         return
       }
 
       const match = await loadRoute(url)
       if (sequence !== navigationSequence.current) return
-      saveCurrentScroll()
+      saveCurrentScroll(true)
       window.history.pushState(
         recordHistoryPosition(null, {
           path: browserPath(url.href),
@@ -341,7 +390,7 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
       )
       commitPage(url, match.page)
     },
-    [commitPage, loadRoute, saveCurrentScroll],
+    [commitPage, loadRoute, saveCurrentScroll, scheduleCurrentScrollSave],
   )
 
   const prefetch = useCallback(
@@ -374,24 +423,47 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
           }
           flushSync(() => setState(nextState))
           stateRef.current = nextState
-          restoreNavigationPosition(url, position)
+          schedulePopstateRestoration(url, position, sequence)
           return
         }
 
         const match = await loadRoute(url)
         if (sequence !== navigationSequence.current) return
-        commitPage(url, match.page, position)
+        commitPage(url, match.page, position, false)
+        schedulePopstateRestoration(url, position, sequence)
       }
-      void navigate()
+      void navigate().catch(() => {
+        if (sequence === navigationSequence.current) {
+          navigateDocument(url.href)
+        }
+      })
     }
 
+    window.addEventListener('scroll', scheduleCurrentScrollSave, {
+      passive: true,
+    })
     window.addEventListener('popstate', handlePopState)
     return () => {
       navigationSequence.current += 1
+      if (scrollFrame.current !== undefined) {
+        window.cancelAnimationFrame(scrollFrame.current)
+        scrollFrame.current = undefined
+      }
+      if (restorationFrame.current !== undefined) {
+        window.cancelAnimationFrame(restorationFrame.current)
+        restorationFrame.current = undefined
+      }
+      window.removeEventListener('scroll', scheduleCurrentScrollSave)
       window.removeEventListener('popstate', handlePopState)
       window.history.scrollRestoration = initialRestoration
     }
-  }, [commitPage, loadRoute, saveCurrentScroll])
+  }, [
+    commitPage,
+    loadRoute,
+    saveCurrentScroll,
+    scheduleCurrentScrollSave,
+    schedulePopstateRestoration,
+  ])
 
   const router = useMemo<Router>(
     () => ({

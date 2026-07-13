@@ -40,6 +40,16 @@ function renderLink(
   )
 }
 
+function handledRejectedPromise(error: Error): {
+  catchHandler: ReturnType<typeof vi.spyOn>
+  promise: Promise<void>
+} {
+  const promise = Promise.reject<void>(error)
+  void promise.catch(() => undefined)
+  const catchHandler = vi.spyOn(promise, 'catch')
+  return { catchHandler, promise }
+}
+
 describe('client router hooks', () => {
   afterEach(cleanup)
 
@@ -103,6 +113,43 @@ describe('Link', () => {
 
     expect(router.prefetch).toHaveBeenNthCalledWith(1, '/project/guide')
     expect(router.prefetch).toHaveBeenNthCalledWith(2, '/project/guide')
+  })
+
+  it.each(['focus', 'hover'] as const)(
+    'contains a rejected %s prefetch without navigating',
+    async (interaction) => {
+      const rejected = handledRejectedPromise(new Error('prefetch failed'))
+      const router = createRouter({
+        prefetch: vi.fn().mockReturnValue(rejected.promise),
+      })
+      renderLink(router, { href: '/project/guide' })
+      const link = screen.getByRole('link', { name: 'Destination' })
+      const currentUrl = window.location.href
+
+      if (interaction === 'focus') fireEvent.focus(link)
+      else fireEvent.mouseEnter(link)
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+      expect(router.prefetch).toHaveBeenCalledWith('/project/guide')
+      expect(rejected.catchHandler).toHaveBeenCalledOnce()
+      expect(router.go).not.toHaveBeenCalled()
+      expect(window.location.href).toBe(currentUrl)
+    },
+  )
+
+  it('falls back to document navigation after an intercepted click rejects', async () => {
+    const rejected = handledRejectedPromise(new Error('navigation failed'))
+    const router = createRouter({
+      go: vi.fn().mockReturnValue(rejected.promise),
+    })
+    renderLink(router, { href: '#recovered' })
+
+    fireEvent.click(screen.getByRole('link', { name: 'Destination' }))
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+    expect(router.go).toHaveBeenCalledWith('#recovered')
+    expect(rejected.catchHandler).toHaveBeenCalledOnce()
+    expect(window.location.hash).toBe('#recovered')
   })
 
   it.each([

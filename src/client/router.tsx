@@ -4,6 +4,7 @@ import {
   type AnchorHTMLAttributes,
   type ReactNode,
 } from 'react'
+import { navigateDocument } from './navigation.js'
 
 export interface Router {
   path: string
@@ -113,27 +114,30 @@ export function Link({
       onFocus={(event) => {
         onFocus?.(event)
         if (!event.defaultPrevented && canHandle()) {
-          void router.prefetch(href)
+          void router.prefetch(href).catch(() => undefined)
         }
       }}
       onMouseEnter={(event) => {
         onMouseEnter?.(event)
         if (!event.defaultPrevented && canHandle()) {
-          void router.prefetch(href)
+          void router.prefetch(href).catch(() => undefined)
         }
       }}
       onClick={(event) => {
         onClick?.(event)
+        const url = resolveInternalUrl(href, router.base)
         if (
           event.defaultPrevented ||
           event.button !== 0 ||
           hasModifiedClick(event) ||
-          !canHandle()
+          target !== undefined ||
+          downloadValue !== undefined ||
+          !url
         ) {
           return
         }
         event.preventDefault()
-        void router.go(href)
+        void router.go(href).catch(() => navigateDocument(url.href))
       }}
     />
   )

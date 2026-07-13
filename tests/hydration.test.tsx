@@ -7,6 +7,11 @@ const routeMocks = vi.hoisted(() => ({
   aboutLoader: vi.fn(),
   guideLoader: vi.fn(),
   homeLoader: vi.fn(),
+  navigateDocument: vi.fn(),
+}))
+
+vi.mock('../src/client/navigation', () => ({
+  navigateDocument: routeMocks.navigateDocument,
 }))
 
 vi.mock('virtual:silen/config', () => ({
@@ -137,7 +142,65 @@ async function serverMarkup(url: string): Promise<string> {
   return renderToString(<App initialUrl={url} initialPage={match.page} />)
 }
 
+async function captureUnhandledRejections(
+  action: () => void,
+): Promise<unknown[]> {
+  const rejections: unknown[] = []
+  const handleRejection = (reason: unknown): void => {
+    rejections.push(reason)
+  }
+  process.on('unhandledRejection', handleRejection)
+  try {
+    action()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+  } finally {
+    process.off('unhandledRejection', handleRejection)
+  }
+  return rejections
+}
+
+async function traverseHistory(direction: 'back' | 'forward'): Promise<void> {
+  await act(async () => {
+    const popped = new Promise<void>((resolve) => {
+      window.addEventListener('popstate', () => resolve(), { once: true })
+    })
+    window.history[direction]()
+    await popped
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+  })
+}
+
+function storedHistoryPosition(): {
+  path: string
+  scrollX: number
+  scrollY: number
+} {
+  const state: unknown = window.history.state
+  if (typeof state !== 'object' || state === null) {
+    throw new Error('Expected an object history state')
+  }
+  const position = (state as Record<string, unknown>).__silen
+  if (typeof position !== 'object' || position === null) {
+    throw new Error('Expected a Silen history position')
+  }
+  const fields = position as Record<string, unknown>
+  if (
+    typeof fields.path !== 'string' ||
+    typeof fields.scrollX !== 'number' ||
+    typeof fields.scrollY !== 'number'
+  ) {
+    throw new Error('Expected a valid Silen history position')
+  }
+  return {
+    path: fields.path,
+    scrollX: fields.scrollX,
+    scrollY: fields.scrollY,
+  }
+}
+
 describe('hydration and browser navigation', () => {
+  let currentScrollX: number
+  let currentScrollY: number
   let scrollIntoView: ReturnType<typeof vi.fn>
   let scrollTo: ReturnType<typeof vi.fn>
 
@@ -147,8 +210,13 @@ describe('hydration and browser navigation', () => {
     document.body.innerHTML = ''
     document.documentElement.lang = 'en-US'
     window.history.replaceState(null, '', '/project/')
+    currentScrollX = 0
+    currentScrollY = 0
     scrollIntoView = vi.fn()
-    scrollTo = vi.fn()
+    scrollTo = vi.fn((x: number, y: number) => {
+      currentScrollX = x
+      currentScrollY = y
+    })
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
       value: scrollIntoView,
@@ -159,18 +227,29 @@ describe('hydration and browser navigation', () => {
     })
     Object.defineProperty(window, 'scrollX', {
       configurable: true,
-      value: 0,
+      get: () => currentScrollX,
     })
     Object.defineProperty(window, 'scrollY', {
       configurable: true,
-      value: 0,
+      get: () => currentScrollY,
     })
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) =>
+        window.setTimeout(() => callback(performance.now()), 0),
+      ),
+    )
+    vi.stubGlobal(
+      'cancelAnimationFrame',
+      vi.fn((handle: number) => window.clearTimeout(handle)),
+    )
     vi.clearAllMocks()
   })
 
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('hydrates complete SSR markup without a mismatch', async () => {
@@ -311,10 +390,7 @@ describe('hydration and browser navigation', () => {
     const pushState = vi.spyOn(window.history, 'pushState')
     pushState.mockClear()
 
-    await act(async () => {
-      window.history.back()
-      await new Promise((resolve) => window.setTimeout(resolve, 0))
-    })
+    await traverseHistory('back')
 
     expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy()
     expect(pushState).not.toHaveBeenCalled()
@@ -322,6 +398,159 @@ describe('hydration and browser navigation', () => {
     expect(document.title).toBe('Home')
 
     act(() => root.unmount())
+  })
+
+  it('contains a rejected popstate load so it cannot become an unhandled rejection', async () => {
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    routeMocks.aboutLoader.mockRejectedValueOnce(new Error('route failed'))
+    window.history.pushState({ attempted: true }, '', '/project/about')
+
+    const rejections = await captureUnhandledRejections(() => {
+      fireEvent.popState(window, { state: { attempted: true } })
+    })
+
+    expect(routeMocks.aboutLoader).toHaveBeenCalled()
+    expect(routeMocks.navigateDocument).toHaveBeenCalledWith(
+      `${window.location.origin}/project/about`,
+    )
+    expect(rejections).toEqual([])
+
+    act(() => root.unmount())
+  })
+
+  it('persists anchor and manual scroll through a back and forward page cycle', async () => {
+    currentScrollX = 24
+    currentScrollY = 48
+    scrollIntoView.mockImplementation(function (this: Element) {
+      if (this.id === 'install') {
+        currentScrollX = 0
+        currentScrollY = 180
+      }
+    })
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+
+    fireEvent.click(screen.getByRole('link', { name: 'Guide' }))
+    expect(await screen.findByRole('heading', { name: 'Guide' })).toBeTruthy()
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/guide#install',
+      scrollX: 0,
+      scrollY: 180,
+    })
+
+    currentScrollX = 7
+    currentScrollY = 420
+    fireEvent.scroll(window)
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+
+    await traverseHistory('back')
+    expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy()
+    expect(scrollTo).toHaveBeenLastCalledWith(24, 48)
+
+    await traverseHistory('forward')
+    expect(await screen.findByRole('heading', { name: 'Guide' })).toBeTruthy()
+    expect(scrollTo).toHaveBeenLastCalledWith(7, 420)
+
+    act(() => root.unmount())
+  })
+
+  it('persists manual scroll through a back and forward hash cycle', async () => {
+    window.history.replaceState(null, '', '/project/guide')
+    scrollIntoView.mockImplementation(function (this: Element) {
+      if (this.id === 'details') {
+        currentScrollX = 0
+        currentScrollY = 210
+      }
+    })
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/guide')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+
+    currentScrollY = 90
+    fireEvent.scroll(window)
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+    const replaceState = vi.spyOn(window.history, 'replaceState')
+    replaceState.mockClear()
+    fireEvent.click(screen.getByRole('link', { name: 'Details' }))
+    expect(replaceState).toHaveBeenCalledOnce()
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+    expect(storedHistoryPosition()).toEqual({
+      path: '/project/guide#details',
+      scrollX: 0,
+      scrollY: 210,
+    })
+
+    currentScrollY = 360
+    fireEvent.scroll(window)
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+
+    window.addEventListener(
+      'popstate',
+      () => {
+        window.scrollTo(0, 0)
+      },
+      { once: true },
+    )
+    await traverseHistory('back')
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 90)
+
+    await traverseHistory('forward')
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 360)
+
+    act(() => root.unmount())
+  })
+
+  it('coalesces scroll history writes and removes the listener on unmount', async () => {
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+    const replaceState = vi.spyOn(window.history, 'replaceState')
+    replaceState.mockClear()
+
+    currentScrollY = 10
+    fireEvent.scroll(window)
+    currentScrollY = 20
+    fireEvent.scroll(window)
+    currentScrollY = 30
+    fireEvent.scroll(window)
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+
+    expect(replaceState).toHaveBeenCalledOnce()
+    expect(storedHistoryPosition().scrollY).toBe(30)
+
+    act(() => root.unmount())
+    replaceState.mockClear()
+    currentScrollY = 40
+    fireEvent.scroll(window)
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(replaceState).not.toHaveBeenCalled()
   })
 
   it('renders a real 404 page and metadata for an unknown static route', async () => {
