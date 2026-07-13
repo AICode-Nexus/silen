@@ -156,6 +156,46 @@ describe('MDX compilation', () => {
     expect(pageModule.frontmatter).toEqual(page.frontmatter)
   })
 
+  it('preserves root and nested __proto__ properties without inheritance', async () => {
+    const file = 'tests/fixtures/mdx/prototype-safe.mdx'
+    const route: RouteRecord = {
+      path: '/prototype-safe',
+      relativeFile: 'prototype-safe.mdx',
+      file,
+    }
+
+    const [page, pageModule] = await Promise.all([
+      compilePage(route),
+      loadMdxModule(file),
+    ])
+    const staticNested = page.frontmatter.nested
+    const viteNested = pageModule.frontmatter.nested
+
+    expect(pageModule.frontmatter).toEqual(page.frontmatter)
+    expect(Object.hasOwn(page.frontmatter, '__proto__')).toBe(true)
+    expect(Object.hasOwn(pageModule.frontmatter, '__proto__')).toBe(true)
+    expect(staticNested).toBeTypeOf('object')
+    expect(viteNested).toBeTypeOf('object')
+    if (
+      typeof staticNested !== 'object' ||
+      staticNested === null ||
+      Array.isArray(staticNested) ||
+      typeof viteNested !== 'object' ||
+      viteNested === null ||
+      Array.isArray(viteNested)
+    ) {
+      throw new TypeError('Expected nested frontmatter objects')
+    }
+    expect(Object.hasOwn(staticNested, '__proto__')).toBe(true)
+    expect(Object.hasOwn(viteNested, '__proto__')).toBe(true)
+    expect('rootInherited' in page.frontmatter).toBe(false)
+    expect('rootInherited' in pageModule.frontmatter).toBe(false)
+    expect('nestedInherited' in staticNested).toBe(false)
+    expect('nestedInherited' in viteNested).toBe(false)
+    expect(Object.prototype).not.toHaveProperty('rootInherited')
+    expect(Object.prototype).not.toHaveProperty('nestedInherited')
+  })
+
   it('reports frontmatter values that cannot be normalized', () => {
     expect(() => normalizeFrontmatter({ unsupported: 1n })).toThrow(
       'Failed to normalize frontmatter as JSON',

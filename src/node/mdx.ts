@@ -95,6 +95,11 @@ function fallbackTitle(content: string, headings: Heading[]): string {
   return h1 ?? headings[0]?.title ?? ''
 }
 
+function serializeJsonForModule(value: JsonObject): string {
+  const serialized = JSON.stringify(value)
+  return `JSON.parse(${JSON.stringify(serialized)})`
+}
+
 export async function compilePage(route: RouteRecord): Promise<CompiledPage> {
   const source = await readFile(route.file, 'utf8')
   const parsed = matter(source)
@@ -124,7 +129,7 @@ const pageDataPlugin: Plugin = {
 
     return [
       parsed.content,
-      `export const frontmatter = ${JSON.stringify(analyzed.frontmatter)}`,
+      `export const frontmatter = ${serializeJsonForModule(analyzed.frontmatter)}`,
       `export const headings = ${JSON.stringify(analyzed.headings)}`,
       `export const links = ${JSON.stringify(analyzed.links)}`,
     ].join('\n')
