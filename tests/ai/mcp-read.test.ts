@@ -76,6 +76,9 @@ describe('read-only MCP server', () => {
         openWorldHint: false,
       })
     }
+    const buildTool = listed.tools.find((tool) => tool.name === 'build')
+    expect(buildTool?.title).toBe('Validate build readiness')
+    expect(buildTool?.description).toMatch(/read-only.*preflight/i)
   })
 
   it('calls search, read, and build and returns only relative structured data', async () => {
@@ -95,7 +98,9 @@ describe('read-only MCP server', () => {
     expect(jsonResult(read)).toMatchObject({ path: 'index.mdx', route: '/' })
 
     const built = await client.callTool({ name: 'build', arguments: {} })
-    expect(jsonResult(built)).toMatchObject({ outDir: '.silen/dist' })
+    const builtResult = jsonResult(built)
+    expect(builtResult).toMatchObject({ outDir: '.silen/dist', ok: false })
+    expect(Array.isArray(builtResult.issues)).toBe(true)
     expect(text(built)).not.toContain(fixture)
   }, 30_000)
 
@@ -106,7 +111,10 @@ describe('read-only MCP server', () => {
       arguments: { path: '../secret.txt' },
     })
     expect(result.isError).toBe(true)
-    expect(text(result)).toContain('Path is outside the content root')
+    expect(jsonResult(result)).toEqual({
+      code: 'OUTSIDE_ROOT',
+      reason: 'Path is outside the content root',
+    })
     expect(text(result)).not.toContain(path.dirname(fixture))
   })
 

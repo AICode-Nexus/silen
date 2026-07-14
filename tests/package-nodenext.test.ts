@@ -79,6 +79,7 @@ describe('packed package declarations', () => {
       join(consumerDirectory, 'index.ts'),
       `import type { ComponentType } from 'react'
 import { defineConfig, type UserConfig } from 'silen'
+import { createMcpServer, createWorkspace, WorkspaceError, type Workspace } from 'silen/ai'
 import { Link, RouterProvider, useRoute, useRouter, type Router } from 'silen/client'
 import type { VirtualConfig } from 'virtual:silen/config'
 import type { PageModule } from 'virtual:silen/routes'
@@ -102,6 +103,11 @@ const router: Router = {
   prefetch: async () => {},
 }
 const clientExports = { Link, RouterProvider, useRoute, useRouter }
+const aiExports: {
+  createMcpServer: typeof createMcpServer
+  createWorkspace: (root: string) => Promise<Workspace>
+  WorkspaceError: typeof WorkspaceError
+} = { createMcpServer, createWorkspace, WorkspaceError }
 void config
 void component
 void metadata
@@ -112,6 +118,7 @@ void virtualPage
 void virtualLayout
 void router
 void clientExports
+void aiExports
 `,
     )
     await writeFile(join(consumerDirectory, 'page.mdx'), '# Packed consumer')
@@ -130,6 +137,31 @@ void clientExports
     )
 
     expect(typecheck.exitCode, typecheck.all).toBe(0)
+
+    await writeFile(
+      join(consumerDirectory, 'verify-ai.mjs'),
+      `import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { createMcpServer, createWorkspace, WorkspaceError } from 'silen/ai'
+
+const root = join(process.cwd(), 'ai-workspace')
+await mkdir(root, { recursive: true })
+await writeFile(join(root, 'index.md'), '# Packed AI API\\n')
+const workspace = await createWorkspace(root)
+const listed = await workspace.list()
+const server = createMcpServer({ workspace, allowWrite: false })
+if (listed.files.length !== 1 || !(new WorkspaceError('PACKED', 'safe') instanceof Error)) process.exit(2)
+await server.close()
+console.log('packed-ai-ok')
+`,
+    )
+    const packedAi = await execa('node', ['verify-ai.mjs'], {
+      cwd: consumerDirectory,
+      reject: false,
+      all: true,
+    })
+    expect(packedAi.exitCode, packedAi.all).toBe(0)
+    expect(packedAi.all).toContain('packed-ai-ok')
 
     const site = join(consumerDirectory, 'site')
     await mkdir(join(site, '.silen'), { recursive: true })

@@ -19,5 +19,10 @@ export async function serveMcp(options: CreateMcpOptions): Promise<void> {
   }
   process.once('SIGINT', close)
   process.once('SIGTERM', close)
-  await server.connect(new StdioServerTransport())
+  try {
+    await server.connect(new StdioServerTransport())
+  } finally {
+    process.off('SIGINT', close)
+    process.off('SIGTERM', close)
+  }
 }

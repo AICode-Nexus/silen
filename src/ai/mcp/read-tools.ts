@@ -25,13 +25,20 @@ function jsonResult(value: unknown) {
 }
 
 function safeFailure(error: unknown) {
-  const message =
+  const failure =
     error instanceof WorkspaceError
-      ? error.message
-      : 'The workspace operation failed without exposing internal details'
+      ? { code: error.code, reason: error.message }
+      : {
+          code: 'WORKSPACE_OPERATION_FAILED',
+          reason:
+            'The workspace operation failed without exposing internal details',
+        }
   return {
     isError: true as const,
-    content: [{ type: 'text' as const, text: message }],
+    content: [
+      { type: 'text' as const, text: JSON.stringify(failure, null, 2) },
+    ],
+    structuredContent: failure,
   }
 }
 
@@ -144,9 +151,9 @@ export function registerReadTools(
   server.registerTool(
     'build',
     {
-      title: 'Build documentation',
+      title: 'Validate build readiness',
       description:
-        'Build and validate the site, returning workspace-relative structured diagnostics.',
+        'Run a read-only build preflight over bounded Markdown inputs and existing artifacts. This never executes workspace code, invokes Vite, or writes files.',
       inputSchema: z.object({}).strict(),
       annotations: readOnlyAnnotations,
     },
