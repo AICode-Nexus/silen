@@ -21,6 +21,10 @@ const fileSystemHooks = vi.hoisted(() => ({
     | undefined,
   afterUnlink: undefined as
     ((target: string) => void | Promise<void>) | undefined,
+  beforeRename: undefined as
+    ((oldPath: string, newPath: string) => void | Promise<void>) | undefined,
+  afterRename: undefined as
+    ((oldPath: string, newPath: string) => void | Promise<void>) | undefined,
 }))
 
 vi.mock('node:fs/promises', async (importOriginal) => {
@@ -35,6 +39,11 @@ vi.mock('node:fs/promises', async (importOriginal) => {
       await actual.unlink(target)
       await fileSystemHooks.afterUnlink?.(target)
     },
+    rename: async (oldPath: string, newPath: string) => {
+      await fileSystemHooks.beforeRename?.(oldPath, newPath)
+      await actual.rename(oldPath, newPath)
+      await fileSystemHooks.afterRename?.(oldPath, newPath)
+    },
   }
 })
 
@@ -47,6 +56,8 @@ beforeAll(async () => {
 afterEach(async () => {
   fileSystemHooks.afterLink = undefined
   fileSystemHooks.afterUnlink = undefined
+  fileSystemHooks.beforeRename = undefined
+  fileSystemHooks.afterRename = undefined
   await Promise.all(
     roots.splice(0).map((root) => rm(root, { force: true, recursive: true })),
   )
@@ -59,6 +70,68 @@ async function temporaryRoot(prefix = 'workspace-write-') {
 }
 
 describe('workspace mutations', () => {
+  it.each(['replace', 'append', 'link'] as const)(
+    'keeps an existing target continuously readable during %s',
+    async (operation) => {
+      const root = await temporaryRoot(`workspace-readable-${operation}-`)
+      const page = path.join(root, 'page.md')
+      await writeFile(page, '# Original\n')
+      await writeFile(path.join(root, 'target.md'), '# Target\n')
+      const workspace = await createWorkspace(root)
+      await workspace.reindex()
+
+      let reading = true
+      let reads = 0
+      const readErrors: string[] = []
+      const reader = (async () => {
+        while (reading) {
+          try {
+            await readFile(page, 'utf8')
+            reads += 1
+          } catch (error) {
+            readErrors.push(
+              typeof error === 'object' && error !== null && 'code' in error
+                ? String((error as { code?: unknown }).code)
+                : 'UNKNOWN',
+            )
+          }
+        }
+      })()
+      const yieldToReader = async () => {
+        for (let index = 0; index < 32; index += 1) {
+          await new Promise<void>((resolve) => setImmediate(resolve))
+        }
+      }
+      while (reads < 32) await yieldToReader()
+      fileSystemHooks.afterUnlink = async (target) => {
+        if (target === page) await yieldToReader()
+      }
+      fileSystemHooks.beforeRename = async (_source, target) => {
+        if (target === page) await yieldToReader()
+      }
+
+      try {
+        if (operation === 'replace') {
+          await workspace.write({ path: 'page.md', content: '# Replaced\n' })
+        } else if (operation === 'append') {
+          await workspace.append({ path: 'page.md', content: 'Appended' })
+        } else {
+          await workspace.link({
+            path: 'page.md',
+            target: 'target.md',
+            label: 'Target',
+          })
+        }
+      } finally {
+        reading = false
+        await reader
+      }
+
+      expect(reads).toBeGreaterThanOrEqual(64)
+      expect(readErrors).toEqual([])
+    },
+  )
+
   it('rejects invalid frontmatter without changing content or leaving a stale index', async () => {
     const root = await temporaryRoot('workspace-frontmatter-')
     const existing = path.join(root, 'existing.md')
@@ -131,7 +204,7 @@ describe('workspace mutations', () => {
     await workspace.reindex()
 
     let swapped = false
-    fileSystemHooks.afterLink = async (source, destination) => {
+    fileSystemHooks.afterRename = async (source, destination) => {
       if (swapped || destination !== existing || !source.endsWith('.tmp')) {
         return
       }
@@ -157,7 +230,7 @@ describe('workspace mutations', () => {
     ).toEqual([])
   })
 
-  it('does not overwrite an external file created after replacement unlinks the checked target', async () => {
+  it('does not overwrite an external file swapped in before final target validation', async () => {
     const root = await temporaryRoot('workspace-target-swap-')
     const page = path.join(root, 'page.md')
     await writeFile(page, '# Original\n')
@@ -165,9 +238,10 @@ describe('workspace mutations', () => {
     await workspace.reindex()
 
     let swapped = false
-    fileSystemHooks.afterUnlink = async (target) => {
-      if (swapped || target !== page) return
+    fileSystemHooks.afterLink = async (source, destination) => {
+      if (swapped || source !== page || !destination.endsWith('.backup')) return
       swapped = true
+      await rm(page)
       await writeFile(page, '# External\n', { mode: 0o640 })
     }
     await expect(
@@ -185,6 +259,28 @@ describe('workspace mutations', () => {
         /\.(?:tmp|backup)$/.test(entry),
       ),
     ).toEqual([])
+  })
+
+  it('aborts when an existing target mode changes before final validation', async () => {
+    const root = await temporaryRoot('workspace-target-mode-swap-')
+    const page = path.join(root, 'page.md')
+    await writeFile(page, '# Original\n', { mode: 0o640 })
+    const workspace = await createWorkspace(root)
+    await workspace.reindex()
+
+    let changed = false
+    fileSystemHooks.afterLink = async (source, destination) => {
+      if (changed || source !== page || !destination.endsWith('.backup')) return
+      changed = true
+      await chmod(page, 0o600)
+    }
+    await expect(
+      workspace.write({ path: 'page.md', content: '# Silen\n' }),
+    ).rejects.toBeDefined()
+
+    expect(changed).toBe(true)
+    expect(await readFile(page, 'utf8')).toBe('# Original\n')
+    expect((await stat(page)).mode & 0o7777).toBe(0o600)
   })
 
   it('rejects ignored path segments at every depth and scans them case-insensitively', async () => {

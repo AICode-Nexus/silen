@@ -7,6 +7,7 @@ import {
   open,
   readdir,
   realpath,
+  rename,
   stat,
   unlink,
 } from 'node:fs/promises'
@@ -165,6 +166,10 @@ function containsPath(root: string, target: string): boolean {
 
 function sameIdentity(left: Stats, right: Stats): boolean {
   return left.dev === right.dev && left.ino === right.ino
+}
+
+function sameIdentityAndMode(left: Stats, right: Stats): boolean {
+  return sameIdentity(left, right) && left.mode === right.mode
 }
 
 function routeForFile(file: string): string {
@@ -851,7 +856,7 @@ export async function createWorkspace(root: string): Promise<Workspace> {
       assertSameSnapshot(parentBefore, parentAfterStage)
       keepStagedFiles = true
       return {
-        target: physicalTarget,
+        target: targetBefore?.physical ?? physicalTarget,
         parent: parentBefore,
         ...(targetBefore ? { before: targetBefore } : {}),
         temporary,
@@ -881,27 +886,27 @@ export async function createWorkspace(root: string): Promise<Workspace> {
 
   async function commitStagedFile(staged: StagedFile): Promise<void> {
     try {
-      assertSameSnapshot(
-        staged.parent,
-        await snapshotPath(staged.parent.physical),
-      )
-      const current = await currentSnapshot(staged.target)
+      const [parentImmediatelyBeforeCommit, current] = await Promise.all([
+        snapshotPath(staged.parent.physical),
+        currentSnapshot(staged.target),
+      ])
+      assertSameSnapshot(staged.parent, parentImmediatelyBeforeCommit)
       if (staged.before) {
         if (
           !current ||
           current.physical !== staged.before.physical ||
-          !sameIdentity(current.stats, staged.before.stats)
+          !sameIdentityAndMode(current.stats, staged.before.stats)
         ) {
           throw unsafePath()
         }
-        await unlink(staged.target)
+        await rename(staged.temporary, staged.target)
         staged.originalRemoved = true
-      } else if (current) {
-        throw unsafePath()
+        staged.installed = true
+      } else {
+        if (current) throw unsafePath()
+        await link(staged.temporary, staged.target)
+        staged.installed = true
       }
-
-      await link(staged.temporary, staged.target)
-      staged.installed = true
       const installed = await snapshotPath(staged.target)
       if (!sameIdentity(staged.temporaryStats, installed.stats)) {
         throw unsafePath()
@@ -924,9 +929,18 @@ export async function createWorkspace(root: string): Promise<Workspace> {
         current &&
         sameIdentity(current.stats, staged.temporaryStats)
       ) {
-        await unlink(staged.target)
+        if (staged.before && staged.backup) {
+          await rename(staged.backup, staged.target)
+          current = await snapshotPath(staged.target)
+          if (!sameIdentityAndMode(current.stats, staged.before.stats)) {
+            throw unsafePath('Unable to roll back a changed workspace target')
+          }
+          staged.originalRemoved = false
+        } else {
+          await unlink(staged.target)
+          current = undefined
+        }
         staged.installed = false
-        current = undefined
       }
       if (staged.before && staged.backup) {
         if (!current) {
@@ -1011,6 +1025,7 @@ export async function createWorkspace(root: string): Promise<Workspace> {
   async function prepareMutationIndex(
     relative: string,
     after: string,
+    targetBefore?: PathSnapshot,
   ): Promise<{
     documents: WorkspaceDocument[]
     index: SerializedWorkspaceIndex
@@ -1021,7 +1036,8 @@ export async function createWorkspace(root: string): Promise<Workspace> {
     const finalRelative = posixPath(
       path.relative(
         contentRoot,
-        path.join(parent.physical, path.basename(relative)),
+        targetBefore?.physical ??
+          path.join(parent.physical, path.basename(relative)),
       ),
     )
     const pathKey = (value: string) =>
@@ -1089,7 +1105,7 @@ export async function createWorkspace(root: string): Promise<Workspace> {
       const { before, created } = state
       const after = normalizeMutationContent(await transform(before))
       validateMutationDocument(after)
-      const prepared = await prepareMutationIndex(relative, after)
+      const prepared = await prepareMutationIndex(relative, after, state.target)
       const indexTarget = lexicalPath('.silen/ai/index.json')
       const indexExists = await assertNoSymlinkComponents(indexTarget, true)
       const indexBefore = indexExists
