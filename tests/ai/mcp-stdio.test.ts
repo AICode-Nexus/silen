@@ -136,6 +136,37 @@ describe('MCP stdio lifecycle', () => {
   })
 
   it.each(['SIGTERM', 'SIGINT'] as const)(
+    'keeps handling repeated %s signals while shutdown is in progress',
+    async (signal) => {
+      const sigint = process.listenerCount('SIGINT')
+      const sigterm = process.listenerCount('SIGTERM')
+      mocks.connect.mockResolvedValueOnce()
+      let finishClose!: () => void
+      mocks.close.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishClose = () => {
+              mocks.transport?.onclose?.()
+              resolve()
+            }
+          }),
+      )
+      const serving = serveMcp({ workspace: {} as never, allowWrite: false })
+      await vi.waitFor(() => expect(mocks.connect).toHaveBeenCalledOnce())
+
+      expect(process.emit(signal, signal)).toBe(true)
+      await vi.waitFor(() => expect(mocks.close).toHaveBeenCalledOnce())
+      expect(process.emit(signal, signal)).toBe(true)
+      expect(mocks.close).toHaveBeenCalledOnce()
+
+      finishClose()
+      await serving
+      expect(process.listenerCount('SIGINT')).toBe(sigint)
+      expect(process.listenerCount('SIGTERM')).toBe(sigterm)
+    },
+  )
+
+  it.each(['SIGTERM', 'SIGINT'] as const)(
     'closes a real CLI session and exits normally on %s with protocol-clean stdout',
     async (signal) => {
       const child = execa(

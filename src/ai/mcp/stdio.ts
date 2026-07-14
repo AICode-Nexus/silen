@@ -21,16 +21,16 @@ export async function serveMcp(options: CreateMcpOptions): Promise<void> {
     previousOnClose?.()
     resolveClosed()
   }
+  let closing = false
   let closePromise: Promise<void> | undefined
-  const closeServer = (): Promise<void> => {
-    closePromise ??= Promise.resolve().then(() => server.close())
-    return closePromise
-  }
   const close = (): void => {
-    void closeServer().catch(rejectClosed)
+    if (closing) return
+    closing = true
+    closePromise = Promise.resolve().then(() => server.close())
+    void closePromise.catch(rejectClosed)
   }
-  process.once('SIGINT', close)
-  process.once('SIGTERM', close)
+  process.on('SIGINT', close)
+  process.on('SIGTERM', close)
   try {
     await server.connect(transport)
     await closed
