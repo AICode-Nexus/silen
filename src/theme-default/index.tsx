@@ -1,3 +1,4 @@
+import './styles/index.css'
 import type { ReactNode } from 'react'
 
 export function Layout({ children }: { children: ReactNode }): ReactNode {

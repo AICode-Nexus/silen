@@ -111,7 +111,14 @@ describe('virtual modules', () => {
 
   it('resolves and loads exactly the three public virtual IDs', async () => {
     const root = path.resolve('tests/fixtures/ssr')
-    const [plugin] = await silenPlugin(resolvedConfig(root))
+    const plugins = await silenPlugin(resolvedConfig(root))
+    expect(plugins.map((plugin) => plugin.name)).toEqual([
+      '@tailwindcss/vite:scan',
+      '@tailwindcss/vite:generate:serve',
+      '@tailwindcss/vite:generate:build',
+      'silen:core',
+    ])
+    const plugin = plugins.find((candidate) => candidate.name === 'silen:core')
     expect(plugin).toBeDefined()
     if (!plugin || typeof plugin.resolveId !== 'function') {
       throw new TypeError('Expected a virtual-module resolve hook')
@@ -135,6 +142,9 @@ describe('virtual modules', () => {
     expect(load('\0virtual:silen/routes')).toContain("'/guide/'")
     expect(load('\0virtual:silen/config')).toContain('JSON.parse')
     expect(load('\0virtual:silen/theme')).toMatch(/theme-default\/index\.tsx/)
+    expect(load('\0virtual:silen/theme')).toMatch(
+      /^import ".*theme-default\/styles\/index\.css"/,
+    )
     expect(resolveId('virtual:silen/unknown')).toBeUndefined()
     expect(load('\0virtual:silen/unknown')).toBeUndefined()
     expect(resolveId('\0virtual:silen/routes')).toBeUndefined()

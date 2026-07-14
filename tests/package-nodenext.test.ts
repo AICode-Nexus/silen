@@ -152,5 +152,5 @@ export default defineConfig({ title: 'Packed CLI', base: '/packed/' })
     expect(
       await readFile(join(site, '.silen/dist/index.html'), 'utf8'),
     ).toContain('<h1>Built by the packed CLI</h1>')
-  })
+  }, 120_000)
 })

@@ -1,0 +1,28 @@
+:root {
+  color-scheme: light;
+  --silen-background: oklch(1 0 0);
+  --silen-foreground: oklch(0.24 0.01 285);
+  --silen-primary: oklch(0.57 0.19 275);
+  --silen-primary-foreground: oklch(0.99 0 0);
+  --silen-muted: oklch(0.97 0.004 285);
+  --silen-muted-foreground: oklch(0.51 0.012 285);
+  --silen-border: oklch(0.91 0.006 285);
+  --silen-ring: var(--silen-primary);
+  --silen-radius: 0.75rem;
+  --silen-nav-height: 4rem;
+  --silen-sidebar-width: 17rem;
+  --silen-content-width: 45rem;
+  --silen-layout-width: 90rem;
+}
+
+.dark {
+  color-scheme: dark;
+  --silen-background: oklch(0.17 0.008 285);
+  --silen-foreground: oklch(0.92 0.006 285);
+  --silen-primary: oklch(0.72 0.15 275);
+  --silen-primary-foreground: oklch(0.17 0.008 285);
+  --silen-muted: oklch(0.22 0.01 285);
+  --silen-muted-foreground: oklch(0.68 0.012 285);
+  --silen-border: oklch(0.29 0.01 285);
+  --silen-ring: var(--silen-primary);
+}

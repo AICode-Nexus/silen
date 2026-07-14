@@ -88,6 +88,7 @@ describe('published package smoke test', () => {
     expect(files).toContain('package/LICENSE')
     expect(files).toContain('package/dist/node/cli.js')
     expect(files).toContain('package/dist/index.d.ts')
+    expect(files).toContain('package/dist/theme-default/index.css')
     expect(files.some((file) => file.endsWith('.d.ts'))).toBe(true)
     expect(
       files.filter(
@@ -169,6 +170,8 @@ title: Package home
 This page is rendered from a clean external project.
 
 [Read the guide](./guide/)
+
+<div className="bg-background text-foreground">Semantic theme</div>
 `,
       ),
       writeFile(
@@ -232,6 +235,17 @@ The nested route was generated.
     expect(guide).toContain('<h1>External guide</h1>')
     expect(staticAsset).toBe('external-static-asset\n')
     expect(outputFiles.some((file) => file.endsWith('.js'))).toBe(true)
+    const themeCss = (
+      await Promise.all(
+        outputFiles
+          .filter((file) => file.endsWith('.css'))
+          .map((file) => readFile(path.join(output, 'assets', file), 'utf8')),
+      )
+    ).join('\n')
+    expect(themeCss).toContain('--silen-background:')
+    expect(themeCss).toContain('.bg-background')
+    expect(themeCss).not.toContain(packageSource)
+    expect(themeCss).not.toContain('src/theme-default/styles')
     expect((await stat(executable)).isFile()).toBe(true)
   }, 120_000)
 })

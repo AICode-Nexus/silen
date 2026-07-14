@@ -1,3 +1,6 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
 import type { Plugin } from 'vite'
 import type { ResolvedConfig } from '../shared/config.js'
 import { scanRoutes } from './routes.js'
@@ -8,6 +11,25 @@ import {
 } from './virtual.js'
 
 const resolvedPrefix = '\0'
+
+function defaultThemeStylesheet(): string {
+  const sourceExtension = path.extname(fileURLToPath(import.meta.url)) === '.ts'
+  return fileURLToPath(
+    new URL(
+      sourceExtension
+        ? '../theme-default/styles/index.css'
+        : '../theme-default/index.css',
+      import.meta.url,
+    ),
+  )
+}
+
+function viteImportPath(file: string): string {
+  const normalized = file.replaceAll('\\', '/')
+  return /^[A-Za-z]:\//.test(normalized) || normalized.startsWith('//')
+    ? `/@fs/${normalized}`
+    : normalized
+}
 
 function moduleName(id: string): keyof VirtualModules | undefined {
   const publicId = id.startsWith(resolvedPrefix) ? id.slice(1) : id
@@ -33,8 +55,13 @@ export async function silenPlugin(
     config,
     publicConfigOnly: options.publicConfigOnly ?? false,
   })
+  modules.theme = [
+    `import ${JSON.stringify(viteImportPath(defaultThemeStylesheet()))}`,
+    modules.theme,
+  ].join('\n')
 
   return [
+    ...tailwindcss(),
     {
       name: 'silen:core',
       resolveId(id) {
