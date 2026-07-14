@@ -29,6 +29,11 @@ import {
   type RenderAssets,
 } from './render.js'
 import { scanRoutes } from './routes.js'
+import {
+  createPageSearchDocuments,
+  createSearchIndex,
+  serializeSearchIndex,
+} from './search.js'
 
 export interface BuildRoute {
   path: string
@@ -528,6 +533,26 @@ async function renderRoutes(
   }
 }
 
+async function emitSearchIndex(
+  config: ResolvedConfig,
+  pages: readonly CompiledPage[],
+  outDir: string,
+): Promise<void> {
+  if (config.themeConfig.search === false) return
+
+  const destination = path.join(outDir, 'search-index.json')
+  const temporary = path.join(outDir, `.search-index-${randomUUID()}.tmp`)
+  const serialized = serializeSearchIndex(
+    createSearchIndex(createPageSearchDocuments(pages)),
+  )
+  try {
+    await writeFile(temporary, serialized, 'utf8')
+    await rename(temporary, destination)
+  } finally {
+    await rm(temporary, { force: true })
+  }
+}
+
 async function renameExisting(
   source: string,
   destination: string,
@@ -586,6 +611,7 @@ export async function build(root: string): Promise<BuildResult> {
       loadRenderer(ssrEntry, routes),
     ])
     await renderRoutes(config, routeOutputs, renderer, manifest, stagedOutDir)
+    await emitSearchIndex(config, pages, stagedOutDir)
     await rm(path.join(stagedOutDir, '.vite'), { force: true, recursive: true })
     await installOutput(stagedOutDir, config.outDir, backupDir)
     installed = true
