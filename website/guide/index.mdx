@@ -1,0 +1,55 @@
+---
+title: Get started
+description: Create and publish your first Silen documentation site.
+---
+
+# Get started
+
+Silen turns a folder of Markdown and MDX files into a complete static website.
+It uses React for the component model, Vite for the development and build
+pipeline, and MDX for content that can grow beyond plain Markdown.
+
+## Install
+
+Use Node.js 20.19 or newer and add Silen to your project:
+
+```sh
+pnpm add -D silen
+```
+
+## Create the site
+
+Add `docs/.silen/config.ts`:
+
+```ts
+import { defineConfig } from 'silen'
+
+export default defineConfig({
+  title: 'My documentation',
+})
+```
+
+Then add `docs/index.mdx`:
+
+```mdx
+# Hello, Silen
+
+Your documentation starts here.
+```
+
+## Develop and build
+
+```sh
+pnpm silen dev docs
+pnpm silen build docs
+pnpm silen preview docs
+```
+
+The production output is written to `docs/.silen/dist` by default. Configure a
+`base` when the site is hosted below a subpath, such as GitHub Pages project
+sites.
+
+## Next step
+
+Continue with [AI-ready documentation](/ai/) or inspect the
+[source repository](https://github.com/AICode-Nexus/silen).

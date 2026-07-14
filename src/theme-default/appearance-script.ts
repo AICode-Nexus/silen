@@ -1,0 +1,1 @@
+export const appearanceScript = `(function(){var e=document.documentElement,v='system',d=false;try{var s=localStorage.getItem('silen-theme');if(s==='light'||s==='dark'||s==='system')v=s}catch(_){}try{d=v==='dark'||(v==='system'&&matchMedia('(prefers-color-scheme: dark)').matches)}catch(_){d=v==='dark'}e.classList.toggle('dark',d);e.style.colorScheme=d?'dark':'light'})()`

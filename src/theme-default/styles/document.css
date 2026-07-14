@@ -1,0 +1,153 @@
+.silen-doc,
+.silen-page {
+  line-height: 1.75;
+}
+
+.silen-doc :where(h1, h2, h3, h4),
+.silen-page :where(h1, h2, h3, h4) {
+  color: var(--silen-foreground);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  scroll-margin-top: calc(var(--silen-nav-height) + 1.5rem);
+}
+
+.silen-doc h1,
+.silen-page h1 {
+  margin-bottom: 1.5rem;
+  font-size: clamp(2rem, 5vw, 2.5rem);
+}
+
+.silen-doc h2,
+.silen-page h2 {
+  margin-top: 2.75rem;
+  margin-bottom: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--silen-border);
+  font-size: 1.5rem;
+}
+
+.silen-doc h3,
+.silen-page h3 {
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+}
+
+.silen-doc :where(p, ul, ol, blockquote),
+.silen-page :where(p, ul, ol, blockquote) {
+  margin-block: 1rem;
+}
+
+.silen-doc :where(ul, ol),
+.silen-page :where(ul, ol) {
+  padding-left: 1.5rem;
+}
+
+.silen-doc ul,
+.silen-page ul {
+  list-style: disc;
+}
+
+.silen-doc ol,
+.silen-page ol {
+  list-style: decimal;
+}
+
+.silen-doc a:not([data-slot]),
+.silen-page a:not([data-slot]) {
+  color: var(--silen-primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.silen-doc :not(pre) > code,
+.silen-page :not(pre) > code {
+  border: 1px solid var(--silen-border);
+  border-radius: 0.35rem;
+  background: var(--silen-muted);
+  padding: 0.1rem 0.35rem;
+  font-size: 0.875em;
+}
+
+.silen-doc blockquote,
+.silen-page blockquote {
+  border-left: 0.25rem solid var(--silen-border);
+  padding-left: 1rem;
+  color: var(--silen-muted-foreground);
+}
+
+.silen-code-block {
+  margin-block: 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--silen-border);
+  border-radius: var(--silen-radius);
+  background: var(--silen-muted);
+}
+
+.silen-code-toolbar {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--silen-border);
+  padding-inline: 0.75rem;
+}
+
+.silen-code-language {
+  overflow: hidden;
+  color: var(--silen-muted-foreground);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.silen-code-copy {
+  border-radius: 0.375rem;
+  padding: 0.3rem 0.5rem;
+  color: var(--silen-muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.silen-code-copy:hover {
+  background: var(--silen-background);
+  color: var(--silen-foreground);
+}
+
+.silen-code-copy:focus-visible {
+  outline: 2px solid var(--silen-ring);
+  outline-offset: 2px;
+}
+
+.silen-code-block pre {
+  margin: 0;
+  overflow-x: auto;
+  border-radius: 0;
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.dark .silen-code-block .shiki,
+.dark .silen-code-block .shiki span {
+  background-color: var(--shiki-dark-bg) !important;
+  color: var(--shiki-dark) !important;
+}
+
+.silen-pager {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 3.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--silen-border);
+}
+
+@media (max-width: 39.999rem) {
+  .silen-pager {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,49 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/inter';
+@import './tokens.css';
+@import './document.css';
+@source "../**/*.{ts,tsx}";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--silen-background);
+  --color-foreground: var(--silen-foreground);
+  --color-card: var(--silen-card);
+  --color-card-foreground: var(--silen-card-foreground);
+  --color-primary: var(--silen-primary);
+  --color-primary-foreground: var(--silen-primary-foreground);
+  --color-secondary: var(--silen-secondary);
+  --color-secondary-foreground: var(--silen-secondary-foreground);
+  --color-muted: var(--silen-muted);
+  --color-muted-foreground: var(--silen-muted-foreground);
+  --color-popover: var(--silen-popover);
+  --color-popover-foreground: var(--silen-popover-foreground);
+  --color-accent: var(--silen-accent);
+  --color-accent-foreground: var(--silen-accent-foreground);
+  --color-destructive: var(--silen-destructive);
+  --color-border: var(--silen-border);
+  --color-input: var(--silen-input);
+  --color-ring: var(--silen-ring);
+  --radius-sm: calc(var(--silen-radius) - 0.25rem);
+  --radius-md: calc(var(--silen-radius) - 0.125rem);
+  --radius-lg: var(--silen-radius);
+  --radius-xl: calc(var(--silen-radius) + 0.25rem);
+  --spacing-nav: var(--silen-nav-height);
+  --spacing-sidebar: var(--silen-sidebar-width);
+  --spacing-content: var(--silen-content-width);
+  --spacing-layout: var(--silen-layout-width);
+  --font-sans:
+    'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
