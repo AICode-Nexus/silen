@@ -28,6 +28,7 @@ const linkTargets = new Set<ThemeLinkTarget>([
 
 interface SafeDestination {
   readonly external: boolean
+  readonly forceNewContext: boolean
   readonly href: string
   readonly opensNewContext: boolean
 }
@@ -65,6 +66,7 @@ function safeDestination(
   if (classified.kind === 'network-path') {
     return {
       external: true,
+      forceNewContext: true,
       href: classified.value,
       opensNewContext: true,
     }
@@ -73,6 +75,7 @@ function safeDestination(
     return ['http', 'https', 'mailto', 'tel'].includes(classified.scheme)
       ? {
           external: true,
+          forceNewContext: false,
           href: classified.value,
           opensNewContext: ['http', 'https'].includes(classified.scheme),
         }
@@ -80,6 +83,7 @@ function safeDestination(
   }
   return {
     external: false,
+    forceNewContext: false,
     href: resolveThemeLink(classified.value, base),
     opensNewContext: false,
   }
@@ -105,12 +109,17 @@ function safeRel(
   rel: string | undefined,
   target: ThemeLinkTarget | undefined,
 ): string | undefined {
-  const values = new Set((rel ?? '').split(/\s+/).filter(Boolean))
-  if (target === '_blank') {
-    values.add('noopener')
-    values.add('noreferrer')
+  const values = new Map<string, string>()
+  for (const value of (rel ?? '').split(/\s+/).filter(Boolean)) {
+    const normalized = value.toLowerCase()
+    if (target === '_blank' && normalized === 'opener') continue
+    if (!values.has(normalized)) values.set(normalized, value)
   }
-  return values.size > 0 ? [...values].join(' ') : undefined
+  if (target === '_blank') {
+    values.set('noopener', 'noopener')
+    values.set('noreferrer', 'noreferrer')
+  }
+  return values.size > 0 ? [...values.values()].join(' ') : undefined
 }
 
 function HomeLink({
@@ -126,8 +135,9 @@ function HomeLink({
   readonly rel?: string | undefined
   readonly target?: ThemeLinkTarget | undefined
 }): React.JSX.Element {
-  const resolvedTarget =
-    target ?? (destination.opensNewContext ? '_blank' : undefined)
+  const resolvedTarget = destination.forceNewContext
+    ? '_blank'
+    : (target ?? (destination.opensNewContext ? '_blank' : undefined))
   const resolvedRel = safeRel(rel, resolvedTarget)
   if (destination.external) {
     return (

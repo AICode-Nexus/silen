@@ -161,6 +161,111 @@ describe('default content layouts', () => {
     },
   )
 
+  it.each([
+    ['forward slash', '//cdn.example.com/action', '_self'],
+    ['forward slash', '//cdn.example.com/action', '_parent'],
+    ['forward slash', '//cdn.example.com/action', '_top'],
+    ['slash and backslash', '/\\cdn.example.com/action', '_self'],
+    ['slash and backslash', '/\\cdn.example.com/action', '_parent'],
+    ['slash and backslash', '/\\cdn.example.com/action', '_top'],
+  ] as const)(
+    'forces %s network-path actions at %s configured with %s into a safe context',
+    (_, networkPath, configuredTarget) => {
+      render(
+        <TestSiteProvider base="/project/">
+          <HomeLayout
+            hero={{
+              name: 'Explicit network targets',
+              actions: [
+                {
+                  text: 'Network hero action',
+                  link: networkPath,
+                  target: configuredTarget,
+                  rel: 'external opener nofollow NOFOLLOW',
+                },
+              ],
+            }}
+            features={[
+              {
+                title: 'Network target feature',
+                details: 'Cannot weaken network-path isolation.',
+                link: networkPath,
+                linkText: 'Network feature action',
+                target: configuredTarget,
+                rel: 'author opener help HELP',
+              },
+            ]}
+          >
+            Home body
+          </HomeLayout>
+        </TestSiteProvider>,
+      )
+
+      const heroAction = screen.getByRole('link', {
+        name: 'Network hero action',
+      })
+      const featureAction = screen.getByRole('link', {
+        name: 'Network feature action',
+      })
+      expect(heroAction.getAttribute('target')).toBe('_blank')
+      expect(heroAction.getAttribute('rel')?.split(/\s+/).sort()).toEqual([
+        'external',
+        'nofollow',
+        'noopener',
+        'noreferrer',
+      ])
+      expect(featureAction.getAttribute('target')).toBe('_blank')
+      expect(featureAction.getAttribute('rel')?.split(/\s+/).sort()).toEqual([
+        'author',
+        'help',
+        'noopener',
+        'noreferrer',
+      ])
+    },
+  )
+
+  it('preserves configured targets for ordinary local and HTTP actions', () => {
+    render(
+      <TestSiteProvider base="/project/">
+        <HomeLayout
+          hero={{
+            name: 'Ordinary targets',
+            actions: [
+              {
+                text: 'Local parent action',
+                link: '/guide/',
+                target: '_parent',
+                rel: 'bookmark',
+              },
+            ],
+          }}
+          features={[
+            {
+              title: 'HTTP target feature',
+              details: 'Keeps its configured browsing context.',
+              link: 'https://example.com/reference',
+              linkText: 'HTTP top action',
+              target: '_top',
+              rel: 'external',
+            },
+          ]}
+        >
+          Home body
+        </HomeLayout>
+      </TestSiteProvider>,
+    )
+
+    const local = screen.getByRole('link', { name: 'Local parent action' })
+    expect(local.getAttribute('href')).toBe('/project/guide/')
+    expect(local.getAttribute('target')).toBe('_parent')
+    expect(local.getAttribute('rel')).toBe('bookmark')
+
+    const http = screen.getByRole('link', { name: 'HTTP top action' })
+    expect(http.getAttribute('href')).toBe('https://example.com/reference')
+    expect(http.getAttribute('target')).toBe('_top')
+    expect(http.getAttribute('rel')).toBe('external')
+  })
+
   it('continues resolving normal local home destinations against base', () => {
     render(
       <TestSiteProvider base="/project/">
