@@ -29,7 +29,13 @@ const linkTargets = new Set<ThemeLinkTarget>([
 interface SafeDestination {
   readonly external: boolean
   readonly href: string
+  readonly opensNewContext: boolean
 }
+
+type ClassifiedUrl =
+  | { readonly kind: 'local'; readonly value: string }
+  | { readonly kind: 'network-path'; readonly value: string }
+  | { readonly kind: 'scheme'; readonly scheme: string; readonly value: string }
 
 function hasControlCharacter(value: string): boolean {
   return [...value].some((character) => {
@@ -38,36 +44,61 @@ function hasControlCharacter(value: string): boolean {
   })
 }
 
+function classifyUrl(value: string): ClassifiedUrl | undefined {
+  const normalized = value.trim()
+  if (!normalized || hasControlCharacter(normalized)) return undefined
+  if (/^[\\/]{2}/.test(normalized)) {
+    return { kind: 'network-path', value: normalized }
+  }
+  const scheme = /^([a-z][a-z\d+.-]*):/i.exec(normalized)?.[1]?.toLowerCase()
+  return scheme
+    ? { kind: 'scheme', scheme, value: normalized }
+    : { kind: 'local', value: normalized }
+}
+
 function safeDestination(
   link: string,
   base: string,
 ): SafeDestination | undefined {
-  const value = link.trim()
-  if (!value || hasControlCharacter(value)) return undefined
-  if (value.startsWith('//')) return { external: true, href: value }
-  const scheme = /^([a-z][a-z\d+.-]*):/i.exec(value)?.[1]?.toLowerCase()
-  if (scheme) {
-    return ['http', 'https', 'mailto', 'tel'].includes(scheme)
-      ? { external: true, href: value }
+  const classified = classifyUrl(link)
+  if (!classified) return undefined
+  if (classified.kind === 'network-path') {
+    return {
+      external: true,
+      href: classified.value,
+      opensNewContext: true,
+    }
+  }
+  if (classified.kind === 'scheme') {
+    return ['http', 'https', 'mailto', 'tel'].includes(classified.scheme)
+      ? {
+          external: true,
+          href: classified.value,
+          opensNewContext: ['http', 'https'].includes(classified.scheme),
+        }
       : undefined
   }
-  return { external: false, href: resolveThemeLink(value, base) }
+  return {
+    external: false,
+    href: resolveThemeLink(classified.value, base),
+    opensNewContext: false,
+  }
 }
 
 function safeImageSource(src: string, base: string): string | undefined {
-  const value = src.trim()
-  if (!value || hasControlCharacter(value)) return undefined
-  if (value.startsWith('//')) return value
-  const scheme = /^([a-z][a-z\d+.-]*):/i.exec(value)?.[1]?.toLowerCase()
-  if (scheme) {
-    return scheme === 'http' ||
-      scheme === 'https' ||
-      scheme === 'blob' ||
-      (scheme === 'data' && value.toLowerCase().startsWith('data:image/'))
-      ? value
+  const classified = classifyUrl(src)
+  if (!classified) return undefined
+  if (classified.kind === 'network-path') return classified.value
+  if (classified.kind === 'scheme') {
+    return classified.scheme === 'http' ||
+      classified.scheme === 'https' ||
+      classified.scheme === 'blob' ||
+      (classified.scheme === 'data' &&
+        classified.value.toLowerCase().startsWith('data:image/'))
+      ? classified.value
       : undefined
   }
-  return resolveThemeLink(value, base)
+  return resolveThemeLink(classified.value, base)
 }
 
 function safeRel(
@@ -96,10 +127,7 @@ function HomeLink({
   readonly target?: ThemeLinkTarget | undefined
 }): React.JSX.Element {
   const resolvedTarget =
-    target ??
-    (destination.external && /^https?:|^\/\//i.test(destination.href)
-      ? '_blank'
-      : undefined)
+    target ?? (destination.opensNewContext ? '_blank' : undefined)
   const resolvedRel = safeRel(rel, resolvedTarget)
   if (destination.external) {
     return (

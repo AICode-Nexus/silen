@@ -107,6 +107,100 @@ describe('default content layouts', () => {
     expect(screen.getByText('Additional home content')).not.toBeNull()
   })
 
+  it.each([
+    ['forward slash', '//cdn.example.com/home.svg'],
+    ['backslash', '\\\\cdn.example.com/home.svg'],
+    ['forward slash and backslash', '/\\cdn.example.com/home.svg'],
+    ['backslash and forward slash', '\\/cdn.example.com/home.svg'],
+  ])(
+    'treats %s network paths as external actions and images',
+    (_, networkPath) => {
+      render(
+        <TestSiteProvider base="/project/">
+          <HomeLayout
+            hero={{
+              name: 'Network paths',
+              image: { src: networkPath, alt: 'Network image' },
+              actions: [{ text: 'Network action', link: networkPath }],
+            }}
+            features={[
+              {
+                title: 'Network feature',
+                details: 'Uses a browser network-path URL.',
+                link: networkPath,
+                linkText: 'Network feature action',
+              },
+            ]}
+          >
+            Home body
+          </HomeLayout>
+        </TestSiteProvider>,
+      )
+
+      const action = screen.getByRole<HTMLAnchorElement>('link', {
+        name: 'Network action',
+      })
+      const feature = screen.getByRole<HTMLAnchorElement>('link', {
+        name: 'Network feature action',
+      })
+      for (const link of [action, feature]) {
+        expect(link.getAttribute('href')).toBe(networkPath)
+        expect(link.getAttribute('target')).toBe('_blank')
+        expect(link.getAttribute('rel')?.split(/\s+/).sort()).toEqual([
+          'noopener',
+          'noreferrer',
+        ])
+        expect(link.href).toBe('http://cdn.example.com/home.svg')
+      }
+
+      const image = screen.getByRole<HTMLImageElement>('img', {
+        name: 'Network image',
+      })
+      expect(image.getAttribute('src')).toBe(networkPath)
+      expect(image.src).toBe('http://cdn.example.com/home.svg')
+    },
+  )
+
+  it('continues resolving normal local home destinations against base', () => {
+    render(
+      <TestSiteProvider base="/project/">
+        <HomeLayout
+          hero={{
+            name: 'Local paths',
+            image: { src: '/home.svg', alt: 'Local image' },
+            actions: [{ text: 'Local action', link: '/guide/' }],
+          }}
+          features={[
+            {
+              title: 'Local feature',
+              details: 'Uses a local URL.',
+              link: 'reference/',
+              linkText: 'Local feature action',
+            },
+          ]}
+        >
+          Home body
+        </HomeLayout>
+      </TestSiteProvider>,
+    )
+
+    const action = screen.getByRole('link', { name: 'Local action' })
+    expect(action.getAttribute('href')).toBe('/project/guide/')
+    expect(action.hasAttribute('target')).toBe(false)
+    expect(action.hasAttribute('rel')).toBe(false)
+
+    const feature = screen.getByRole('link', {
+      name: 'Local feature action',
+    })
+    expect(feature.getAttribute('href')).toBe('/project/reference/')
+    expect(feature.hasAttribute('target')).toBe(false)
+    expect(feature.hasAttribute('rel')).toBe(false)
+
+    expect(
+      screen.getByRole('img', { name: 'Local image' }).getAttribute('src'),
+    ).toBe('/project/home.svg')
+  })
+
   it('reads typed home content from public page data', () => {
     const themeConfig: ThemeConfig = {
       home: {
