@@ -53,7 +53,7 @@ describe('published package smoke test', () => {
       ),
     ])
 
-    const packageBuild = await execa('corepack', ['pnpm', 'build'], {
+    const packageBuild = await execa('pnpm', ['build'], {
       cwd: packageSource,
       reject: false,
       all: true,
@@ -65,8 +65,8 @@ describe('published package smoke test', () => {
     expect(packageBuild.exitCode, packageBuild.all).toBe(0)
 
     const pack = await execa(
-      'corepack',
-      ['pnpm', 'pack', '--pack-destination', temporaryDirectory],
+      'pnpm',
+      ['pack', '--pack-destination', temporaryDirectory],
       { cwd: packageSource, reject: false, all: true },
     )
     expect(pack.exitCode, pack.all).toBe(0)
@@ -236,8 +236,8 @@ The nested route was generated.
     ])
 
     const install = await execa(
-      'corepack',
-      ['pnpm', 'install', '--ignore-scripts', '--frozen-lockfile=false'],
+      'pnpm',
+      ['install', '--ignore-scripts', '--frozen-lockfile=false'],
       { cwd: consumer, reject: false, all: true },
     )
     expect(install.exitCode, install.all).toBe(0)

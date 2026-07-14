@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { request } from 'node:http'
 import {
   mkdir,
@@ -43,34 +44,42 @@ function rawStatus(url: URL, requestPath: string): Promise<number> {
 function expectViteHmrConnection(url: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const websocketUrl = new URL(url)
-    websocketUrl.protocol = websocketUrl.protocol === 'https:' ? 'wss:' : 'ws:'
-    const socket = new WebSocket(websocketUrl, 'vite-hmr')
+    const clientRequest = request({
+      headers: {
+        Connection: 'Upgrade',
+        'Sec-WebSocket-Key': randomBytes(16).toString('base64'),
+        'Sec-WebSocket-Protocol': 'vite-hmr',
+        'Sec-WebSocket-Version': '13',
+        Upgrade: 'websocket',
+      },
+      host: websocketUrl.hostname,
+      path: `${websocketUrl.pathname}${websocketUrl.search}`,
+      port: websocketUrl.port,
+    })
     const timeout = setTimeout(() => {
-      socket.close()
+      clientRequest.destroy()
       reject(new Error(`Timed out connecting to Vite HMR at ${websocketUrl}`))
     }, 5_000)
 
-    socket.addEventListener('message', (event) => {
-      let payload: unknown
-      try {
-        payload = JSON.parse(String(event.data))
-      } catch {
-        return
-      }
-      if (
-        typeof payload === 'object' &&
-        payload !== null &&
-        (payload as { type?: unknown }).type === 'connected'
-      ) {
-        clearTimeout(timeout)
-        socket.close()
-        resolve()
-      }
-    })
-    socket.addEventListener('error', () => {
+    clientRequest.on('upgrade', (_response, socket) => {
       clearTimeout(timeout)
-      reject(new Error(`Failed connecting to Vite HMR at ${websocketUrl}`))
+      socket.destroy()
+      resolve()
     })
+    clientRequest.on('response', (response) => {
+      clearTimeout(timeout)
+      response.resume()
+      reject(
+        new Error(
+          `Vite HMR rejected the WebSocket upgrade with ${response.statusCode ?? 0}`,
+        ),
+      )
+    })
+    clientRequest.on('error', (error) => {
+      clearTimeout(timeout)
+      reject(error)
+    })
+    clientRequest.end()
   })
 }
 

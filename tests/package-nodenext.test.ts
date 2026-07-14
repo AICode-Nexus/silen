@@ -26,7 +26,7 @@ describe('packed package declarations', () => {
     const temporaryDirectory = await mkdtemp(join(tmpdir(), 'silen-nodenext-'))
     temporaryDirectories.push(temporaryDirectory)
 
-    const build = await execa('corepack', ['pnpm', 'build'], {
+    const build = await execa('pnpm', ['build'], {
       cwd: process.cwd(),
       reject: false,
       all: true,
@@ -34,8 +34,8 @@ describe('packed package declarations', () => {
     expect(build.exitCode, build.all).toBe(0)
 
     const pack = await execa(
-      'corepack',
-      ['pnpm', 'pack', '--pack-destination', temporaryDirectory],
+      'pnpm',
+      ['pack', '--pack-destination', temporaryDirectory],
       { cwd: process.cwd(), reject: false, all: true },
     )
     expect(pack.exitCode, pack.all).toBe(0)
@@ -124,15 +124,15 @@ void aiExports
     await writeFile(join(consumerDirectory, 'page.mdx'), '# Packed consumer')
 
     const install = await execa(
-      'corepack',
-      ['pnpm', 'install', '--offline', '--ignore-scripts'],
+      'pnpm',
+      ['install', '--offline', '--ignore-scripts'],
       { cwd: consumerDirectory, reject: false, all: true },
     )
     expect(install.exitCode, install.all).toBe(0)
 
     const typecheck = await execa(
-      'corepack',
-      ['pnpm', 'exec', 'tsc', '-p', join(consumerDirectory, 'tsconfig.json')],
+      'pnpm',
+      ['exec', 'tsc', '-p', join(consumerDirectory, 'tsconfig.json')],
       { cwd: process.cwd(), reject: false, all: true },
     )
 
