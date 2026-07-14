@@ -1,4 +1,11 @@
-import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -47,7 +54,11 @@ describe('packed package declarations', () => {
       JSON.stringify({
         private: true,
         type: 'module',
-        dependencies: { silen: `file:${archivePath}` },
+        dependencies: {
+          react: '19.2.7',
+          'react-dom': '19.2.7',
+          silen: `file:${archivePath}`,
+        },
         devDependencies: { '@types/react': '19.2.17' },
       }),
     )
@@ -119,5 +130,27 @@ void clientExports
     )
 
     expect(typecheck.exitCode, typecheck.all).toBe(0)
+
+    const site = join(consumerDirectory, 'site')
+    await mkdir(join(site, '.silen'), { recursive: true })
+    await Promise.all([
+      writeFile(
+        join(site, '.silen/config.ts'),
+        `import { defineConfig } from 'silen'
+export default defineConfig({ title: 'Packed CLI', base: '/packed/' })
+`,
+      ),
+      writeFile(join(site, 'index.mdx'), '# Built by the packed CLI\n'),
+    ])
+    const executable = join(consumerDirectory, 'node_modules/.bin/silen')
+    const packedBuild = await execa(executable, ['build', site], {
+      cwd: consumerDirectory,
+      reject: false,
+      all: true,
+    })
+    expect(packedBuild.exitCode, packedBuild.all).toBe(0)
+    expect(
+      await readFile(join(site, '.silen/dist/index.html'), 'utf8'),
+    ).toContain('<h1>Built by the packed CLI</h1>')
   })
 })

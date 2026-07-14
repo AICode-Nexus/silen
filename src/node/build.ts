@@ -382,18 +382,30 @@ function chunkSourceFile(
   return path.isAbsolute(source) ? source : path.resolve(root, source)
 }
 
-function findRouteChunk(
+async function canonicalSourceFile(file: string): Promise<string> {
+  try {
+    return normalizedFile(await realpath(file))
+  } catch {
+    return normalizedFile(path.resolve(file))
+  }
+}
+
+async function findRouteChunk(
   manifest: Manifest,
   root: string,
   route: RouteRecord,
-): [string, ManifestChunk] | undefined {
-  const routeFile = normalizedFile(path.resolve(route.file))
-  return Object.entries(manifest).find(([key, chunk]) => {
+): Promise<[string, ManifestChunk] | undefined> {
+  const routeFile = await canonicalSourceFile(route.file)
+  for (const [key, chunk] of Object.entries(manifest)) {
     const source = chunkSourceFile(root, key, chunk)
-    return (
-      source !== undefined && normalizedFile(path.resolve(source)) === routeFile
-    )
-  })
+    if (
+      source !== undefined &&
+      (await canonicalSourceFile(source)) === routeFile
+    ) {
+      return [key, chunk]
+    }
+  }
+  return undefined
 }
 
 function preloadType(file: string): AssetPreload['as'] | undefined {
@@ -404,11 +416,11 @@ function preloadType(file: string): AssetPreload['as'] | undefined {
   return undefined
 }
 
-function manifestAssets(
+async function manifestAssets(
   manifest: Manifest,
   root: string,
   route: RouteRecord,
-): RenderAssets {
+): Promise<RenderAssets> {
   const entries = Object.entries(manifest).filter(
     ([, chunk]) => chunk.isEntry === true,
   )
@@ -418,7 +430,7 @@ function manifestAssets(
     )
   }
   const [entryKey, entry] = entries[0]!
-  const routeEntry = findRouteChunk(manifest, root, route)
+  const routeEntry = await findRouteChunk(manifest, root, route)
   if (!routeEntry) {
     throw new Error(
       `Silen client manifest resolution failed for ${routeContext(route)}: no chunk represents ${route.relativeFile}`,
@@ -496,7 +508,7 @@ async function renderRoutes(
       if (rendered.status !== 200) {
         throw new Error(`canonical route rendered status ${rendered.status}`)
       }
-      const assets = manifestAssets(manifest, config.root, route)
+      const assets = await manifestAssets(manifest, config.root, route)
       const document = renderDocument(rendered, {
         ...assets,
         base: config.base,
