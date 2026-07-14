@@ -69,6 +69,85 @@ it('suffixes duplicate headings deterministically', () => {
   ])
 })
 
+it('keeps generated IDs unique when authored slugs overlap duplicate suffixes', () => {
+  const page = {
+    route: '/guide/',
+    title: 'Guide',
+    markdown:
+      '# Guide\n\n## A\n\nFirst.\n\n## A-1\n\nSecond.\n\n## A\n\nThird.',
+  }
+
+  const first = createAiChunks(page)
+  const second = createAiChunks(page)
+  const ids = first.map((chunk) => chunk.id)
+
+  expect(first).toEqual(second)
+  expect(ids).toEqual(['/guide/', '/guide/#a', '/guide/#a-1', '/guide/#a-2'])
+  expect(new Set(ids).size).toBe(ids.length)
+})
+
+it('keeps H4 through H6 headings searchable without creating new chunks', () => {
+  const chunks = createAiChunks({
+    route: '/guide/',
+    title: 'Guide',
+    markdown: [
+      '# Guide',
+      '',
+      '## Install',
+      '',
+      'Intro.',
+      '',
+      '#### Linux',
+      '',
+      'Linux notes.',
+      '',
+      '##### Package manager',
+      '',
+      'Choose pnpm.',
+      '',
+      '###### CI',
+      '',
+      'Run builds.',
+      '',
+      '### Advanced',
+      '',
+      'Advanced notes.',
+    ].join('\n'),
+  })
+
+  expect(chunks).toHaveLength(3)
+  expect(chunks[1]).toMatchObject({
+    headingPath: ['Install'],
+    text: 'Intro. Linux Linux notes. Package manager Choose pnpm. CI Run builds.',
+  })
+  expect(chunks[2]).toMatchObject({
+    headingPath: ['Install', 'Advanced'],
+    text: 'Advanced notes.',
+  })
+})
+
+it('resolves reference-style links from definitions into their section chunk', () => {
+  const chunks = createAiChunks({
+    route: '/guide/',
+    title: 'Guide',
+    markdown: [
+      '# Guide',
+      '',
+      '## Install',
+      '',
+      'Read the [setup notes][setup].',
+      '',
+      '## Next',
+      '',
+      'Continue reading.',
+      '',
+      '[setup]: /setup/ "Setup"',
+    ].join('\n'),
+  })
+
+  expect(chunks[1]?.links).toEqual(['/setup/'])
+})
+
 it.each([{ draft: true as const }, { ai: false as const }])(
   'creates no chunks for an excluded page: %o',
   (control) => {

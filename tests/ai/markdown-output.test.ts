@@ -59,3 +59,22 @@ it('normalizes identical pages to byte-identical LF-terminated Markdown', () => 
   expect(first.endsWith('\n')).toBe(true)
   expect(first.endsWith('\n\n')).toBe(false)
 })
+
+it('preserves valid GFM tables without leading or trailing pipes', () => {
+  const output = serializePageMarkdown({
+    route: '/guide/',
+    source: [
+      '# Guide',
+      '',
+      'Command | Purpose',
+      '--- | ---',
+      '`pnpm` | Install',
+    ].join('\n'),
+    frontmatter: { title: 'Guide' },
+  } as never)
+
+  expect(output).toContain(
+    ['Command | Purpose', '--- | ---', '`pnpm` | Install'].join('\n'),
+  )
+  expect(output).not.toContain('\\--- | ---')
+})

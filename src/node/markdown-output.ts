@@ -44,15 +44,22 @@ function sourceForNode(node: MarkdownAstNode, source: string): string {
 
 function isGfmTable(value: string): boolean {
   const lines = value.split(/\r?\n/).map((line) => line.trim())
-  if (lines.length < 2 || lines.some((line) => !/^\|.*\|$/.test(line))) {
+  if (lines.length < 2 || lines.some((line) => !line.includes('|'))) {
     return false
   }
-  const separators = lines[1]
-    ?.slice(1, -1)
-    .split('|')
-    .map((cell) => cell.trim())
+  const rows = lines.map((line) =>
+    line
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((cell) => cell.trim()),
+  )
+  const header = rows[0]
+  const separators = rows[1]
   return Boolean(
-    separators?.length && separators.every((cell) => /^:?-{3,}:?$/.test(cell)),
+    header?.length &&
+    separators?.length === header.length &&
+    separators.every((cell) => /^:?-{3,}:?$/.test(cell)),
   )
 }
 

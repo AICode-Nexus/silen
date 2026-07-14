@@ -8,6 +8,7 @@ interface ChunkAstNode {
   alt?: string
   children?: ChunkAstNode[]
   depth?: number
+  identifier?: string
   lang?: string | null
   url?: string
   value?: string
@@ -53,7 +54,11 @@ function walk(
 function chunkText(nodes: readonly ChunkAstNode[]): string {
   return normalizeText(
     nodes
-      .filter((node) => node.type !== 'heading')
+      .filter(
+        (node) =>
+          node.type !== 'heading' ||
+          (typeof node.depth === 'number' && node.depth >= 4),
+      )
       .map(nodeText)
       .filter(Boolean)
       .join(' '),
@@ -72,12 +77,34 @@ function chunkCode(
   return code
 }
 
-function chunkLinks(nodes: readonly ChunkAstNode[]): string[] {
+function chunkLinks(
+  nodes: readonly ChunkAstNode[],
+  definitions: ReadonlyMap<string, string>,
+): string[] {
   const links: string[] = []
   walk(nodes, (node) => {
     if (node.type === 'link' && node.url) links.push(node.url)
+    if (node.type === 'linkReference' && node.identifier) {
+      const url = definitions.get(node.identifier)
+      if (url) links.push(url)
+    }
   })
   return links
+}
+
+function linkDefinitions(nodes: readonly ChunkAstNode[]): Map<string, string> {
+  const definitions = new Map<string, string>()
+  walk(nodes, (node) => {
+    if (
+      node.type === 'definition' &&
+      node.identifier &&
+      node.url &&
+      !definitions.has(node.identifier)
+    ) {
+      definitions.set(node.identifier, node.url)
+    }
+  })
+  return definitions
 }
 
 function slug(value: string): string {
@@ -87,26 +114,27 @@ function slug(value: string): string {
 function uniqueHeadingId(
   route: string,
   segments: readonly string[],
-  seen: Map<string, number>,
+  usedIds: Set<string>,
 ): { id: string; segments: string[] } {
-  const baseId = `${route}#${segments.join('/')}`
-  const duplicate = seen.get(baseId) ?? 0
-  seen.set(baseId, duplicate + 1)
-  if (duplicate === 0) return { id: baseId, segments: [...segments] }
-
   const uniqueSegments = [...segments]
   const last = uniqueSegments.at(-1) ?? 'section'
-  uniqueSegments[uniqueSegments.length - 1] = `${last}-${duplicate}`
-  return {
-    id: `${route}#${uniqueSegments.join('/')}`,
-    segments: uniqueSegments,
+  let duplicate = 0
+  let id = `${route}#${uniqueSegments.join('/')}`
+
+  while (usedIds.has(id)) {
+    duplicate += 1
+    uniqueSegments[uniqueSegments.length - 1] = `${last}-${duplicate}`
+    id = `${route}#${uniqueSegments.join('/')}`
   }
+  usedIds.add(id)
+  return { id, segments: uniqueSegments }
 }
 
 function finalizeChunk(
   page: AiPage,
   chunk: PendingChunk,
   order: number,
+  definitions: ReadonlyMap<string, string>,
 ): AiChunk {
   return {
     id: chunk.id,
@@ -115,7 +143,7 @@ function finalizeChunk(
     headingPath: chunk.headingPath,
     text: chunkText(chunk.nodes),
     code: chunkCode(chunk.nodes),
-    links: chunkLinks(chunk.nodes),
+    links: chunkLinks(chunk.nodes, definitions),
     order,
   }
 }
@@ -125,7 +153,8 @@ export function createAiChunks(page: AiPage): AiChunk[] {
 
   const tree = markdownParser.parse(page.markdown) as unknown as ChunkAstNode
   const chunks: PendingChunk[] = []
-  const seenIds = new Map<string, number>()
+  const definitions = linkDefinitions(tree.children ?? [])
+  const usedIds = new Set([page.route])
   let activeHeadingTitles: string[] = []
   let activeHeadingSlugs: string[] = []
   let current: PendingChunk = {
@@ -146,7 +175,7 @@ export function createAiChunks(page: AiPage): AiChunk[] {
         activeHeadingTitles = [...activeHeadingTitles.slice(0, 1), title]
         activeHeadingSlugs = [...activeHeadingSlugs.slice(0, 1), segment]
       }
-      const unique = uniqueHeadingId(page.route, activeHeadingSlugs, seenIds)
+      const unique = uniqueHeadingId(page.route, activeHeadingSlugs, usedIds)
       activeHeadingSlugs = unique.segments
       current = {
         id: unique.id,
@@ -159,5 +188,7 @@ export function createAiChunks(page: AiPage): AiChunk[] {
   }
   chunks.push(current)
 
-  return chunks.map((chunk, order) => finalizeChunk(page, chunk, order))
+  return chunks.map((chunk, order) =>
+    finalizeChunk(page, chunk, order, definitions),
+  )
 }
