@@ -1,4 +1,4 @@
-import { act, useState } from 'react'
+import { act, StrictMode, useState } from 'react'
 import {
   cleanup,
   fireEvent,
@@ -233,6 +233,24 @@ describe('SearchDialog', () => {
 })
 
 describe('lazy search launcher', () => {
+  it('opens the dynamically loaded dialog after a StrictMode effect replay', async () => {
+    const user = userEvent.setup()
+    render(
+      <StrictMode>
+        <Providers>
+          <Nav />
+        </Providers>
+      </StrictMode>,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Search documentation' }),
+    )
+    expect(
+      await screen.findByRole('dialog', { name: 'Search documentation' }),
+    ).not.toBeNull()
+  })
+
   it('opens from the button and shortcut, restores focus, and installs one listener', async () => {
     const user = userEvent.setup()
     const add = vi.spyOn(window, 'addEventListener')

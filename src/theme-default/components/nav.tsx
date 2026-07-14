@@ -39,6 +39,7 @@ function SearchLauncher(): React.JSX.Element {
   const returnFocus = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
+    mounted.current = true
     return () => {
       mounted.current = false
     }

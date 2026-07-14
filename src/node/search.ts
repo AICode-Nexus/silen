@@ -3,7 +3,8 @@ import MiniSearch, {
   type Options,
   type SearchResult as MiniSearchResult,
 } from 'minisearch'
-import matter from 'gray-matter'
+import { createProcessor } from '@mdx-js/mdx'
+import remarkFrontmatter from 'remark-frontmatter'
 import type { CompiledPage } from './mdx.js'
 
 export interface SearchDocument {
@@ -236,78 +237,148 @@ export function serializeSearchIndex(index: SerializedSearchIndex): string {
     .replaceAll('\u2029', '\\u2029')
 }
 
-function stripMdxEsm(content: string): string {
-  const output: string[] = []
-  let fence: string | undefined
-  let skippingEsm = false
-
-  for (const line of content.split(/\r?\n/)) {
-    const fenceMatch = /^\s*(```+|~~~+)/.exec(line)?.[1]
-    if (fenceMatch) {
-      if (fence === undefined) fence = fenceMatch[0]
-      else if (fenceMatch[0] === fence) fence = undefined
-      output.push(line)
-      continue
-    }
-    if (fence !== undefined) {
-      output.push(line)
-      continue
-    }
-
-    if (skippingEsm) {
-      if (line.trim() === '') {
-        skippingEsm = false
-        output.push('')
-      }
-      continue
-    }
-    if (/^\s*(?:import|export)\b/.test(line)) {
-      skippingEsm = !/[;}]\s*$/.test(line)
-      continue
-    }
-    output.push(line)
-  }
-  return output.join('\n')
+interface SearchAstNode {
+  readonly type: string
+  readonly alt?: unknown
+  readonly children?: readonly unknown[]
+  readonly depth?: unknown
+  readonly name?: unknown
+  readonly value?: unknown
 }
 
-function decodePlainTextEntities(value: string): string {
-  return value
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&quot;', '"')
-    .replaceAll('&#39;', "'")
-    .replaceAll('&amp;', '&')
+interface ExtractedSearchHeading {
+  readonly depth: number
+  readonly title: string
+}
+
+interface ExtractedSearchContent {
+  readonly text: string
+  readonly headings: readonly ExtractedSearchHeading[]
+}
+
+const searchTextParser = createProcessor({
+  remarkPlugins: [[remarkFrontmatter, ['yaml', 'toml']]],
+})
+
+function isSearchAstNode(value: unknown): value is SearchAstNode {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    typeof value.type === 'string'
+  )
+}
+
+function childText(node: SearchAstNode, separator: string): string {
+  return (node.children ?? [])
+    .filter(isSearchAstNode)
+    .map(publicSearchText)
+    .filter(Boolean)
+    .join(separator)
+}
+
+function publicSearchText(node: SearchAstNode): string {
+  switch (node.type) {
+    case 'text':
+      return typeof node.value === 'string' ? node.value : ''
+    case 'inlineCode':
+    case 'code':
+      // Code is rendered public content and intentionally remains searchable.
+      return typeof node.value === 'string' ? node.value : ''
+    case 'image':
+    case 'imageReference':
+      return typeof node.alt === 'string' ? node.alt : ''
+    case 'break':
+      return '\n'
+    case 'emphasis':
+    case 'strong':
+    case 'delete':
+    case 'link':
+    case 'linkReference':
+    case 'paragraph':
+    case 'heading':
+    case 'mdxJsxTextElement':
+      return childText(node, '')
+    case 'mdxJsxFlowElement':
+      if (
+        typeof node.name === 'string' &&
+        /^(?:script|style)$/i.test(node.name)
+      ) {
+        return ''
+      }
+      return childText(node, '\n')
+    case 'root':
+    case 'blockquote':
+    case 'list':
+    case 'listItem':
+    case 'table':
+    case 'tableRow':
+    case 'tableCell':
+      return childText(node, '\n')
+    default:
+      // ESM, frontmatter, expressions, HTML and other metadata are private.
+      return ''
+  }
+}
+
+function collectPublicHeadings(
+  node: SearchAstNode,
+  headings: ExtractedSearchHeading[],
+): void {
+  if (node.type === 'heading' && typeof node.depth === 'number') {
+    const title = normalizedText(publicSearchText(node))
+    if (title) headings.push({ depth: node.depth, title })
+    return
+  }
+  if (
+    node.type === 'mdxJsxFlowElement' &&
+    typeof node.name === 'string' &&
+    /^(?:script|style)$/i.test(node.name)
+  ) {
+    return
+  }
+  if (
+    !['root', 'blockquote', 'list', 'listItem', 'mdxJsxFlowElement'].includes(
+      node.type,
+    )
+  ) {
+    return
+  }
+  for (const child of node.children ?? []) {
+    if (isSearchAstNode(child)) collectPublicHeadings(child, headings)
+  }
+}
+
+function extractSearchContent(source: string): ExtractedSearchContent {
+  const tree = searchTextParser.parse(source)
+  const headings: ExtractedSearchHeading[] = []
+  collectPublicHeadings(tree, headings)
+  return { text: normalizedText(publicSearchText(tree)), headings }
 }
 
 export function markdownToSearchText(source: string): string {
-  const content = stripMdxEsm(matter(source).content)
-  return normalizedText(
-    decodePlainTextEntities(
-      content
-        .replace(/<!--[^]*?-->/g, ' ')
-        .replace(/^\s*(```+|~~~+).*$/gm, ' ')
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\{[^{}]*}/g, ' ')
-        .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-        .replace(/`([^`]+)`/g, '$1')
-        .replace(/^\s{0,3}#{1,6}\s+/gm, '')
-        .replace(/^\s{0,3}>\s?/gm, '')
-        .replace(/^\s*[-+*]\s+/gm, '')
-        .replace(/^\s*\d+[.)]\s+/gm, '')
-        .replace(/[|*_~]+/g, ' '),
-    ),
-  )
+  return extractSearchContent(source).text
 }
 
 export function createPageSearchDocuments(
   pages: readonly CompiledPage[],
 ): SearchDocument[] {
-  return pages.map((page) => ({
-    id: page.route,
-    title: page.title,
-    route: page.route,
-    headings: page.headings.map((heading) => heading.title),
-    text: markdownToSearchText(page.source),
-  }))
+  return pages.map((page) => {
+    const content = extractSearchContent(page.source)
+    const title = page.frontmatter.title
+    return {
+      id: page.route,
+      title:
+        typeof title === 'string'
+          ? title
+          : (content.headings.find((heading) => heading.depth === 1)?.title ??
+            content.headings[0]?.title ??
+            ''),
+      route: page.route,
+      headings: content.headings
+        .filter((heading) => heading.depth >= 2)
+        .map((heading) => heading.title),
+      text: content.text,
+    }
+  })
 }

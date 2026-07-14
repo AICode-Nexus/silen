@@ -19,6 +19,7 @@ import {
 import { build, type BuildResult } from '../../src/node/build'
 import {
   createSearchIndex,
+  markdownToSearchText,
   querySearchIndex,
   serializeSearchIndex,
   type SearchDocument,
@@ -46,6 +47,49 @@ const documents: SearchDocument[] = [
 ]
 
 describe('local search index', () => {
+  it('extracts only rendered MDX text from adversarial metadata', () => {
+    const text = markdownToSearchText(`---
+title: Public document
+privateToken: /private/frontmatter
+---
+
+import {
+  hiddenTool,
+} from '/private/import/path'
+
+export const hidden = {
+  path: '/private/export/path',
+
+  note: "private export note",
+  template: \`private template value\`,
+  comment: /* private comment value */ true,
+};
+
+# Public heading
+
+Public paragraph with [visible link text](/private/link-target) and \`inlineCode()\`.
+
+- Public list item
+
+<PrivatePanel source="/private/jsx-prop">
+  Visible JSX child prose.
+  {/* /private/jsx-comment */}
+</PrivatePanel>
+
+<script>{\`const secret = '/private/script'\`}</script>
+<style>{\`.secret { background: url('/private/style') }\`}</style>
+
+\`\`\`ts
+const publicExample = 'shown code'
+\`\`\`
+`)
+
+    expect(text).toBe(
+      "Public heading Public paragraph with visible link text and inlineCode(). Public list item Visible JSX child prose. const publicExample = 'shown code'",
+    )
+    expect(text).not.toMatch(/private|hiddenTool|secret/i)
+  })
+
   it('serializes deterministically regardless of document input order', () => {
     const forward = serializeSearchIndex(createSearchIndex(documents))
     const reverse = serializeSearchIndex(
@@ -155,7 +199,27 @@ title: Home </script><script>unsafe()</script>
 privateToken: private-frontmatter-value
 ---
 
-export const secretSource = '/private/source/file'
+import {
+  privateImport,
+} from ${JSON.stringify(path.join(root, 'private-import.ts'))}
+
+export const secretSource = {
+  sourceRoot: ${JSON.stringify(root)},
+
+  file: '/private/source/file',
+  template: \`private-template-value
+## /private/esm-heading
+\`,
+  comment: /* private-comment-value */ true,
+};
+
+<aside data-private-path="/private/jsx-attribute">
+  Public JSX child content.
+  {/* private-jsx-comment-value */}
+</aside>
+
+<script>{\`private-script-value\`}</script>
+<style>{\`private-style-value\`}</style>
 
 # Search home
 
@@ -174,6 +238,10 @@ title: Configuration guide
 
 Choose public project settings.
 `,
+      ),
+      writeFile(
+        path.join(root, 'private-import.ts'),
+        "export const privateImport = 'private-module-value'\n",
       ),
     ])
     result = await build(root)
@@ -196,6 +264,14 @@ Choose public project settings.
     expect(serialized).not.toContain('</script>')
     expect(serialized).not.toContain(root)
     expect(serialized).not.toContain('/private/source/file')
+    expect(serialized).not.toContain('private-import.ts')
+    expect(serialized).not.toContain('private-template-value')
+    expect(serialized).not.toContain('/private/esm-heading')
+    expect(serialized).not.toContain('private-comment-value')
+    expect(serialized).not.toContain('/private/jsx-attribute')
+    expect(serialized).not.toContain('private-jsx-comment-value')
+    expect(serialized).not.toContain('private-script-value')
+    expect(serialized).not.toContain('private-style-value')
     expect(serialized).not.toContain('private-config-value')
     expect(serialized).not.toContain('private-frontmatter-value')
   })
