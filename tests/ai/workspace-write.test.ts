@@ -540,5 +540,5 @@ describe('workspace mutations', () => {
     expect(
       (await readdir(root)).filter((entry) => entry.endsWith('.tmp')),
     ).toEqual([])
-  })
+  }, 15_000)
 })

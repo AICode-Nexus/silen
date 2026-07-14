@@ -9,7 +9,7 @@ async function runLintAgainst(source: string) {
   await mkdir(join(process.cwd(), 'tests'), { recursive: true })
   await writeFile(fixturePath, source)
 
-  return execa('corepack', ['pnpm', 'exec', 'eslint', fixturePath], {
+  return execa('pnpm', ['exec', 'eslint', fixturePath], {
     cwd: process.cwd(),
     reject: false,
     all: true,
