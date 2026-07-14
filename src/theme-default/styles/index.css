@@ -3,7 +3,7 @@
 @import '@fontsource-variable/inter';
 @import './tokens.css';
 @import './document.css';
-@source "../**/*.{ts,tsx}";
+@source "../**/*.{js,jsx,ts,tsx}";
 
 @custom-variant dark (&:is(.dark *));
 
