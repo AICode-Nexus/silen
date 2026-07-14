@@ -15,6 +15,12 @@ const config: ResolvedConfig = {
   outDir: path.join(fixtureRoot, '.silen/dist'),
   onBrokenLinks: 'error',
   themeConfig: {},
+  ai: {
+    llmsTxt: true,
+    llmsFullTxt: true,
+    markdownRoutes: true,
+    index: true,
+  },
   command: 'build',
   root: fixtureRoot,
   configFile: path.join(fixtureRoot, '.silen/config.ts'),

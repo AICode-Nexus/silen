@@ -79,6 +79,14 @@ const schema = z
     outDir: z.string().optional(),
     onBrokenLinks: z.enum(['error', 'warn', 'ignore']).default('error'),
     themeConfig: z.record(z.string(), z.json()).default({}),
+    ai: z
+      .object({
+        llmsTxt: z.boolean().default(true),
+        llmsFullTxt: z.boolean().default(true),
+        markdownRoutes: z.boolean().default(true),
+        index: z.boolean().default(true),
+      })
+      .prefault({}),
   })
   .passthrough()
 

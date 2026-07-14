@@ -54,6 +54,12 @@ describe('resolveConfig', () => {
       outDir: path.join(root, '.silen/dist'),
       onBrokenLinks: 'error',
       themeConfig: {},
+      ai: {
+        llmsTxt: true,
+        llmsFullTxt: true,
+        markdownRoutes: true,
+        index: true,
+      },
       command: 'build',
       root,
       configFile: path.join(root, '.silen/config.ts'),

@@ -72,6 +72,13 @@ export interface ThemeConfig {
   readonly home?: ThemeHomeConfig
 }
 
+export interface AiArtifactConfig {
+  readonly llmsTxt: boolean
+  readonly llmsFullTxt: boolean
+  readonly markdownRoutes: boolean
+  readonly index: boolean
+}
+
 export interface UserConfig {
   title?: string
   description?: string
@@ -80,9 +87,11 @@ export interface UserConfig {
   outDir?: string
   onBrokenLinks?: 'error' | 'warn' | 'ignore'
   themeConfig?: ThemeConfig
+  ai?: Partial<AiArtifactConfig>
 }
 
-export interface ResolvedConfig extends Required<UserConfig> {
+export interface ResolvedConfig extends Required<Omit<UserConfig, 'ai'>> {
+  ai: AiArtifactConfig
   command: 'serve' | 'build'
   root: string
   configFile: string

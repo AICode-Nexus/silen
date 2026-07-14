@@ -17,10 +17,13 @@ import {
   type PluginOption,
 } from 'vite'
 import type { RenderedPage } from '../client/app.js'
+import { generateAiArtifacts } from '../ai/artifacts.js'
+import type { AiPage } from '../shared/ai.js'
 import type { ResolvedConfig } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
 import { resolveConfig } from './config.js'
 import { validateInternalLinks } from './links.js'
+import { serializePageMarkdown } from './markdown-output.js'
 import { compilePage, createMdxPlugins, type CompiledPage } from './mdx.js'
 import { silenPlugin } from './plugin.js'
 import {
@@ -554,6 +557,17 @@ async function emitSearchIndex(
   }
 }
 
+function createAiPages(pages: readonly CompiledPage[]): AiPage[] {
+  return pages.map((page) => ({
+    route: page.route,
+    title: page.title,
+    markdown: serializePageMarkdown(page),
+    ...(page.description ? { description: page.description } : {}),
+    ...(page.frontmatter.draft === true ? { draft: true } : {}),
+    ...(page.frontmatter.ai === false ? { ai: false } : {}),
+  }))
+}
+
 async function renameExisting(
   source: string,
   destination: string,
@@ -590,7 +604,6 @@ async function buildSite(root: string): Promise<BuildResult> {
   await assertSafeOutDir(config, routes)
   const routeOutputs = planRouteOutputs(config.outDir, routes)
   const pages = await compilePages(routes)
-  validateInternalLinks(routes, pages, config.onBrokenLinks, config.base)
 
   const buildId = `${process.pid}-${randomUUID()}`
   const outParent = path.dirname(config.outDir)
@@ -612,6 +625,13 @@ async function buildSite(root: string): Promise<BuildResult> {
       loadRenderer(ssrEntry, routes),
     ])
     await renderRoutes(config, routeOutputs, renderer, manifest, stagedOutDir)
+    await generateAiArtifacts({
+      outDir: stagedOutDir,
+      site: config,
+      pages: createAiPages(pages),
+      config: config.ai,
+    })
+    validateInternalLinks(routes, pages, config.onBrokenLinks, config.base)
     await emitSearchIndex(config, pages, stagedOutDir)
     await rm(path.join(stagedOutDir, '.vite'), { force: true, recursive: true })
     await installOutput(stagedOutDir, config.outDir, backupDir)

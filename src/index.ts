@@ -9,7 +9,7 @@ export function defineConfig<const T extends UserConfig>(config: T): T {
   return config
 }
 
-export type { UserConfig } from './shared/config.js'
+export type { AiArtifactConfig, UserConfig } from './shared/config.js'
 export type {
   ThemeConfig,
   ThemeHomeAction,
