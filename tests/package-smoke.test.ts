@@ -3,6 +3,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   readdir,
   rm,
   stat,
@@ -88,6 +89,8 @@ describe('published package smoke test', () => {
     expect(files).toContain('package/LICENSE')
     expect(files).toContain('package/dist/node/cli.js')
     expect(files).toContain('package/dist/index.d.ts')
+    expect(files).toContain('package/dist/client/hmr.js')
+    expect(files).toContain('package/dist/client/hmr.d.ts')
     expect(files).toContain('package/dist/theme-default/index.css')
     expect(files.some((file) => file.endsWith('.d.ts'))).toBe(true)
     expect(
@@ -165,10 +168,12 @@ export default defineConfig({
       writeFile(
         path.join(consumer, 'docs', '.silen', 'theme.tsx'),
         `import type { ReactNode } from 'react'
+import { useData } from 'silen/client'
 import DefaultTheme, { defineTheme } from 'silen/theme'
 
 function Demo({ children }: { readonly children?: ReactNode }) {
-  return <aside data-packed-demo="">{children}</aside>
+  const { base } = useData()
+  return <aside data-packed-demo="" data-packed-base={base}>{children}</aside>
 }
 
 export default defineTheme({
@@ -273,6 +278,7 @@ The nested route was generated.
     expect(home).toContain('<h1>Installed package</h1>')
     expect(home).toContain('data-packed-root=""')
     expect(home).toContain('data-packed-demo=""')
+    expect(home).toContain('data-packed-base="/handbook/"')
     expect(home).toContain('Installed theme extension')
     expect(home).toMatch(/src="\/handbook\/assets\/.+\.js"/)
     expect(home).toContain('</html>')
@@ -291,5 +297,110 @@ The nested route was generated.
     expect(themeCss).not.toContain(packageSource)
     expect(themeCss).not.toContain('src/theme-default/styles')
     expect((await stat(executable)).isFile()).toBe(true)
+
+    const developmentPage = path.join(consumer, 'docs', 'index.mdx')
+    const development = execa(
+      executable,
+      ['dev', 'docs', '--host', '127.0.0.1', '--port', '0'],
+      {
+        cwd: consumer,
+        reject: false,
+        all: true,
+      },
+    )
+    let developmentOutput = ''
+    let developmentUrl: URL | undefined
+
+    try {
+      developmentUrl = await new Promise<URL>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(
+            new Error(
+              `Timed out waiting for the packed dev server:\n${developmentOutput}`,
+            ),
+          )
+        }, 15_000)
+        development.all?.on('data', (chunk) => {
+          developmentOutput += String(chunk)
+          const match = developmentOutput.match(
+            /Silen dev server running at (https?:\/\/\S+)/,
+          )
+          if (!match?.[1]) return
+          clearTimeout(timeout)
+          resolve(new URL(match[1]))
+        })
+        void development.then((result) => {
+          clearTimeout(timeout)
+          reject(
+            new Error(
+              `Packed dev server exited before listening:\n${result.all}`,
+            ),
+          )
+        }, reject)
+      })
+      const packedHmrRuntime = await realpath(
+        path.join(
+          consumer,
+          'node_modules',
+          'silen',
+          'dist',
+          'client',
+          'hmr.js',
+        ),
+      )
+      const [developmentHome, viteHmrClient, silenHmrRuntime] =
+        await Promise.all([
+          fetch(developmentUrl),
+          fetch(new URL('@vite/client', developmentUrl)),
+          fetch(new URL(`@fs${packedHmrRuntime}`, developmentUrl)),
+        ])
+      const [developmentHtml, viteHmrSource, silenHmrSource] =
+        await Promise.all([
+          developmentHome.text(),
+          viteHmrClient.text(),
+          silenHmrRuntime.text(),
+        ])
+
+      expect(developmentHome.status, developmentHtml).toBe(200)
+      expect(developmentHtml).toContain('<h1>Installed package</h1>')
+      expect(developmentHtml).toContain('data-packed-root=""')
+      expect(developmentHtml).toContain('data-packed-demo=""')
+      expect(developmentHtml).toContain('data-packed-base="/handbook/"')
+      expect(developmentHtml).toContain('/handbook/@vite/client')
+      expect(viteHmrClient.status, viteHmrSource).toBe(200)
+      expect(viteHmrSource).toContain('vite-hmr')
+      expect(silenHmrRuntime.status, silenHmrSource).toBe(200)
+      expect(silenHmrSource).toContain('publishHotRouteUpdate')
+      expect(silenHmrSource).toContain('subscribeToHotThemeUpdates')
+
+      await writeFile(
+        developmentPage,
+        (await readFile(developmentPage, 'utf8')).replace(
+          '# Installed package',
+          '# Installed package updated',
+        ),
+      )
+      const updateDeadline = Date.now() + 10_000
+      let updatedHtml = ''
+      let updatedStatus = 0
+      do {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        const updated = await fetch(developmentUrl)
+        updatedStatus = updated.status
+        updatedHtml = await updated.text()
+      } while (
+        !updatedHtml.includes('<h1>Installed package updated</h1>') &&
+        Date.now() < updateDeadline
+      )
+      expect(updatedStatus, updatedHtml).toBe(200)
+      expect(updatedHtml).toContain('<h1>Installed package updated</h1>')
+    } finally {
+      development.kill('SIGTERM')
+      const stopped = await development
+      expect(stopped.exitCode, stopped.all).toBe(0)
+      if (developmentUrl) {
+        await expect(fetch(developmentUrl)).rejects.toThrow()
+      }
+    }
   }, 120_000)
 })

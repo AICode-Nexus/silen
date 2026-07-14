@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     'node/cli': 'src/node/cli.ts',
     'client/entry': 'src/client/entry.tsx',
+    'client/hmr': 'src/client/hmr.ts',
     'client/index': 'src/client/index.ts',
     'client/ssr-entry': 'src/client/ssr-entry.tsx',
     'theme-default/index': 'src/theme-default/index.tsx',

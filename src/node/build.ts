@@ -345,6 +345,7 @@ async function buildServerRenderer(
       oxc: { jsx: { development: false } },
       plugins: await productionPlugins(config),
       root: config.root,
+      ssr: { noExternal: ['silen'] },
       build: {
         assetsInlineLimit: 0,
         emptyOutDir: true,

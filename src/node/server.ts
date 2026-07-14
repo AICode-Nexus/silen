@@ -532,6 +532,7 @@ export async function createDevServer(
       oxc: { jsx: { development: false } },
       resolve: { dedupe: ['react', 'react-dom'] },
       root: config.root,
+      ssr: { noExternal: ['silen'] },
       server: {
         middlewareMode: { server },
         ws: { server },
