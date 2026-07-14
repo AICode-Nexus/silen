@@ -29,6 +29,7 @@ describe('renderDocument', () => {
       title: '<Title & "quoted">',
       description: 'Description <unsafe> & "quoted"',
       publicData: {
+        siteTitle: 'Fixture Docs',
         lang: 'en-US"><script>bad()</script>',
         base: '/project/',
         route: '/',

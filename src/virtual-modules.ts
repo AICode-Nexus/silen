@@ -26,17 +26,40 @@ declare module 'virtual:silen/routes' {
 }
 
 declare module 'virtual:silen/config' {
-  type JsonPrimitive = string | number | boolean | null
-  type JsonValue =
-    JsonPrimitive | { readonly [key: string]: JsonValue } | readonly JsonValue[]
-  type JsonObject = { readonly [key: string]: JsonValue }
+  interface ThemeNavItem {
+    readonly text: string
+    readonly link: string
+  }
+
+  interface ThemeSidebarItem {
+    readonly text: string
+    readonly link: string
+  }
+
+  interface ThemeSidebarGroup {
+    readonly text: string
+    readonly collapsed?: boolean
+    readonly items: readonly ThemeSidebarItem[]
+  }
+
+  interface ThemeLogo {
+    readonly src: string
+    readonly alt?: string
+  }
+
+  interface ThemeConfig {
+    readonly logo?: string | ThemeLogo
+    readonly nav?: readonly ThemeNavItem[]
+    readonly sidebar?: readonly ThemeSidebarGroup[]
+    readonly search?: boolean
+  }
 
   export interface VirtualConfig {
     title: string
     description: string
     lang: string
     base: string
-    themeConfig: JsonObject
+    themeConfig: ThemeConfig
   }
 
   const config: VirtualConfig

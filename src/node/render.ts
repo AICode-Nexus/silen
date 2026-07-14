@@ -1,4 +1,5 @@
 import type { RenderedPage } from '../client/app.js'
+import { appearanceScript } from '../theme-default/appearance-script.js'
 
 export interface AssetPreload {
   as: 'audio' | 'font' | 'image' | 'video'
@@ -80,6 +81,7 @@ export function renderDocument(
     '<meta charset="UTF-8">',
     '<meta name="viewport" content="width=device-width,initial-scale=1">',
     '<meta name="color-scheme" content="light dark">',
+    `<script>${appearanceScript}</script>`,
     `<title>${escapeHtml(page.title)}</title>`,
     `<meta name="description" content="${escapeHtml(page.description)}">`,
     ...stylesheets,

@@ -10,3 +10,11 @@ export function defineConfig<const T extends UserConfig>(config: T): T {
 }
 
 export type { UserConfig } from './shared/config.js'
+export type {
+  ThemeConfig,
+  ThemeLogo,
+  ThemeNavItem,
+  ThemeSidebarGroup,
+  ThemeSidebarItem,
+} from './shared/config.js'
+export type { Heading } from './shared/page.js'

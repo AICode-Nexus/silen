@@ -1,8 +1,10 @@
 import './styles/index.css'
-import type { ReactNode } from 'react'
+import { Layout } from './components/layout.js'
 
-export function Layout({ children }: { children: ReactNode }): ReactNode {
-  return children
-}
-
+export { Layout } from './components/layout.js'
+export {
+  AppearanceSwitch,
+  type AppearancePreference,
+} from './components/appearance.js'
+export { appearanceScript } from './appearance-script.js'
 export default { Layout }

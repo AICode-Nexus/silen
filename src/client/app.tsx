@@ -10,18 +10,10 @@ import { flushSync } from 'react-dom'
 import config from 'virtual:silen/config'
 import routes from 'virtual:silen/routes'
 import Theme from 'virtual:silen/theme'
-import type { Heading, JsonObject } from '../shared/page.js'
+import type { JsonObject } from '../shared/page.js'
+import { DataProvider, type PagePublicData } from './data.js'
 import { navigateDocument } from './navigation.js'
 import { resolveInternalUrl, RouterProvider, type Router } from './router.js'
-
-export interface PagePublicData {
-  lang: string
-  base: string
-  route: string
-  frontmatter?: JsonObject
-  headings?: readonly Heading[]
-  themeConfig?: JsonObject
-}
 
 export interface ResolvedPage {
   title: string
@@ -117,6 +109,7 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
         title: 'Page not found',
         description: '',
         publicData: {
+          siteTitle: config.title,
           lang: config.lang,
           base: config.base,
           route: request.route ?? request.pathname,
@@ -138,6 +131,7 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
         config.description,
       ),
       publicData: {
+        siteTitle: config.title,
         lang: stringField(module.frontmatter, 'lang', config.lang),
         base: config.base,
         route,
@@ -564,10 +558,14 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
   )
   const { Component } = state.page
   return (
-    <RouterProvider value={router}>
-      <Theme.Layout>
-        <Component />
-      </Theme.Layout>
-    </RouterProvider>
+    <DataProvider value={state.page.publicData}>
+      <RouterProvider value={router}>
+        <Theme.Layout>
+          <Component />
+        </Theme.Layout>
+      </RouterProvider>
+    </DataProvider>
   )
 }
+
+export type { PagePublicData } from './data.js'
