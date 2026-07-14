@@ -1,5 +1,12 @@
 import { request } from 'node:http'
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import {
+  mkdir,
+  mkdtemp,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
@@ -174,6 +181,56 @@ describe('development server', () => {
       'port',
     )
   })
+
+  it('refreshes added, renamed, and deleted document routes without restarting', async () => {
+    const addedFile = path.join(root, 'dynamic.mdx')
+    const renamedFile = path.join(root, 'renamed.md')
+    const server = await createDevServer(root, {
+      host: '127.0.0.1',
+      port: 0,
+    })
+    runningServers.push(server)
+
+    try {
+      await expect
+        .poll(() => rawStatus(new URL(server.url), '/docs/dynamic'))
+        .toBe(404)
+
+      await writeFile(
+        addedFile,
+        '# Dynamic route\n\nAdded while dev is running.\n',
+      )
+      await expect
+        .poll(async () => {
+          const response = await fetch(new URL('dynamic', server.url))
+          return { body: await response.text(), status: response.status }
+        })
+        .toMatchObject({
+          body: expect.stringContaining('Dynamic route'),
+          status: 200,
+        })
+
+      await rename(addedFile, renamedFile)
+      await expect
+        .poll(async () => {
+          return {
+            added: await rawStatus(new URL(server.url), '/docs/dynamic'),
+            renamed: await rawStatus(new URL(server.url), '/docs/renamed'),
+          }
+        })
+        .toEqual({ added: 404, renamed: 200 })
+
+      await rm(renamedFile)
+      await expect
+        .poll(() => rawStatus(new URL(server.url), '/docs/renamed'))
+        .toBe(404)
+    } finally {
+      await Promise.all([
+        rm(addedFile, { force: true }),
+        rm(renamedFile, { force: true }),
+      ])
+    }
+  }, 30_000)
 })
 
 describe('preview server', () => {

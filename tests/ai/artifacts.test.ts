@@ -45,6 +45,27 @@ describe('AI build artifacts', () => {
     },
   )
 
+  it('escapes Markdown link labels and keeps descriptions on one line', () => {
+    const manifest = renderLlmsTxt(
+      { title: 'Docs', description: 'Docs.', base: '/docs/' },
+      [
+        {
+          route: '/guide',
+          title: 'Guide \\ ]\ncontinued',
+          description: 'First line\r\n second\tline',
+          markdown: '# Guide\n',
+        },
+      ],
+    )
+
+    expect(manifest).toContain(
+      String.raw`- [Guide \\ \] continued](/docs/guide.md): First line second line`,
+    )
+    expect(
+      manifest.split('\n').filter((line) => line.startsWith('- [')),
+    ).toHaveLength(1)
+  })
+
   it('emits canonical per-page Markdown and excludes drafts and opted-out pages', async () => {
     const [home, guide] = await Promise.all([
       readFile(path.join(result.outDir, 'index.md'), 'utf8'),

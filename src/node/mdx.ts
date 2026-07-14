@@ -229,6 +229,8 @@ export function createMdxPlugins(): Plugin[] {
   // runtime; bridge only the incompatible declaration families here.
   const mdxPlugin = mdx({
     development: false,
+    format: 'mdx',
+    mdxExtensions: ['.md', '.mdx'],
     remarkPlugins: [remarkPageData],
     rehypePlugins: [rehypeHighlightCode],
   }) as unknown as Plugin

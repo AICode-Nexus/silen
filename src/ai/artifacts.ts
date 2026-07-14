@@ -51,6 +51,14 @@ function includedPages(pages: readonly AiPage[]): AiPage[] {
     .map(publicPage)
 }
 
+function singleLine(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function markdownLinkLabel(value: string): string {
+  return singleLine(value).replaceAll('\\', '\\\\').replaceAll(']', '\\]')
+}
+
 export function markdownUrlForRoute(route: string): string {
   if (route === '/') return '/index.md'
   if (route.endsWith('/')) return `${route}index.md`
@@ -91,7 +99,7 @@ export function renderLlmsTxt(
 ): string {
   const links = pages.map(
     (page) =>
-      `- [${page.title}](${joinBaseRoute(site.base, markdownRoutes ? markdownUrlForRoute(page.route) : page.route)})${page.description ? `: ${page.description}` : ''}`,
+      `- [${markdownLinkLabel(page.title)}](${joinBaseRoute(site.base, markdownRoutes ? markdownUrlForRoute(page.route) : page.route)})${page.description ? `: ${singleLine(page.description)}` : ''}`,
   )
   return normalizeText(
     [
