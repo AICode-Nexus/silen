@@ -119,6 +119,14 @@ describe('virtual modules', () => {
     config.privateToken = 'do-not-bundle'
     config.themeConfig = Object.assign(
       {
+        ai: Object.assign(
+          { endpoint: 'https://docs.example.com/api/ask' },
+          {
+            apiKey: 'do-not-bundle-ai-key',
+            headers: { Authorization: 'do-not-bundle-ai-header' },
+            provider: 'do-not-bundle-ai-provider',
+          },
+        ),
         socialLinks: [
           {
             icon: 'github',
@@ -179,6 +187,7 @@ describe('virtual modules', () => {
         index: true,
       },
       themeConfig: {
+        ai: { endpoint: 'https://docs.example.com/api/ask' },
         socialLinks: [
           {
             icon: 'github',
@@ -203,6 +212,9 @@ describe('virtual modules', () => {
     expect(source).not.toContain('do-not-bundle-hero')
     expect(source).not.toContain('do-not-bundle-feature')
     expect(source).not.toContain('do-not-bundle-home')
+    expect(source).not.toContain('do-not-bundle-ai-key')
+    expect(source).not.toContain('do-not-bundle-ai-header')
+    expect(source).not.toContain('do-not-bundle-ai-provider')
     expect(source).not.toContain(root)
     expect(source).not.toContain('configFile')
     expect(source).not.toContain('outDir')

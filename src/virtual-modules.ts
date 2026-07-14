@@ -98,12 +98,17 @@ declare module 'virtual:silen/config' {
     readonly features?: readonly ThemeHomeFeature[]
   }
 
+  interface ThemeAiConfig {
+    readonly endpoint: string
+  }
+
   interface ThemeConfig {
     readonly logo?: string | ThemeLogo
     readonly nav?: readonly ThemeNavItem[]
     readonly sidebar?: readonly ThemeSidebarGroup[]
     readonly socialLinks?: readonly ThemeSocialLink[]
     readonly search?: boolean
+    readonly ai?: ThemeAiConfig
     readonly home?: ThemeHomeConfig
   }
 
@@ -139,4 +144,20 @@ declare module 'virtual:silen/theme' {
   export const Layout: LayoutComponent
   const theme: Theme
   export default theme
+}
+
+declare module 'virtual:silen/ask-ai' {
+  import type { ComponentType } from 'react'
+
+  export interface EndpointAskAiDialogProps {
+    readonly endpoint: string
+    readonly open: boolean
+    readonly onOpenChange: (open: boolean) => void
+  }
+
+  export type AskAiDialogLoader = () => Promise<{
+    default: ComponentType<EndpointAskAiDialogProps>
+  }>
+
+  export const loadAskAiDialog: AskAiDialogLoader | undefined
 }

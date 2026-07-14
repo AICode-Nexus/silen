@@ -1,5 +1,6 @@
-import { SearchIcon } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { SearchIcon, SparklesIcon } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { loadAskAiDialog } from 'virtual:silen/ask-ai'
 import { Link, useData, useRoute } from '../../client/index.js'
 import { cn } from '../lib/cn.js'
 import { isActiveThemeLink, resolveThemeLink } from '../lib/navigation.js'
@@ -8,6 +9,9 @@ import { Button } from './ui/button.js'
 import { MobileSidebar } from './sidebar.js'
 
 type SearchDialogComponent = (typeof import('./search.js'))['SearchDialog']
+
+const LazyAskAiDialog =
+  loadAskAiDialog === undefined ? undefined : lazy(loadAskAiDialog)
 
 let searchDialogModule: Promise<SearchDialogComponent> | undefined
 
@@ -116,10 +120,55 @@ function SearchLauncher(): React.JSX.Element {
   )
 }
 
+function AskAiLauncher({ endpoint }: { readonly endpoint: string }) {
+  const [open, setOpen] = useState(false)
+  const returnFocus = useRef<HTMLButtonElement | null>(null)
+
+  const changeOpen = (nextOpen: boolean): void => {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      window.setTimeout(() => returnFocus.current?.focus(), 0)
+    }
+  }
+
+  return (
+    <>
+      <Button
+        ref={returnFocus}
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        <SparklesIcon data-icon="inline-start" />
+        Ask AI
+      </Button>
+      {open && LazyAskAiDialog ? (
+        <Suspense
+          fallback={
+            <span role="status" className="sr-only">
+              Loading Ask AI…
+            </span>
+          }
+        >
+          <LazyAskAiDialog
+            endpoint={endpoint}
+            open={open}
+            onOpenChange={changeOpen}
+          />
+        </Suspense>
+      ) : null}
+    </>
+  )
+}
+
 export function Nav(): React.JSX.Element {
   const { base, siteTitle, themeConfig } = useData()
   const currentRoute = useRoute()
   const logo = themeConfig?.logo
+  const askAiEndpoint = themeConfig?.ai?.endpoint
   const logoSource = typeof logo === 'string' ? logo : logo?.src
   return (
     <header className="sticky top-0 z-40 h-[var(--silen-nav-height)] border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
@@ -161,6 +210,9 @@ export function Nav(): React.JSX.Element {
           })}
         </ul>
         {themeConfig?.search === false ? null : <SearchLauncher />}
+        {askAiEndpoint === undefined || LazyAskAiDialog === undefined ? null : (
+          <AskAiLauncher endpoint={askAiEndpoint} />
+        )}
         <AppearanceSwitch />
         <MobileSidebar />
       </nav>

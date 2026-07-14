@@ -63,12 +63,17 @@ export interface ThemeHomeConfig {
   readonly features?: readonly ThemeHomeFeature[]
 }
 
+export interface ThemeAiConfig {
+  readonly endpoint: string
+}
+
 export interface ThemeConfig {
   readonly logo?: string | ThemeLogo
   readonly nav?: readonly ThemeNavItem[]
   readonly sidebar?: readonly ThemeSidebarGroup[]
   readonly socialLinks?: readonly ThemeSocialLink[]
   readonly search?: boolean
+  readonly ai?: ThemeAiConfig
   readonly home?: ThemeHomeConfig
 }
 

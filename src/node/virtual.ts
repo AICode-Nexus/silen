@@ -7,12 +7,14 @@ export const virtualModuleIds = {
   routes: 'virtual:silen/routes',
   config: 'virtual:silen/config',
   theme: 'virtual:silen/theme',
+  askAi: 'virtual:silen/ask-ai',
 } as const
 
 export interface VirtualModules {
   routes: string
   config: string
   theme: string
+  askAi: string
 }
 
 export interface VirtualModuleOptions {
@@ -76,7 +78,18 @@ export function defaultThemeFile(): string {
   )
 }
 
+function askAiDialogFile(): string {
+  const sourceExtension = path.extname(fileURLToPath(import.meta.url)) === '.ts'
+  return fileURLToPath(
+    new URL(
+      `../theme-default/components/ask-ai.${sourceExtension ? 'tsx' : 'js'}`,
+      import.meta.url,
+    ),
+  )
+}
+
 function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
+  const askAiEndpoint = themeConfig.ai?.endpoint
   return {
     ...(themeConfig.logo === undefined
       ? {}
@@ -120,6 +133,9 @@ function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
           ),
         }),
     ...(themeConfig.search === undefined ? {} : { search: themeConfig.search }),
+    ...(typeof askAiEndpoint === 'string' && askAiEndpoint.length > 0
+      ? { ai: { endpoint: askAiEndpoint } }
+      : {}),
     ...(themeConfig.home === undefined
       ? {}
       : {
@@ -233,6 +249,7 @@ export function createVirtualModules({
     (route) =>
       `  ${quoteModuleString(route.path)}: () => import(${quoteModuleString(viteImportPath(route.file))})`,
   )
+  const askAiEndpoint = config.themeConfig.ai?.endpoint
 
   return {
     routes: [
@@ -260,5 +277,15 @@ export function createVirtualModules({
           `export { default } from ${quoteModuleString(viteImportPath(themeFile))}`,
           `export * from ${quoteModuleString(viteImportPath(themeFile))}`,
         ].join('\n'),
+    askAi:
+      typeof askAiEndpoint !== 'string' || askAiEndpoint.length === 0
+        ? [
+            'const loadAskAiDialog = undefined',
+            'export { loadAskAiDialog }',
+          ].join('\n')
+        : [
+            `const loadAskAiDialog = () => import(${quoteModuleString(viteImportPath(askAiDialogFile()))}).then((module) => ({ default: module.EndpointAskAiDialog }))`,
+            'export { loadAskAiDialog }',
+          ].join('\n'),
   }
 }

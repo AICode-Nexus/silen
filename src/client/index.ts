@@ -13,3 +13,11 @@ export {
   type Router,
   type RouterProviderProps,
 } from './router.js'
+export {
+  createEndpointAskAiAdapter,
+  type AskAiAdapter,
+  type AskAiEvent,
+  type AskAiMessage,
+  type AskAiRequest,
+  type EndpointAskAiAdapterOptions,
+} from './ai.js'
