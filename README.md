@@ -8,7 +8,7 @@ into complete static HTML with client-side navigation.
 
 ## Requirements and installation
 
-Silen supports Node.js `^20.19.0 || >=22.12.0` and pnpm `11.12.0`. React
+Silen supports Node.js `^20.19.0 || >=22.12.0` and pnpm `10.34.0`. React
 `^19.2.7` and React DOM `^19.2.7` are peer dependencies.
 
 ```sh
