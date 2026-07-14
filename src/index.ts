@@ -12,6 +12,12 @@ export function defineConfig<const T extends UserConfig>(config: T): T {
 export type { UserConfig } from './shared/config.js'
 export type {
   ThemeConfig,
+  ThemeHomeAction,
+  ThemeHomeConfig,
+  ThemeHomeFeature,
+  ThemeHomeHero,
+  ThemeHomeImage,
+  ThemeLinkTarget,
   ThemeLogo,
   ThemeNavItem,
   ThemeSidebarGroup,

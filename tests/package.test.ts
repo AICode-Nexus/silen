@@ -18,4 +18,25 @@ describe('public package contract', () => {
 
     expect(defineConfig({ themeConfig })).toEqual({ themeConfig })
   })
+
+  it('exposes a strict typed home-page configuration', () => {
+    const themeConfig: ThemeConfig = {
+      home: {
+        hero: {
+          name: 'Silen',
+          tagline: 'Documentation without the weight.',
+          image: { src: '/hero.svg', alt: 'Silen home page' },
+          actions: [{ text: 'Get started', link: '/guide/', theme: 'brand' }],
+        },
+        features: [
+          {
+            title: 'Fast',
+            details: 'Compile-time content with focused hydration.',
+          },
+        ],
+      },
+    }
+
+    expect(defineConfig({ themeConfig })).toEqual({ themeConfig })
+  })
 })

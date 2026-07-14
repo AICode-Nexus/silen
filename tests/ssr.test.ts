@@ -68,6 +68,10 @@ describe('SSR entry', () => {
     expect(rendered.appHtml).toContain(
       'This primary content must be present in the server response.',
     )
+    expect(rendered.appHtml).toContain('data-silen-code-block=""')
+    expect(rendered.appHtml).toContain('class="shiki shiki-themes')
+    expect(rendered.appHtml).toContain('data-language="sh"')
+    expect(rendered.appHtml).toContain('aria-label="Copy code"')
   })
 
   it.each([
@@ -107,6 +111,8 @@ describe('SSR entry', () => {
         },
       })
       expect(rendered.appHtml).toContain('<h1>404</h1>')
+      expect(rendered.appHtml).toContain('Page not found')
+      expect(rendered.appHtml).toContain('href="/project/"')
     },
   )
 

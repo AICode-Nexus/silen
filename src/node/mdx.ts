@@ -5,6 +5,7 @@ import GithubSlugger from 'github-slugger'
 import type { Plugin } from 'vite'
 import type { Heading, JsonObject, RouteRecord } from '../shared/page.js'
 import { remarkPageData } from './remark-page-data.js'
+import { highlightCodeToHast, type HighlightedNode } from './highlight.js'
 
 export interface CompiledPage {
   file: string
@@ -136,12 +137,99 @@ const pageDataPlugin: Plugin = {
   },
 }
 
+function textContent(node: HighlightedNode): string {
+  if (node.type === 'text') return node.value ?? ''
+  return (node.children ?? []).map(textContent).join('')
+}
+
+function classNames(node: HighlightedNode): string[] {
+  const value = node.properties?.className ?? node.properties?.class
+  if (Array.isArray(value)) return value.map(String)
+  return typeof value === 'string' ? value.split(/\s+/) : []
+}
+
+function sourceLanguage(pre: HighlightedNode): string | undefined {
+  const code = pre.children?.find(
+    (child) => child.type === 'element' && child.tagName === 'code',
+  )
+  if (!code) return undefined
+  return classNames(code)
+    .find((name) => name.startsWith('language-'))
+    ?.slice('language-'.length)
+}
+
+function highlightedPre(root: HighlightedNode): HighlightedNode | undefined {
+  return root.children?.find(
+    (child) => child.type === 'element' && child.tagName === 'pre',
+  )
+}
+
+function reactStyle(value: unknown): Record<string, string> | undefined {
+  if (typeof value !== 'string') return undefined
+  const style: Record<string, string> = {}
+  for (const declaration of value.split(';')) {
+    const separator = declaration.indexOf(':')
+    if (separator < 1) continue
+    const property = declaration.slice(0, separator).trim()
+    const styleValue = declaration.slice(separator + 1).trim()
+    if (!property || !styleValue) continue
+    const reactProperty = property.startsWith('--')
+      ? property
+      : property.replace(/-([a-z])/g, (_, character: string) =>
+          character.toUpperCase(),
+        )
+    style[reactProperty] = styleValue
+  }
+  return style
+}
+
+function normalizeHighlightedStyles(node: HighlightedNode): void {
+  const style = reactStyle(node.properties?.style)
+  if (style && node.properties) node.properties.style = style
+  for (const child of node.children ?? []) normalizeHighlightedStyles(child)
+}
+
+function rehypeHighlightCode() {
+  return async (tree: HighlightedNode): Promise<void> => {
+    const codeBlocks: HighlightedNode[] = []
+    const collect = (node: HighlightedNode): void => {
+      if (node.type === 'element' && node.tagName === 'pre') {
+        const code = node.children?.find(
+          (child) => child.type === 'element' && child.tagName === 'code',
+        )
+        if (code) codeBlocks.push(node)
+        return
+      }
+      for (const child of node.children ?? []) collect(child)
+    }
+    collect(tree)
+
+    await Promise.all(
+      codeBlocks.map(async (pre) => {
+        const language = sourceLanguage(pre) ?? 'text'
+        const highlighted = highlightedPre(
+          await highlightCodeToHast(textContent(pre), language),
+        )
+        if (!highlighted) return
+        normalizeHighlightedStyles(highlighted)
+        highlighted.properties = {
+          ...highlighted.properties,
+          dataLanguage: language,
+          dataSilenCode: '',
+        }
+        Object.assign(pre, highlighted)
+      }),
+    )
+  }
+}
+
 export function createMdxPlugins(): Plugin[] {
   // Vite 8's public Plugin type is based on Rolldown while the official MDX
   // adapter exposes the Rollup Plugin type. Vite accepts that adapter at
   // runtime; bridge only the incompatible declaration families here.
   const mdxPlugin = mdx({
     remarkPlugins: [remarkPageData],
+    rehypePlugins: [rehypeHighlightCode],
   }) as unknown as Plugin
   return [pageDataPlugin, mdxPlugin]
 }

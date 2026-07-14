@@ -80,6 +80,7 @@ vi.mock('virtual:silen/routes', async () => {
       frontmatter: {
         title: 'Home',
         description: 'Home description',
+        layout: 'home',
       },
       headings: [],
       links: ['/guide'],
@@ -106,6 +107,7 @@ vi.mock('virtual:silen/routes', async () => {
       frontmatter: {
         title: 'About',
         description: 'About description',
+        layout: 'page',
       },
       headings: [],
       links: [],
@@ -130,6 +132,18 @@ vi.mock('virtual:silen/theme', () => ({
         </main>
       )
     },
+    layouts: {
+      doc({ children }: { children: React.ReactNode }) {
+        return <section data-layout="doc">{children}</section>
+      },
+      home({ children }: { children: React.ReactNode }) {
+        return <section data-layout="home">{children}</section>
+      },
+      page({ children }: { children: React.ReactNode }) {
+        return <section data-layout="page">{children}</section>
+      },
+    },
+    components: {},
   },
 }))
 
@@ -336,6 +350,18 @@ describe('hydration and browser navigation', () => {
     ).toBe(false)
 
     act(() => root.unmount())
+  })
+
+  it('selects home, default doc, and page layouts from frontmatter', async () => {
+    const [home, guide, about] = await Promise.all([
+      serverMarkup('/project/'),
+      serverMarkup('/project/guide'),
+      serverMarkup('/project/about'),
+    ])
+
+    expect(home).toContain('data-layout="home"')
+    expect(guide).toContain('data-layout="doc"')
+    expect(about).toContain('data-layout="page"')
   })
 
   it('prefetches once, swaps page content and metadata, pushes history, scrolls to an anchor, and keeps Router context', async () => {

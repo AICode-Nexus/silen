@@ -19,7 +19,13 @@ export interface ResolvedPage {
   title: string
   description: string
   publicData: PagePublicData
-  Component: ComponentType
+  Component: ComponentType<MdxContentProps>
+}
+
+interface MdxContentProps {
+  readonly components?: Readonly<
+    Record<string, ComponentType<never> | keyof React.JSX.IntrinsicElements>
+  >
 }
 
 export interface RouteMatch {
@@ -40,8 +46,17 @@ export interface AppProps {
   initialPage: ResolvedPage
 }
 
-function NotFound(): React.JSX.Element {
+function FallbackNotFound(): React.JSX.Element {
   return <h1>404</h1>
+}
+
+type ContentLayoutName = 'doc' | 'home' | 'page'
+
+function contentLayout(frontmatter?: JsonObject): ContentLayoutName {
+  const layout = frontmatter?.layout
+  return layout === 'home' || layout === 'page' || layout === 'doc'
+    ? layout
+    : 'doc'
 }
 
 function decodePathname(pathname: string): string | undefined {
@@ -115,7 +130,8 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
           route: request.route ?? request.pathname,
           themeConfig: config.themeConfig,
         },
-        Component: NotFound,
+        Component: (Theme.NotFound ??
+          FallbackNotFound) as ComponentType<MdxContentProps>,
       },
     }
   }
@@ -139,7 +155,7 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
         headings: module.headings,
         themeConfig: config.themeConfig,
       },
-      Component: module.default,
+      Component: module.default as ComponentType<MdxContentProps>,
     },
   }
 }
@@ -557,11 +573,18 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
     [go, prefetch, state.path],
   )
   const { Component } = state.page
+  const layoutName = contentLayout(state.page.publicData.frontmatter)
+  const ContentLayout = Theme.layouts?.[layoutName]
+  const content = Theme.components ? (
+    <Component components={Theme.components} />
+  ) : (
+    <Component />
+  )
   return (
     <DataProvider value={state.page.publicData}>
       <RouterProvider value={router}>
         <Theme.Layout>
-          <Component />
+          {ContentLayout ? <ContentLayout>{content}</ContentLayout> : content}
         </Theme.Layout>
       </RouterProvider>
     </DataProvider>

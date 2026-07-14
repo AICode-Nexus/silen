@@ -95,6 +95,34 @@ describe('virtual modules', () => {
             ariaLabel: 'Silen on GitHub',
           },
         ],
+        home: Object.assign(
+          {
+            hero: Object.assign(
+              {
+                name: 'Public home',
+                tagline: 'Safe public fields',
+                image: { src: '/hero.svg', alt: 'Home preview' },
+                actions: [
+                  {
+                    text: 'Guide',
+                    link: '/guide/',
+                    theme: 'brand' as const,
+                    privateActionToken: 'do-not-bundle-action',
+                  },
+                ],
+              },
+              { privateHeroToken: 'do-not-bundle-hero' },
+            ),
+            features: [
+              {
+                title: 'Typed',
+                details: 'Public feature',
+                privateFeatureToken: 'do-not-bundle-feature',
+              },
+            ],
+          },
+          { privateHomeToken: 'do-not-bundle-home' },
+        ),
       },
       { privateThemeToken: 'do-not-bundle-theme' },
     )
@@ -121,10 +149,23 @@ describe('virtual modules', () => {
             ariaLabel: 'Silen on GitHub',
           },
         ],
+        home: {
+          hero: {
+            name: 'Public home',
+            tagline: 'Safe public fields',
+            image: { src: '/hero.svg', alt: 'Home preview' },
+            actions: [{ text: 'Guide', link: '/guide/', theme: 'brand' }],
+          },
+          features: [{ title: 'Typed', details: 'Public feature' }],
+        },
       },
     })
     expect(source).not.toContain('do-not-bundle')
     expect(source).not.toContain('do-not-bundle-theme')
+    expect(source).not.toContain('do-not-bundle-action')
+    expect(source).not.toContain('do-not-bundle-hero')
+    expect(source).not.toContain('do-not-bundle-feature')
+    expect(source).not.toContain('do-not-bundle-home')
     expect(source).not.toContain(root)
     expect(source).not.toContain('configFile')
     expect(source).not.toContain('outDir')

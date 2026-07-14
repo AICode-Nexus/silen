@@ -1,4 +1,6 @@
 import path from 'node:path'
+import { createElement, type ComponentType } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import { describe, expect, it } from 'vitest'
 import {
@@ -130,6 +132,22 @@ describe('MDX compilation', () => {
       'https://example.com/packages',
     ])
     expect(pageModule.default).toBeTypeOf('function')
+  })
+
+  it('highlights fenced code at compile time while preserving trusted MDX', async () => {
+    const pageModule = await loadMdxModule('tests/fixtures/mdx/highlight.mdx')
+    const Component = pageModule.default as ComponentType
+    const rendered = renderToStaticMarkup(createElement(Component))
+
+    expect(rendered).toContain('data-trusted-mdx="yes"')
+    expect(rendered.match(/class="shiki shiki-themes/g)).toHaveLength(2)
+    expect(rendered).toContain('data-language="typescript"')
+    expect(rendered).toContain('data-language="not-a-real-language"')
+    expect(rendered).not.toContain('<script>')
+    expect(rendered).not.toContain(process.cwd())
+    expect(rendered).not.toContain(
+      path.resolve('tests/fixtures/mdx/highlight.mdx'),
+    )
   })
 
   it('shares JSON-safe frontmatter between static and Vite results', async () => {

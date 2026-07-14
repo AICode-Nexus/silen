@@ -6,6 +6,7 @@ import {
   type Router,
 } from '../../src/client'
 import type { Heading } from '../../src/shared/page'
+import type { JsonObject } from '../../src/shared/page'
 import type { ThemeConfig } from '../../src/shared/config'
 
 const defaultThemeConfig: ThemeConfig = {
@@ -24,6 +25,7 @@ const defaultThemeConfig: ThemeConfig = {
 interface TestSiteProviderProps {
   base?: string
   children: ReactNode
+  frontmatter?: JsonObject
   headings?: readonly Heading[]
   path?: string
   siteTitle?: string
@@ -33,6 +35,7 @@ interface TestSiteProviderProps {
 export function TestSiteProvider({
   base = '/',
   children,
+  frontmatter,
   headings = [
     { depth: 2, title: 'Install', slug: 'install' },
     { depth: 3, title: 'Options', slug: 'options' },
@@ -52,6 +55,7 @@ export function TestSiteProvider({
     lang: 'en-US',
     base,
     route: path,
+    ...(frontmatter === undefined ? {} : { frontmatter }),
     headings,
     themeConfig,
   }

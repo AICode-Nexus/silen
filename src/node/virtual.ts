@@ -93,6 +93,68 @@ function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
           ),
         }),
     ...(themeConfig.search === undefined ? {} : { search: themeConfig.search }),
+    ...(themeConfig.home === undefined
+      ? {}
+      : {
+          home: {
+            hero: {
+              name: themeConfig.home.hero.name,
+              ...(themeConfig.home.hero.text === undefined
+                ? {}
+                : { text: themeConfig.home.hero.text }),
+              ...(themeConfig.home.hero.tagline === undefined
+                ? {}
+                : { tagline: themeConfig.home.hero.tagline }),
+              ...(themeConfig.home.hero.image === undefined
+                ? {}
+                : {
+                    image:
+                      typeof themeConfig.home.hero.image === 'string'
+                        ? themeConfig.home.hero.image
+                        : {
+                            src: themeConfig.home.hero.image.src,
+                            alt: themeConfig.home.hero.image.alt,
+                          },
+                  }),
+              ...(themeConfig.home.hero.actions === undefined
+                ? {}
+                : {
+                    actions: themeConfig.home.hero.actions.map((action) => ({
+                      text: action.text,
+                      link: action.link,
+                      ...(action.theme === undefined
+                        ? {}
+                        : { theme: action.theme }),
+                      ...(action.target === undefined
+                        ? {}
+                        : { target: action.target }),
+                      ...(action.rel === undefined ? {} : { rel: action.rel }),
+                    })),
+                  }),
+            },
+            ...(themeConfig.home.features === undefined
+              ? {}
+              : {
+                  features: themeConfig.home.features.map((feature) => ({
+                    ...(feature.icon === undefined
+                      ? {}
+                      : { icon: feature.icon }),
+                    title: feature.title,
+                    details: feature.details,
+                    ...(feature.link === undefined
+                      ? {}
+                      : { link: feature.link }),
+                    ...(feature.linkText === undefined
+                      ? {}
+                      : { linkText: feature.linkText }),
+                    ...(feature.target === undefined
+                      ? {}
+                      : { target: feature.target }),
+                    ...(feature.rel === undefined ? {} : { rel: feature.rel }),
+                  })),
+                }),
+          },
+        }),
   }
 }
 
