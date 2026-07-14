@@ -5,6 +5,12 @@ const config: VirtualConfig = {
   description: '',
   lang: 'en-US',
   base: '/',
+  ai: {
+    llmsTxt: true,
+    llmsFullTxt: true,
+    markdownRoutes: true,
+    index: true,
+  },
   themeConfig: {},
 }
 

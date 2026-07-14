@@ -131,6 +131,7 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
           lang: config.lang,
           base: config.base,
           route: request.route ?? request.pathname,
+          ai: config.ai,
           themeConfig: config.themeConfig,
         },
         Component: (InitialTheme.NotFound ??
@@ -156,6 +157,7 @@ function resolvedPage(route: string, module: PageModule): ResolvedPage {
       lang: stringField(module.frontmatter, 'lang', config.lang),
       base: config.base,
       route,
+      ai: config.ai,
       frontmatter: module.frontmatter,
       headings: module.headings,
       themeConfig: config.themeConfig,

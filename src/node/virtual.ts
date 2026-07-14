@@ -195,6 +195,7 @@ function serializeConfig(
         description: config.description,
         lang: config.lang,
         base: config.base,
+        ai: config.ai,
         themeConfig: publicThemeConfig(config.themeConfig),
       }
     : config

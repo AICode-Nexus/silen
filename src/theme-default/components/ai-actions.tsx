@@ -1,6 +1,14 @@
 import { useRef, useState } from 'react'
+import { BotIcon, ChevronDownIcon, CopyIcon } from 'lucide-react'
 import { cn } from '../lib/cn.js'
 import { Button } from './ui/button.js'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu.js'
 import {
   Tooltip,
   TooltipContent,
@@ -94,40 +102,37 @@ export function AiPageActions({
       className="not-prose mt-8 flex flex-wrap items-center gap-2"
     >
       <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={loading}
-              aria-busy={
-                status.phase === 'loading' && status.kind === 'markdown'
-              }
-              onClick={() => void copy('markdown')}
-            >
-              Copy Markdown
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Copy clean page Markdown</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={loading}
-              aria-busy={status.phase === 'loading' && status.kind === 'ai'}
-              onClick={() => void copy('ai')}
-            >
-              Copy for AI
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            Copy page context with source attribution
-          </TooltipContent>
-        </Tooltip>
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={loading}
+                  aria-busy={loading}
+                >
+                  Copy
+                  <ChevronDownIcon data-icon="inline-end" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Copy this page</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="start">
+            <DropdownMenuGroup>
+              <DropdownMenuItem onSelect={() => void copy('markdown')}>
+                <CopyIcon aria-hidden="true" />
+                Copy Markdown
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => void copy('ai')}>
+                <BotIcon aria-hidden="true" />
+                Copy for AI
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </TooltipProvider>
       {message ? (
         <span

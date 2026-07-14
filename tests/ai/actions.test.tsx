@@ -35,6 +35,33 @@ function clipboard(): ReturnType<
   return writeText
 }
 
+async function chooseCopyAction(
+  user: ReturnType<typeof userEvent.setup>,
+  name: 'Copy Markdown' | 'Copy for AI',
+): Promise<void> {
+  await user.click(screen.getByRole('button', { name: 'Copy' }))
+  await user.click(screen.getByRole('menuitem', { name }))
+}
+
+it('exposes both copy actions from one accessible dropdown trigger', async () => {
+  const user = userEvent.setup()
+  render(
+    <AiPageActions
+      title="Install"
+      markdownUrl="/guide/install.md"
+      canonicalUrl="https://docs.example/guide/install"
+    />,
+  )
+
+  expect(screen.getAllByRole('button')).toHaveLength(1)
+  const trigger = screen.getByRole('button', { name: 'Copy' })
+  expect(trigger.getAttribute('aria-haspopup')).toBe('menu')
+
+  await user.click(trigger)
+  expect(screen.getByRole('menuitem', { name: 'Copy Markdown' })).not.toBeNull()
+  expect(screen.getByRole('menuitem', { name: 'Copy for AI' })).not.toBeNull()
+})
+
 it('copies normalized Markdown without page navigation content', async () => {
   const user = userEvent.setup()
   const fetch = vi
@@ -54,7 +81,7 @@ it('copies normalized Markdown without page navigation content', async () => {
     </section>,
   )
 
-  await user.click(screen.getByRole('button', { name: 'Copy Markdown' }))
+  await chooseCopyAction(user, 'Copy Markdown')
 
   expect(fetch).toHaveBeenCalledWith('/guide/install.md')
   expect(writeText).toHaveBeenCalledWith('# Install\n\nRun pnpm.\n')
@@ -78,7 +105,7 @@ it('copies AI context with page title and canonical source attribution', async (
     />,
   )
 
-  await user.click(screen.getByRole('button', { name: 'Copy for AI' }))
+  await chooseCopyAction(user, 'Copy for AI')
 
   expect(writeText).toHaveBeenCalledWith(
     [
@@ -116,7 +143,8 @@ it('uses the document route to create base-aware Markdown and canonical URLs', a
   )
 
   const article = screen.getByRole('article')
-  await user.click(within(article).getByRole('button', { name: 'Copy for AI' }))
+  await user.click(within(article).getByRole('button', { name: 'Copy' }))
+  await user.click(screen.getByRole('menuitem', { name: 'Copy for AI' }))
 
   expect(fetch).toHaveBeenCalledWith('/project/guide/index.md')
   expect(writeText).toHaveBeenCalledWith(
@@ -124,6 +152,40 @@ it('uses the document route to create base-aware Markdown and canonical URLs', a
       `Source: ${new URL('/project/guide/', window.location.href).href}`,
     ),
   )
+})
+
+it('hides copy actions when global Markdown routes are disabled', () => {
+  render(
+    <TestSiteProvider
+      ai={{
+        llmsTxt: true,
+        llmsFullTxt: true,
+        markdownRoutes: false,
+        index: true,
+      }}
+    >
+      <DocLayout>
+        <h1>Install</h1>
+      </DocLayout>
+    </TestSiteProvider>,
+  )
+
+  expect(screen.queryByRole('group', { name: 'Page copy actions' })).toBeNull()
+})
+
+it.each([
+  ['draft page', { draft: true }],
+  ['page excluded from AI artifacts', { ai: false }],
+] as const)('hides copy actions for a %s', (_name, frontmatter) => {
+  render(
+    <TestSiteProvider frontmatter={{ title: 'Install', ...frontmatter }}>
+      <DocLayout>
+        <h1>Install</h1>
+      </DocLayout>
+    </TestSiteProvider>,
+  )
+
+  expect(screen.queryByRole('group', { name: 'Page copy actions' })).toBeNull()
 })
 
 it('disables both actions while copying and ignores repeated clicks', async () => {
@@ -144,22 +206,20 @@ it('disables both actions while copying and ignores repeated clicks', async () =
     />,
   )
 
-  const copyMarkdown = screen.getByRole('button', { name: 'Copy Markdown' })
-  const copyForAi = screen.getByRole('button', { name: 'Copy for AI' })
-  await user.click(copyMarkdown)
+  const trigger = screen.getByRole('button', { name: 'Copy' })
+  await user.click(trigger)
+  await user.click(screen.getByRole('menuitem', { name: 'Copy Markdown' }))
 
-  expect((copyMarkdown as HTMLButtonElement).disabled).toBe(true)
-  expect(copyMarkdown.getAttribute('aria-busy')).toBe('true')
-  expect((copyForAi as HTMLButtonElement).disabled).toBe(true)
+  expect((trigger as HTMLButtonElement).disabled).toBe(true)
+  expect(trigger.getAttribute('aria-busy')).toBe('true')
   expect(screen.getByRole('status').textContent).toBe('Copying Markdown')
 
-  await user.click(copyForAi)
+  await user.click(trigger)
   expect(fetch).toHaveBeenCalledTimes(1)
 
   resolveResponse(new Response('# Install'))
   expect(await screen.findByText('Markdown copied')).not.toBeNull()
-  expect((copyMarkdown as HTMLButtonElement).disabled).toBe(false)
-  expect((copyForAi as HTMLButtonElement).disabled).toBe(false)
+  expect((trigger as HTMLButtonElement).disabled).toBe(false)
 })
 
 it('reports failed Markdown fetches accessibly and leaves actions retryable', async () => {
@@ -178,8 +238,8 @@ it('reports failed Markdown fetches accessibly and leaves actions retryable', as
     />,
   )
 
-  const action = screen.getByRole('button', { name: 'Copy Markdown' })
-  await user.click(action)
+  const action = screen.getByRole('button', { name: 'Copy' })
+  await chooseCopyAction(user, 'Copy Markdown')
 
   expect(screen.getByRole('alert').textContent).toBe(
     'Could not fetch page Markdown. Please try again.',
@@ -202,7 +262,7 @@ it('reports clipboard permission failures accessibly', async () => {
     />,
   )
 
-  await user.click(screen.getByRole('button', { name: 'Copy for AI' }))
+  await chooseCopyAction(user, 'Copy for AI')
 
   expect(screen.getByRole('alert').textContent).toBe(
     'Could not access the clipboard. Please try again.',

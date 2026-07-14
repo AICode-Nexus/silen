@@ -50,7 +50,7 @@ export function DocLayout({
 }: {
   readonly children: ReactNode
 }): React.JSX.Element {
-  const { base, frontmatter, route, siteTitle, themeConfig } = useData()
+  const { ai, base, frontmatter, route, siteTitle, themeConfig } = useData()
   const currentRoute = useRoute()
   const pages = (themeConfig?.sidebar ?? []).flatMap((group) => group.items)
   const currentIndex = pages.findIndex((item) =>
@@ -66,15 +66,21 @@ export function DocLayout({
       : route.endsWith('/')
         ? `${route}index.md`
         : `${route}.md`
+  const hasPublicMarkdown =
+    ai?.markdownRoutes !== false &&
+    frontmatter?.draft !== true &&
+    frontmatter?.ai !== false
 
   return (
     <article className="silen-doc">
       {children}
-      <AiPageActions
-        title={title}
-        markdownUrl={resolveThemeLink(markdownPath, base)}
-        canonicalUrl={resolveThemeLink(route, base)}
-      />
+      {hasPublicMarkdown ? (
+        <AiPageActions
+          title={title}
+          markdownUrl={resolveThemeLink(markdownPath, base)}
+          canonicalUrl={resolveThemeLink(route, base)}
+        />
+      ) : null}
       {previous || next ? (
         <nav aria-label="Page navigation" className="silen-pager">
           {previous ? (

@@ -26,6 +26,13 @@ declare module 'virtual:silen/routes' {
 }
 
 declare module 'virtual:silen/config' {
+  interface AiArtifactConfig {
+    readonly llmsTxt: boolean
+    readonly llmsFullTxt: boolean
+    readonly markdownRoutes: boolean
+    readonly index: boolean
+  }
+
   interface ThemeNavItem {
     readonly text: string
     readonly link: string
@@ -105,6 +112,7 @@ declare module 'virtual:silen/config' {
     description: string
     lang: string
     base: string
+    ai: AiArtifactConfig
     themeConfig: ThemeConfig
   }
 

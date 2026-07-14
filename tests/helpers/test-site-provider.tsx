@@ -7,7 +7,7 @@ import {
 } from '../../src/client'
 import type { Heading } from '../../src/shared/page'
 import type { JsonObject } from '../../src/shared/page'
-import type { ThemeConfig } from '../../src/shared/config'
+import type { AiArtifactConfig, ThemeConfig } from '../../src/shared/config'
 
 const defaultThemeConfig: ThemeConfig = {
   nav: [{ text: 'API', link: '/api/' }],
@@ -23,6 +23,7 @@ const defaultThemeConfig: ThemeConfig = {
 }
 
 interface TestSiteProviderProps {
+  ai?: AiArtifactConfig
   base?: string
   children: ReactNode
   frontmatter?: JsonObject
@@ -33,6 +34,12 @@ interface TestSiteProviderProps {
 }
 
 export function TestSiteProvider({
+  ai = {
+    llmsTxt: true,
+    llmsFullTxt: true,
+    markdownRoutes: true,
+    index: true,
+  },
   base = '/',
   children,
   frontmatter,
@@ -58,6 +65,7 @@ export function TestSiteProvider({
     ...(frontmatter === undefined ? {} : { frontmatter }),
     headings,
     themeConfig,
+    ai,
   }
 
   return (

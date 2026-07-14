@@ -1,6 +1,6 @@
 import { readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { build } from '../../src/node/build'
 import { createPreviewServer, type SilenServer } from '../../src/node/server'
 
@@ -30,54 +30,54 @@ test.afterAll(async () => {
   await rm(path.join(root, '.silen/.temp'), { force: true, recursive: true })
 })
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: {
-        readText(): Promise<string> {
-          return Promise.resolve(
-            sessionStorage.getItem('silen-browser-clipboard') ?? '',
-          )
-        },
-        writeText(value: string): Promise<void> {
-          if (sessionStorage.getItem('silen-clipboard-fail') === '1') {
-            return Promise.reject(new DOMException('Denied', 'NotAllowedError'))
-          }
-          sessionStorage.setItem('silen-browser-clipboard', value)
-          return Promise.resolve()
-        },
-      },
-    })
-  })
-})
+async function chooseCopyAction(
+  page: Page,
+  name: 'Copy Markdown' | 'Copy for AI',
+): Promise<void> {
+  await page.getByRole('button', { name: 'Copy', exact: true }).click()
+  await page.getByRole('menuitem', { name }).click()
+}
 
 test('copy actions use base-aware Markdown and preserve page navigation', async ({
+  context,
   page,
 }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], {
+    origin: new URL(serverUrl()).origin,
+  })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(serverUrl('guide/'))
 
-  const copyMarkdown = page.getByRole('button', { name: 'Copy Markdown' })
-  const copyForAi = page.getByRole('button', { name: 'Copy for AI' })
-  await expect(copyMarkdown).toBeVisible()
-  await expect(copyForAi).toBeVisible()
+  const copy = page.getByRole('button', { name: 'Copy', exact: true })
+  await expect(copy).toBeVisible()
+  expect(await page.evaluate(() => Object.hasOwn(navigator, 'clipboard'))).toBe(
+    false,
+  )
+
+  await copy.focus()
+  await page.keyboard.press('Enter')
+  await expect(
+    page.getByRole('menuitem', { name: 'Copy Markdown' }),
+  ).toBeVisible()
+  await page.keyboard.press('Escape')
 
   const originalUrl = page.url()
-  await copyMarkdown.click()
+  await chooseCopyAction(page, 'Copy Markdown')
   await expect(page.getByRole('status')).toHaveText('Markdown copied')
   await expect
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
     .toBe(expectedMarkdown)
   expect(page.url()).toBe(originalUrl)
 
-  await copyForAi.click()
+  await chooseCopyAction(page, 'Copy for AI')
   await expect(page.getByRole('status')).toHaveText('AI context copied')
-  const context = await page.evaluate(() => navigator.clipboard.readText())
-  expect(context).toContain('# Getting Started')
-  expect(context).toContain(`Source: ${serverUrl('guide/')}`)
-  expect(context).not.toContain('Documentation sidebar')
-  expect(context).not.toContain('Page navigation')
+  const copiedContext = await page.evaluate(() =>
+    navigator.clipboard.readText(),
+  )
+  expect(copiedContext).toContain('# Getting Started')
+  expect(copiedContext).toContain(`Source: ${serverUrl('guide/')}`)
+  expect(copiedContext).not.toContain('Documentation sidebar')
+  expect(copiedContext).not.toContain('Page navigation')
   expect(page.url()).toBe(originalUrl)
 
   await page.getByRole('link', { name: 'Next: About' }).click()
@@ -87,19 +87,30 @@ test('copy actions use base-aware Markdown and preserve page navigation', async 
 test('copy actions expose fetch and clipboard failures to assistive tech', async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    const clipboard = navigator.clipboard
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: clipboard.readText.bind(clipboard),
+        writeText(): Promise<void> {
+          return Promise.reject(new DOMException('Denied', 'NotAllowedError'))
+        },
+      },
+    })
+  })
   await page.route('**/guide/index.md', async (route) => {
     await route.fulfill({ status: 503, body: 'Unavailable' })
   })
   await page.goto(serverUrl('guide/'))
 
-  await page.getByRole('button', { name: 'Copy Markdown' }).click()
+  await chooseCopyAction(page, 'Copy Markdown')
   await expect(page.getByRole('alert')).toHaveText(
     'Could not fetch page Markdown. Please try again.',
   )
 
   await page.unroute('**/guide/index.md')
-  await page.evaluate(() => sessionStorage.setItem('silen-clipboard-fail', '1'))
-  await page.getByRole('button', { name: 'Copy for AI' }).click()
+  await chooseCopyAction(page, 'Copy for AI')
   await expect(page.getByRole('alert')).toHaveText(
     'Could not access the clipboard. Please try again.',
   )

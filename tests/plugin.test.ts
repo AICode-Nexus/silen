@@ -172,6 +172,12 @@ describe('virtual modules', () => {
       description: 'Project documentation',
       lang: 'en-US',
       base: '/project/',
+      ai: {
+        llmsTxt: true,
+        llmsFullTxt: true,
+        markdownRoutes: true,
+        index: true,
+      },
       themeConfig: {
         socialLinks: [
           {
