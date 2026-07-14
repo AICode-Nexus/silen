@@ -41,6 +41,8 @@ const OPEN_READ_FLAGS = constants.O_RDONLY | NO_FOLLOW
 const OPEN_WRITE_FLAGS =
   constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW
 const ignoredDirectories = new Set(['.git', '.silen', 'node_modules'])
+const mutationPathLocks = new Map<string, Promise<void>>()
+const workspaceIndexLocks = new Map<string, Promise<void>>()
 
 export class WorkspaceError extends Error {
   constructor(
@@ -81,6 +83,26 @@ export interface WorkspaceBuildResult {
   issues: WorkspaceAuditIssue[]
 }
 
+export interface WorkspaceWriteInput {
+  path: string
+  content: string
+}
+
+export interface WorkspaceLinkInput {
+  path: string
+  target: string
+  label: string
+}
+
+export interface WorkspaceMutationResult {
+  path: string
+  created: boolean
+  bytesBefore: number
+  bytesAfter: number
+  diff: string
+  index: { fileCount: number; index: string; fingerprint: string }
+}
+
 export interface Workspace {
   readonly relativeRoot: string
   resolve(requestedPath: string): Promise<string>
@@ -99,6 +121,9 @@ export interface Workspace {
     route: string,
   ): Promise<{ route: string; backlinks: WorkspaceBacklink[] }>
   citations(requestedPath?: string): Promise<{ citations: WorkspaceCitation[] }>
+  write(input: WorkspaceWriteInput): Promise<WorkspaceMutationResult>
+  link(input: WorkspaceLinkInput): Promise<WorkspaceMutationResult>
+  append(input: WorkspaceWriteInput): Promise<WorkspaceMutationResult>
   build(): Promise<WorkspaceBuildResult>
   audit(): Promise<WorkspaceAuditResult>
 }
@@ -154,6 +179,157 @@ function validatePathInput(value: string): void {
   }
 }
 
+function containsControlCharacter(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const code = character.codePointAt(0)!
+    return code <= 0x1f || code === 0x7f
+  })
+}
+
+function normalizeMutationPath(value: string): string {
+  validatePathInput(value)
+  const components = value.split('/')
+  if (
+    components.some(
+      (component) =>
+        !component ||
+        component === '.' ||
+        component === '..' ||
+        containsControlCharacter(component),
+    )
+  ) {
+    throw new WorkspaceError('OUTSIDE_ROOT', 'Path is outside the content root')
+  }
+  if (!/\.mdx?$/i.test(value)) {
+    throw new WorkspaceError(
+      'UNSUPPORTED_FILE',
+      'Only Markdown and MDX files can be changed',
+    )
+  }
+  if (ignoredDirectories.has(components[0]!)) {
+    throw new WorkspaceError(
+      'UNSUPPORTED_FILE',
+      'Only indexed Markdown and MDX files can be changed',
+    )
+  }
+  return components.join('/')
+}
+
+function normalizeMutationContent(value: string): string {
+  if (typeof value !== 'string') {
+    throw new WorkspaceError('INVALID_CONTENT', 'Content must be UTF-8 text')
+  }
+  const normalized = value.replace(/\r\n?/g, '\n')
+  const encoded = Buffer.from(normalized, 'utf8')
+  if (encoded.toString('utf8') !== normalized) {
+    throw new WorkspaceError('INVALID_CONTENT', 'Content must be UTF-8 text')
+  }
+  if (encoded.byteLength > MAX_FILE_BYTES) {
+    throw new WorkspaceError(
+      'FILE_TOO_LARGE',
+      'Workspace file exceeds the 2 MiB byte limit',
+    )
+  }
+  return normalized
+}
+
+function appendWithSeparator(existing: string, addition: string): string {
+  const left = existing.replace(/\n+$/g, '')
+  const right = addition.replace(/^\n+/g, '')
+  if (!right) {
+    throw new WorkspaceError(
+      'INVALID_CONTENT',
+      'Appended content must not be empty',
+    )
+  }
+  return left ? `${left}\n${right}` : right
+}
+
+function escapeLinkLabel(label: string): string {
+  if (
+    typeof label !== 'string' ||
+    !label ||
+    label.length > 500 ||
+    containsControlCharacter(label)
+  ) {
+    throw new WorkspaceError(
+      'INVALID_LINK_LABEL',
+      'Link label must contain between 1 and 500 safe characters',
+    )
+  }
+  return label
+    .replace(/\\/g, '\\\\')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+}
+
+function splitDiffLines(value: string): string[] {
+  if (!value) return []
+  const lines = value.split('\n')
+  if (lines.at(-1) === '') lines.pop()
+  return lines
+}
+
+function boundedDiffLine(prefix: '-' | '+', value: string): string {
+  const maximumCharacters = 240
+  const safe =
+    value.length > maximumCharacters
+      ? `${value.slice(0, maximumCharacters)}…`
+      : value
+  return `${prefix}${safe}`
+}
+
+function unifiedDiffSummary(
+  relative: string,
+  before: string,
+  after: string,
+): string {
+  const beforeLines = splitDiffLines(before)
+  const afterLines = splitDiffLines(after)
+  let prefix = 0
+  while (
+    prefix < beforeLines.length &&
+    prefix < afterLines.length &&
+    beforeLines[prefix] === afterLines[prefix]
+  ) {
+    prefix += 1
+  }
+  let suffix = 0
+  while (
+    suffix < beforeLines.length - prefix &&
+    suffix < afterLines.length - prefix &&
+    beforeLines[beforeLines.length - suffix - 1] ===
+      afterLines[afterLines.length - suffix - 1]
+  ) {
+    suffix += 1
+  }
+  const removed = beforeLines.slice(prefix, beforeLines.length - suffix)
+  const added = afterLines.slice(prefix, afterLines.length - suffix)
+  const maximumLinesPerSide = 24
+  const body = [
+    ...removed
+      .slice(0, maximumLinesPerSide)
+      .map((line) => boundedDiffLine('-', line)),
+    ...(removed.length > maximumLinesPerSide
+      ? [`-… ${removed.length - maximumLinesPerSide} more lines omitted`]
+      : []),
+    ...added
+      .slice(0, maximumLinesPerSide)
+      .map((line) => boundedDiffLine('+', line)),
+    ...(added.length > maximumLinesPerSide
+      ? [`+… ${added.length - maximumLinesPerSide} more lines omitted`]
+      : []),
+  ]
+  const oldStart = beforeLines.length === 0 ? 0 : prefix + 1
+  const newStart = afterLines.length === 0 ? 0 : prefix + 1
+  return [
+    `--- a/${relative}`,
+    `+++ b/${relative}`,
+    `@@ -${oldStart},${removed.length} +${newStart},${added.length} @@`,
+    ...body,
+  ].join('\n')
+}
+
 function validateReadOptions(options: WorkspaceReadOptions): {
   startLine: number
   endLine?: number
@@ -190,6 +366,26 @@ function unsafePath(reason = 'Workspace path changed during a safe operation') {
   return new WorkspaceError('UNSAFE_PATH', reason)
 }
 
+async function withNamedLock<T>(
+  locks: Map<string, Promise<void>>,
+  key: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const previous = locks.get(key) ?? Promise.resolve()
+  let release: () => void = () => undefined
+  const current = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  locks.set(key, current)
+  await previous
+  try {
+    return await operation()
+  } finally {
+    release()
+    if (locks.get(key) === current) locks.delete(key)
+  }
+}
+
 export async function createWorkspace(root: string): Promise<Workspace> {
   if (typeof root !== 'string' || !root || root.length > MAX_PATH_LENGTH) {
     throw new WorkspaceError(
@@ -214,6 +410,21 @@ export async function createWorkspace(root: string): Promise<Workspace> {
   const relativeRoot = posixPath(
     path.relative(process.cwd(), contentRoot) || '.',
   )
+
+  async function withPathLock<T>(
+    relative: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    return withNamedLock(
+      mutationPathLocks,
+      `${contentRoot}\0${relative}`,
+      operation,
+    )
+  }
+
+  async function withIndexLock<T>(operation: () => Promise<T>): Promise<T> {
+    return withNamedLock(workspaceIndexLocks, contentRoot, operation)
+  }
 
   async function assertRootStable(): Promise<void> {
     try {
@@ -525,9 +736,10 @@ export async function createWorkspace(root: string): Promise<Workspace> {
     if (!parentBefore.stats.isDirectory()) throw unsafePath()
 
     const targetExists = await assertNoSymlinkComponents(target, true)
+    let targetBefore: PathSnapshot | undefined
     if (targetExists) {
-      const existing = await snapshotPath(target)
-      if (!existing.stats.isFile()) {
+      targetBefore = await snapshotPath(target)
+      if (!targetBefore.stats.isFile()) {
         throw unsafePath('Safe workspace output path is not a file')
       }
     }
@@ -549,11 +761,15 @@ export async function createWorkspace(root: string): Promise<Workspace> {
       const parentAfter = await snapshotPath(parent)
       assertSameSnapshot(parentBefore, parentAfter)
       const targetStillExists = await assertNoSymlinkComponents(target, true)
-      if (targetStillExists) {
+      if (targetBefore) {
+        if (!targetStillExists) throw unsafePath()
         const currentTarget = await snapshotPath(target)
         if (!currentTarget.stats.isFile()) {
           throw unsafePath('Safe workspace output path is not a file')
         }
+        assertSameSnapshot(targetBefore, currentTarget)
+      } else if (targetStillExists) {
+        throw unsafePath()
       }
       const temporarySnapshot = await snapshotPath(temporary)
       if (
@@ -570,7 +786,7 @@ export async function createWorkspace(root: string): Promise<Workspace> {
       if (!sameIdentity(temporaryStats, written.stats)) throw unsafePath()
     } catch (error) {
       if (error instanceof WorkspaceError) throw error
-      throw unsafePath('Unable to write a safe workspace cache file')
+      throw unsafePath('Unable to write a safe workspace file')
     } finally {
       await handle?.close().catch(() => undefined)
       await unlink(temporary).catch(() => undefined)
@@ -587,6 +803,79 @@ export async function createWorkspace(root: string): Promise<Workspace> {
     await safeEnsureDirectory('.silen/ai')
     await safeAtomicWrite('.silen/ai/index.json', `${JSON.stringify(index)}\n`)
     return index
+  }
+
+  async function refreshIndex() {
+    return withIndexLock(async () => {
+      const documents = await documentsWithin()
+      const index = await writeIndex(documents)
+      return {
+        fileCount: documents.length,
+        index: '.silen/ai/index.json' as const,
+        fingerprint: index.fingerprint,
+      }
+    })
+  }
+
+  async function prepareMutationIndex(): Promise<void> {
+    await documentsWithin()
+    await safeEnsureDirectory('.silen')
+    await safeEnsureDirectory('.silen/ai')
+  }
+
+  async function readMutationState(
+    relative: string,
+    requireExisting: boolean,
+  ): Promise<{ before: string; created: boolean }> {
+    const target = lexicalPath(relative)
+    const parent = await snapshotPath(path.dirname(target))
+    if (!parent.stats.isDirectory()) {
+      throw unsafePath('Workspace mutation parent is not a directory')
+    }
+    const exists = await assertNoSymlinkComponents(target, true)
+    if (!exists) {
+      if (requireExisting) {
+        throw new WorkspaceError(
+          'NOT_FOUND',
+          `Workspace path does not exist: ${relative}`,
+        )
+      }
+      return { before: '', created: true }
+    }
+    return {
+      before: await secureReadText(target, relative, MAX_FILE_BYTES),
+      created: false,
+    }
+  }
+
+  async function assertLinkTarget(relative: string): Promise<void> {
+    const target = lexicalPath(relative)
+    await secureReadText(target, relative, MAX_FILE_BYTES)
+  }
+
+  async function mutate(
+    relative: string,
+    requireExisting: boolean,
+    transform: (before: string) => string,
+  ): Promise<WorkspaceMutationResult> {
+    return withPathLock(relative, async () => {
+      const { before, created } = await readMutationState(
+        relative,
+        requireExisting,
+      )
+      const after = normalizeMutationContent(transform(before))
+      await prepareMutationIndex()
+      await safeAtomicWrite(relative, after)
+      const index = await refreshIndex()
+      return {
+        path: relative,
+        created,
+        bytesBefore: Buffer.byteLength(before, 'utf8'),
+        bytesAfter: Buffer.byteLength(after, 'utf8'),
+        diff: unifiedDiffSummary(relative, before, after),
+        index,
+      }
+    })
   }
 
   async function readOptionalFile(
@@ -667,13 +956,7 @@ export async function createWorkspace(root: string): Promise<Workspace> {
       return { directories: ['wiki', '.silen/ai'] }
     },
     async reindex() {
-      const documents = await documentsWithin()
-      const index = await writeIndex(documents)
-      return {
-        fileCount: documents.length,
-        index: '.silen/ai/index.json',
-        fingerprint: index.fingerprint,
-      }
+      return refreshIndex()
     },
     guide() {
       return Promise.resolve(
@@ -758,6 +1041,46 @@ export async function createWorkspace(root: string): Promise<Workspace> {
     async citations(requestedPath) {
       const documents = await documentsWithin(requestedPath ?? '.')
       return { citations: documents.flatMap(inspectCitations) }
+    },
+    async write({ path: requestedPath, content }) {
+      const relative = normalizeMutationPath(requestedPath)
+      const normalized = normalizeMutationContent(content)
+      return mutate(relative, false, () => normalized)
+    },
+    async link({ path: requestedPath, target, label }) {
+      const relative = normalizeMutationPath(requestedPath)
+      const relativeTarget = normalizeMutationPath(target)
+      const escapedLabel = escapeLinkLabel(label)
+      return withPathLock(relative, async () => {
+        await assertLinkTarget(relativeTarget)
+        const { before, created } = await readMutationState(relative, true)
+        const destination = path.posix
+          .relative(path.posix.dirname(relative), relativeTarget)
+          .split('/')
+          .map((component) => encodeURIComponent(component))
+          .join('/')
+        const after = normalizeMutationContent(
+          appendWithSeparator(before, `[${escapedLabel}](${destination})`),
+        )
+        await prepareMutationIndex()
+        await safeAtomicWrite(relative, after)
+        const index = await refreshIndex()
+        return {
+          path: relative,
+          created,
+          bytesBefore: Buffer.byteLength(before, 'utf8'),
+          bytesAfter: Buffer.byteLength(after, 'utf8'),
+          diff: unifiedDiffSummary(relative, before, after),
+          index,
+        }
+      })
+    },
+    async append({ path: requestedPath, content }) {
+      const relative = normalizeMutationPath(requestedPath)
+      const normalized = normalizeMutationContent(content)
+      return mutate(relative, true, (before) =>
+        appendWithSeparator(before, normalized),
+      )
     },
     async build() {
       const documents = await documentsWithin()

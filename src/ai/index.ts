@@ -19,7 +19,10 @@ export type {
   Workspace,
   WorkspaceBuildResult,
   WorkspaceFile,
+  WorkspaceLinkInput,
+  WorkspaceMutationResult,
   WorkspaceReadOptions,
   WorkspaceReadResult,
+  WorkspaceWriteInput,
 } from './workspace.js'
 export type { AiChunk, AiPage } from '../shared/ai.js'

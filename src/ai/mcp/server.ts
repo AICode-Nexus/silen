@@ -1,10 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { Workspace } from '../workspace.js'
 import { registerReadTools } from './read-tools.js'
+import { registerWriteTools } from './write-tools.js'
 
 export interface CreateMcpServerOptions {
   workspace: Workspace
-  allowWrite: boolean
+  allowWrite?: boolean
 }
 
 export function createMcpServer(options: CreateMcpServerOptions): McpServer {
@@ -16,5 +17,6 @@ export function createMcpServer(options: CreateMcpServerOptions): McpServer {
     },
   )
   registerReadTools(server, options.workspace)
+  if (options.allowWrite === true) registerWriteTools(server, options.workspace)
   return server
 }
