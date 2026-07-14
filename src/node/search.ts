@@ -269,6 +269,14 @@ function isSearchAstNode(value: unknown): value is SearchAstNode {
   )
 }
 
+function isPrivateJsxElement(node: SearchAstNode): boolean {
+  return (
+    (node.type === 'mdxJsxTextElement' || node.type === 'mdxJsxFlowElement') &&
+    typeof node.name === 'string' &&
+    /^(?:script|style)$/i.test(node.name)
+  )
+}
+
 function childText(node: SearchAstNode, separator: string): string {
   return (node.children ?? [])
     .filter(isSearchAstNode)
@@ -278,6 +286,8 @@ function childText(node: SearchAstNode, separator: string): string {
 }
 
 function publicSearchText(node: SearchAstNode): string {
+  if (isPrivateJsxElement(node)) return ''
+
   switch (node.type) {
     case 'text':
       return typeof node.value === 'string' ? node.value : ''
@@ -300,12 +310,6 @@ function publicSearchText(node: SearchAstNode): string {
     case 'mdxJsxTextElement':
       return childText(node, '')
     case 'mdxJsxFlowElement':
-      if (
-        typeof node.name === 'string' &&
-        /^(?:script|style)$/i.test(node.name)
-      ) {
-        return ''
-      }
       return childText(node, '\n')
     case 'root':
     case 'blockquote':
@@ -325,16 +329,11 @@ function collectPublicHeadings(
   node: SearchAstNode,
   headings: ExtractedSearchHeading[],
 ): void {
+  if (isPrivateJsxElement(node)) return
+
   if (node.type === 'heading' && typeof node.depth === 'number') {
     const title = normalizedText(publicSearchText(node))
     if (title) headings.push({ depth: node.depth, title })
-    return
-  }
-  if (
-    node.type === 'mdxJsxFlowElement' &&
-    typeof node.name === 'string' &&
-    /^(?:script|style)$/i.test(node.name)
-  ) {
     return
   }
   if (

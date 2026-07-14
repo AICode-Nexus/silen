@@ -90,6 +90,40 @@ const publicExample = 'shown code'
     expect(text).not.toMatch(/private|hiddenTool|secret/i)
   })
 
+  it('skips literal script and style JSX children without hiding custom JSX prose', () => {
+    const text = markdownToSearchText(`
+# Public heading
+
+Before <ScRiPt>private inline script <Nested>private nested inline script</Nested></ScRiPt> after.
+
+Before <STYLE>private inline style <Nested>private nested inline style</Nested></STYLE> after.
+
+<SCRIPT>private single-line root script <Nested>private nested root script</Nested></SCRIPT>
+
+<StYlE>private single-line root style <Nested>private nested root style</Nested></StYlE>
+
+<ScRiPt>
+  private multiline flow script
+  <Nested>private nested multiline script</Nested>
+</ScRiPt>
+
+<style>
+  private multiline flow style
+  <Nested>private nested multiline style</Nested>
+</style>
+
+<PublicPanel>
+  Visible custom JSX prose.
+  <PublicChild>Visible nested custom JSX prose.</PublicChild>
+</PublicPanel>
+`)
+
+    expect(text).toBe(
+      'Public heading Before after. Before after. Visible custom JSX prose. Visible nested custom JSX prose.',
+    )
+    expect(text).not.toMatch(/private|script|style/i)
+  })
+
   it('serializes deterministically regardless of document input order', () => {
     const forward = serializeSearchIndex(createSearchIndex(documents))
     const reverse = serializeSearchIndex(
@@ -221,6 +255,10 @@ export const secretSource = {
 <script>{\`private-script-value\`}</script>
 <style>{\`private-style-value\`}</style>
 
+Public around <script>private-literal-inline-script-value</script> remains visible.
+
+<style>private-literal-single-line-style-value</style>
+
 # Search home
 
 Public introduction content.
@@ -261,6 +299,7 @@ Choose public project settings.
       route: '/guide',
     })
     expect(serialized).toContain('Public introduction content')
+    expect(serialized).toContain('Public around remains visible')
     expect(serialized).not.toContain('</script>')
     expect(serialized).not.toContain(root)
     expect(serialized).not.toContain('/private/source/file')
@@ -272,6 +311,8 @@ Choose public project settings.
     expect(serialized).not.toContain('private-jsx-comment-value')
     expect(serialized).not.toContain('private-script-value')
     expect(serialized).not.toContain('private-style-value')
+    expect(serialized).not.toContain('private-literal-inline-script-value')
+    expect(serialized).not.toContain('private-literal-single-line-style-value')
     expect(serialized).not.toContain('private-config-value')
     expect(serialized).not.toContain('private-frontmatter-value')
   })
