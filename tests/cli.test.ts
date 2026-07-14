@@ -43,11 +43,13 @@ afterAll(async () => {
 })
 
 describe('CLI dispatch', () => {
-  it('prints the three primary commands and version', async () => {
+  it('prints the primary, AI, and MCP commands and version', async () => {
     const help = await execa(cliRunner, [cli, '--help'])
     expect(help.stdout).toContain('dev [root]')
     expect(help.stdout).toContain('build [root]')
     expect(help.stdout).toContain('preview [root]')
+    expect(help.stdout).toContain('ai <action> [root]')
+    expect(help.stdout).toContain('mcp [root]')
 
     const version = await execa(cliRunner, [cli, '--version'])
     expect(version.stdout).toContain('silen/0.1.0-alpha.0')
@@ -87,4 +89,19 @@ describe('CLI dispatch', () => {
     expect(result.exitCode).not.toBe(0)
     expect(result.all).toContain('Unknown command')
   })
+
+  it('initializes, indexes, and audits the local AI workspace', async () => {
+    const site = path.join(root, 'site')
+    const initialized = await execa(cliRunner, [cli, 'ai', 'init', site])
+    expect(initialized.stdout).toContain('Initialized')
+
+    const indexed = await execa(cliRunner, [cli, 'ai', 'index', site])
+    expect(JSON.parse(indexed.stdout)).toMatchObject({
+      fileCount: 1,
+      index: '.silen/ai/index.json',
+    })
+
+    const audited = await execa(cliRunner, [cli, 'ai', 'audit', site])
+    expect(JSON.parse(audited.stdout)).toMatchObject({ ok: true, issues: [] })
+  }, 30_000)
 })

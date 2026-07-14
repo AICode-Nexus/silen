@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import cac from 'cac'
+import { serveMcp } from '../ai/mcp/stdio.js'
+import { createWorkspace } from '../ai/workspace.js'
 import { build } from './build.js'
 import {
   createDevServer,
@@ -127,6 +129,41 @@ async function runCli(): Promise<void> {
         commandRoot(root),
         commandServerOptions(options),
       )
+    })
+  cli
+    .command(
+      'ai <action> [root]',
+      'Initialize, index, or audit the local AI workspace',
+    )
+    .action(async (action: unknown, root: unknown) => {
+      if (action !== 'init' && action !== 'index' && action !== 'audit') {
+        throw new Error(
+          `Unknown AI command ${JSON.stringify(action)}; expected init, index, or audit`,
+        )
+      }
+      const workspace = await createWorkspace(commandRoot(root))
+      if (action === 'init') {
+        await workspace.init()
+        console.log(`Initialized ${workspace.relativeRoot}`)
+        return
+      }
+      if (action === 'index') {
+        console.log(JSON.stringify(await workspace.reindex()))
+        return
+      }
+      const result = await workspace.audit()
+      console.log(JSON.stringify(result, null, 2))
+      if (!result.ok) process.exitCode = 1
+    })
+  cli
+    .command('mcp [root]', 'Serve the documentation workspace over MCP')
+    .option('--allow-write', 'Register write tools', { default: false })
+    .action(async (root: unknown, options: { allowWrite?: unknown }) => {
+      const workspace = await createWorkspace(commandRoot(root))
+      await serveMcp({
+        workspace,
+        allowWrite: options.allowWrite === true,
+      })
     })
   cli.help()
   cli.version(version)
