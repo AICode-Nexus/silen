@@ -9,7 +9,7 @@
     "vite",
     "mdx"
   ],
-  "homepage": "https://github.com/AICode-Nexus/silen#readme",
+  "homepage": "https://aicode-nexus.github.io/silen/",
   "bugs": {
     "url": "https://github.com/AICode-Nexus/silen/issues"
   },
@@ -55,6 +55,8 @@
   ],
   "scripts": {
     "build": "tsup",
+    "site:build": "pnpm build && node dist/node/cli.js build website",
+    "site:dev": "pnpm build && node dist/node/cli.js dev website",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

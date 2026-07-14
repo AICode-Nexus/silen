@@ -4,6 +4,8 @@ Silen is a lightweight, documentation-first static site generator powered by
 React, TypeScript, Vite, and MDX. Core Alpha turns trusted MDX project files
 into complete static HTML with client-side navigation.
 
+**Website:** https://aicode-nexus.github.io/silen/
+
 ## Requirements and installation
 
 Silen supports Node.js `^20.19.0 || >=22.12.0` and pnpm `11.12.0`. React
