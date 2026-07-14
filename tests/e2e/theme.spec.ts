@@ -1,4 +1,4 @@
-import { rm } from 'node:fs/promises'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { build } from '../../src/node/build'
@@ -57,7 +57,9 @@ test.beforeEach(({ page }) => {
       )
     }
   })
-  page.on('pageerror', (error) => problems.push(`page error: ${error.message}`))
+  page.on('pageerror', (error) =>
+    problems.push(`page error: ${error.stack ?? error.message}`),
+  )
 })
 
 test.afterEach(({ page }) => {
@@ -221,4 +223,87 @@ test('uses the custom theme for development SSR, hydration, and 404 rendering', 
   await expect(page.locator('[data-demo]')).toContainText(
     'Custom theme component',
   )
+})
+
+test('hot-updates MDX and custom theme components without reloading the page', async ({
+  page,
+}) => {
+  const mdxFile = path.join(root, 'about.mdx')
+  const themeFile = path.join(root, '.silen/theme.tsx')
+  const [originalMdx, originalTheme] = await Promise.all([
+    readFile(mdxFile),
+    readFile(themeFile),
+  ])
+  const marker = `hmr-${Date.now()}`
+
+  try {
+    await page.goto(serverUrl(development, 'about?hmr=preserved'))
+    await expect(
+      page.getByRole('heading', { name: 'About this fixture', level: 1 }),
+    ).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            typeof (window as typeof window & { $RefreshSig$?: unknown })
+              .$RefreshSig$,
+        ),
+      )
+      .toBe('function')
+    await page.evaluate((value) => {
+      ;(window as typeof window & { __silenHmrMarker?: string })[
+        '__silenHmrMarker'
+      ] = value
+    }, marker)
+
+    const updatedMdx = originalMdx
+      .toString('utf8')
+      .replace('About this fixture', 'About this HMR fixture')
+    expect(updatedMdx).not.toBe(originalMdx.toString('utf8'))
+    await writeFile(mdxFile, updatedMdx)
+
+    await expect(
+      page.getByRole('heading', { name: 'About this HMR fixture', level: 1 }),
+    ).toBeVisible({ timeout: 15_000 })
+    await expect(page).toHaveURL(serverUrl(development, 'about?hmr=preserved'))
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as typeof window & { __silenHmrMarker?: string })
+              .__silenHmrMarker,
+        ),
+      )
+      .toBe(marker)
+
+    const updatedTheme = originalTheme
+      .toString('utf8')
+      .replace(
+        '<div data-custom-root="">',
+        '<div data-custom-root="" data-theme-version="updated">',
+      )
+    expect(updatedTheme).not.toBe(originalTheme.toString('utf8'))
+    await writeFile(themeFile, updatedTheme)
+
+    await expect(page.locator('[data-custom-root]')).toHaveAttribute(
+      'data-theme-version',
+      'updated',
+      { timeout: 15_000 },
+    )
+    await expect(page).toHaveURL(serverUrl(development, 'about?hmr=preserved'))
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as typeof window & { __silenHmrMarker?: string })
+              .__silenHmrMarker,
+        ),
+      )
+      .toBe(marker)
+  } finally {
+    await Promise.all([
+      writeFile(mdxFile, originalMdx),
+      writeFile(themeFile, originalTheme),
+    ])
+  }
 })

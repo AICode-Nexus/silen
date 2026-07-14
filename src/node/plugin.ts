@@ -62,6 +62,7 @@ function moduleName(id: string): keyof VirtualModules | undefined {
 
 export interface SilenPluginOptions {
   publicConfigOnly?: boolean
+  hmr?: boolean
 }
 
 export async function silenPlugin(
@@ -75,6 +76,7 @@ export async function silenPlugin(
     config,
     ...(themeFile === undefined ? {} : { themeFile }),
     publicConfigOnly: options.publicConfigOnly ?? false,
+    hmr: options.hmr ?? false,
   })
   modules.theme = [
     `import ${JSON.stringify(viteImportPath(defaultThemeStylesheet()))}`,

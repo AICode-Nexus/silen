@@ -33,6 +33,40 @@ function rawStatus(url: URL, requestPath: string): Promise<number> {
   })
 }
 
+function expectViteHmrConnection(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const websocketUrl = new URL(url)
+    websocketUrl.protocol = websocketUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+    const socket = new WebSocket(websocketUrl, 'vite-hmr')
+    const timeout = setTimeout(() => {
+      socket.close()
+      reject(new Error(`Timed out connecting to Vite HMR at ${websocketUrl}`))
+    }, 5_000)
+
+    socket.addEventListener('message', (event) => {
+      let payload: unknown
+      try {
+        payload = JSON.parse(String(event.data))
+      } catch {
+        return
+      }
+      if (
+        typeof payload === 'object' &&
+        payload !== null &&
+        (payload as { type?: unknown }).type === 'connected'
+      ) {
+        clearTimeout(timeout)
+        socket.close()
+        resolve()
+      }
+    })
+    socket.addEventListener('error', () => {
+      clearTimeout(timeout)
+      reject(new Error(`Failed connecting to Vite HMR at ${websocketUrl}`))
+    })
+  })
+}
+
 beforeAll(async () => {
   const testTemp = path.resolve('.silen/.temp/tests')
   await mkdir(testTemp, { recursive: true })
@@ -103,7 +137,21 @@ describe('development server', () => {
     expect(homeHtml).toContain('<h1>Development home</h1>')
     expect(homeHtml).toContain('Rendered by Vite SSR.')
     expect(homeHtml).toContain('/docs/@vite/client')
+    expect(homeHtml).toContain('/docs/@react-refresh')
+    expect(homeHtml).toContain('injectIntoGlobalHook(window)')
     expect(homeHtml).toContain('/docs/@fs/')
+    await expectViteHmrConnection(server.url)
+
+    const transformedClientModule = await fetch(
+      new URL(
+        `@fs${path.resolve('src/client/data.tsx')}`,
+        `http://127.0.0.1:${server.port}/docs/`,
+      ),
+    )
+    const transformedClientSource = await transformedClientModule.text()
+    expect(transformedClientModule.status, transformedClientSource).toBe(200)
+    expect(transformedClientSource).toContain('function $RefreshSig$')
+    expect(transformedClientSource).not.toContain('jsxDEV')
 
     const missing = await fetch(new URL('missing', server.url))
     expect(missing.status).toBe(404)
@@ -112,6 +160,10 @@ describe('development server', () => {
 
     const outsideBase = await fetch(`http://127.0.0.1:${server.port}/outside`)
     expect(outsideBase.status).toBe(404)
+
+    await server.close()
+    await expect(server.close()).resolves.toBeUndefined()
+    await expect(fetch(server.url)).rejects.toThrow()
   }, 30_000)
 
   it('validates port values before opening a listener', async () => {

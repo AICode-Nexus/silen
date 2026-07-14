@@ -1,13 +1,5 @@
-import type { ReactNode } from 'react'
 import DefaultTheme, { defineTheme } from 'silen/theme'
-
-function Demo({
-  children,
-}: {
-  readonly children?: ReactNode
-}): React.JSX.Element {
-  return <section data-demo="">{children}</section>
-}
+import { Demo } from './demo'
 
 export default defineTheme({
   extends: DefaultTheme,

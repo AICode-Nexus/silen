@@ -583,7 +583,7 @@ async function installOutput(
   }
 }
 
-export async function build(root: string): Promise<BuildResult> {
+async function buildSite(root: string): Promise<BuildResult> {
   const config = await resolveConfig(root, 'build')
   const routes = await scanRoutes(config.root)
   await assertSafeOutDir(config, routes)
@@ -625,5 +625,15 @@ export async function build(root: string): Promise<BuildResult> {
   return {
     outDir: config.outDir,
     routes: routes.map((route) => ({ path: route.path, file: route.file })),
+  }
+}
+
+export async function build(root: string): Promise<BuildResult> {
+  const previousNodeEnv = process.env.NODE_ENV
+  try {
+    return await buildSite(root)
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV
+    else process.env.NODE_ENV = previousNodeEnv
   }
 }

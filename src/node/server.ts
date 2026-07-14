@@ -502,47 +502,53 @@ export async function createDevServer(
 ): Promise<SilenServer> {
   const resolvedListen = listenOptions(options, 5173)
   const config = await resolveConfig(root, 'serve')
-  const vite = await createViteServer({
-    appType: 'custom',
-    base: config.base,
-    configFile: false,
-    optimizeDeps: {
-      include: [
-        'class-variance-authority',
-        'clsx',
-        'cmdk',
-        'lucide-react',
-        'minisearch',
-        'radix-ui',
-        'react',
-        'react-dom',
-        'react-dom/client',
-        'react/jsx-runtime',
-        'tailwind-merge',
-      ],
-    },
-    plugins: [
-      react(),
-      ...(await silenPlugin(config, { publicConfigOnly: true })),
-      ...createMdxPlugins(),
-    ],
-    oxc: { jsx: { development: false } },
-    resolve: { dedupe: ['react', 'react-dom'] },
-    root: config.root,
-    server: { middlewareMode: true, hmr: false },
-  })
-  const server = createHttpServer(createDevRequestHandler(vite, config.base))
+  const server = createHttpServer()
+  let vite: ViteDevServer | undefined
   try {
+    const viteServer = await createViteServer({
+      appType: 'custom',
+      base: config.base,
+      configFile: false,
+      optimizeDeps: {
+        include: [
+          'class-variance-authority',
+          'clsx',
+          'cmdk',
+          'lucide-react',
+          'minisearch',
+          'radix-ui',
+          'react',
+          'react-dom',
+          'react-dom/client',
+          'react/jsx-runtime',
+          'tailwind-merge',
+        ],
+      },
+      plugins: [
+        react(),
+        ...(await silenPlugin(config, { publicConfigOnly: true, hmr: true })),
+        ...createMdxPlugins(),
+      ],
+      oxc: { jsx: { development: false } },
+      resolve: { dedupe: ['react', 'react-dom'] },
+      root: config.root,
+      server: {
+        middlewareMode: { server },
+        ws: { server },
+      },
+    })
+    vite = viteServer
+    server.on('request', createDevRequestHandler(viteServer, config.base))
     const address = await listen(server, resolvedListen)
     return serverLifecycle(
       server,
       address,
       resolvedListen.host,
       config.base,
-      () => vite.close(),
+      () => viteServer.close(),
     )
   } catch (error) {
-    await vite.close()
+    await vite?.close()
     throw error
   }
 }

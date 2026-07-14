@@ -61,6 +61,31 @@ describe('virtual modules', () => {
     expect(Object.keys(loaded.default)).toEqual(['/', "/author's-notes"])
   })
 
+  it('adds explicit development HMR boundaries without changing production modules', () => {
+    const root = path.resolve('tests/fixtures/ssr')
+    const route: RouteRecord = {
+      path: '/',
+      file: path.join(root, 'index.mdx'),
+      relativeFile: 'index.mdx',
+    }
+    const production = createVirtualModules({
+      routes: [route],
+      config: resolvedConfig(root),
+    })
+    const development = createVirtualModules({
+      routes: [route],
+      config: resolvedConfig(root),
+      hmr: true,
+    })
+
+    expect(production.routes).not.toContain('import.meta.hot')
+    expect(production.theme).not.toContain('import.meta.hot')
+    expect(development.routes).toContain('publishHotRouteUpdate')
+    expect(development.routes).toContain('import.meta.hot.accept([')
+    expect(development.routes).toContain(route.file.replaceAll('\\', '/'))
+    expect(development.theme).toContain('import.meta.hot.accept(')
+  })
+
   it('serializes config as data without executing prototype-named fields', async () => {
     const root = path.resolve('tests/fixtures/ssr')
     const config = resolvedConfig(root) as ResolvedConfig &

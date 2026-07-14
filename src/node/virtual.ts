@@ -20,6 +20,33 @@ export interface VirtualModuleOptions {
   config: ResolvedConfig
   themeFile?: string
   publicConfigOnly?: boolean
+  hmr?: boolean
+}
+
+function clientHmrFile(): string {
+  const sourceExtension = path.extname(fileURLToPath(import.meta.url)) === '.ts'
+  return fileURLToPath(
+    new URL(`../client/hmr.${sourceExtension ? 'ts' : 'js'}`, import.meta.url),
+  )
+}
+
+function routeHmrSource(routes: readonly RouteRecord[]): string[] {
+  if (routes.length === 0) return []
+  const files = routes.map((route) =>
+    quoteModuleString(viteImportPath(route.file)),
+  )
+  const paths = routes.map((route) => quoteModuleString(route.path))
+  return [
+    `import { publishHotRouteUpdate } from ${quoteModuleString(viteImportPath(clientHmrFile()))}`,
+    'if (import.meta.hot) {',
+    `  const hotRoutePaths = [${paths.join(', ')}]`,
+    `  import.meta.hot.accept([${files.join(', ')}], (modules) => {`,
+    '    for (const [index, module] of modules.entries()) {',
+    '      if (module) publishHotRouteUpdate({ module, path: hotRoutePaths[index] })',
+    '    }',
+    '  })',
+    '}',
+  ]
 }
 
 function quoteModuleString(value: string): string {
@@ -194,17 +221,17 @@ export function createVirtualModules({
   config,
   themeFile = defaultThemeFile(),
   publicConfigOnly = false,
+  hmr = false,
 }: VirtualModuleOptions): VirtualModules {
-  const routeEntries = [...routes]
-    .sort(
-      (left, right) =>
-        compareStrings(left.path, right.path) ||
-        compareStrings(left.relativeFile, right.relativeFile),
-    )
-    .map(
-      (route) =>
-        `  ${quoteModuleString(route.path)}: () => import(${quoteModuleString(viteImportPath(route.file))})`,
-    )
+  const sortedRoutes = [...routes].sort(
+    (left, right) =>
+      compareStrings(left.path, right.path) ||
+      compareStrings(left.relativeFile, right.relativeFile),
+  )
+  const routeEntries = sortedRoutes.map(
+    (route) =>
+      `  ${quoteModuleString(route.path)}: () => import(${quoteModuleString(viteImportPath(route.file))})`,
+  )
 
   return {
     routes: [
@@ -213,11 +240,24 @@ export function createVirtualModules({
       '}',
       'export { routes }',
       'export default routes',
+      ...(hmr ? routeHmrSource(sortedRoutes) : []),
     ].join('\n'),
     config: serializeConfig(config, publicConfigOnly),
-    theme: [
-      `export { default } from ${quoteModuleString(viteImportPath(themeFile))}`,
-      `export * from ${quoteModuleString(viteImportPath(themeFile))}`,
-    ].join('\n'),
+    theme: hmr
+      ? [
+          `import hotTheme from ${quoteModuleString(viteImportPath(themeFile))}`,
+          `import { publishHotThemeUpdate } from ${quoteModuleString(viteImportPath(clientHmrFile()))}`,
+          'export { hotTheme as default }',
+          `export * from ${quoteModuleString(viteImportPath(themeFile))}`,
+          'if (import.meta.hot) {',
+          `  import.meta.hot.accept(${quoteModuleString(viteImportPath(themeFile))}, (module) => {`,
+          '    if (module) publishHotThemeUpdate(module.default)',
+          '  })',
+          '}',
+        ].join('\n')
+      : [
+          `export { default } from ${quoteModuleString(viteImportPath(themeFile))}`,
+          `export * from ${quoteModuleString(viteImportPath(themeFile))}`,
+        ].join('\n'),
   }
 }

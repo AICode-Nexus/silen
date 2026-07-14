@@ -8,11 +8,15 @@ import {
 } from 'react'
 import { flushSync } from 'react-dom'
 import config from 'virtual:silen/config'
-import routes from 'virtual:silen/routes'
-import Theme from 'virtual:silen/theme'
+import routes, { type PageModule } from 'virtual:silen/routes'
+import InitialTheme, { type Theme } from 'virtual:silen/theme'
 import type { JsonObject } from '../shared/page.js'
 import type { ThemeMdxComponents } from '../theme-default/index.js'
 import { DataProvider, type PagePublicData } from './data.js'
+import {
+  subscribeToHotRouteUpdates,
+  subscribeToHotThemeUpdates,
+} from './hmr.js'
 import { navigateDocument } from './navigation.js'
 import { resolveInternalUrl, RouterProvider, type Router } from './router.js'
 
@@ -129,33 +133,34 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
           route: request.route ?? request.pathname,
           themeConfig: config.themeConfig,
         },
-        Component: (Theme.NotFound ??
+        Component: (InitialTheme.NotFound ??
           FallbackNotFound) as ComponentType<MdxContentProps>,
       },
     }
   }
 
   const module = await loader()
+  return { found: true, page: resolvedPage(route, module) }
+}
+
+function resolvedPage(route: string, module: PageModule): ResolvedPage {
   return {
-    found: true,
-    page: {
-      title: stringField(module.frontmatter, 'title', config.title),
-      description: stringField(
-        module.frontmatter,
-        'description',
-        config.description,
-      ),
-      publicData: {
-        siteTitle: config.title,
-        lang: stringField(module.frontmatter, 'lang', config.lang),
-        base: config.base,
-        route,
-        frontmatter: module.frontmatter,
-        headings: module.headings,
-        themeConfig: config.themeConfig,
-      },
-      Component: module.default as ComponentType<MdxContentProps>,
+    title: stringField(module.frontmatter, 'title', config.title),
+    description: stringField(
+      module.frontmatter,
+      'description',
+      config.description,
+    ),
+    publicData: {
+      siteTitle: config.title,
+      lang: stringField(module.frontmatter, 'lang', config.lang),
+      base: config.base,
+      route,
+      frontmatter: module.frontmatter,
+      headings: module.headings,
+      themeConfig: config.themeConfig,
     },
+    Component: module.default as ComponentType<MdxContentProps>,
   }
 }
 
@@ -264,6 +269,7 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
     path: browserPath(initialUrl),
     page: initialPage,
   }))
+  const [theme, setTheme] = useState<Theme>(() => InitialTheme)
   const stateRef = useRef(state)
   const routeCache = useRef(new Map<string, Promise<RouteMatch>>())
   const navigationSequence = useRef(0)
@@ -495,6 +501,25 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
     [loadRoute],
   )
 
+  useEffect(
+    () =>
+      subscribeToHotRouteUpdates((update) => {
+        routeCache.current.clear()
+        if (stateRef.current.page.publicData.route !== update.path) return
+        const url = currentBrowserUrl()
+        if (stateRef.current.path !== browserPath(url.href)) return
+        commitPage(
+          url,
+          resolvedPage(update.path, update.module),
+          undefined,
+          false,
+        )
+      }),
+    [commitPage],
+  )
+
+  useEffect(() => subscribeToHotThemeUpdates(setTheme), [])
+
   useEffect(() => {
     setMetadata(stateRef.current.page)
     const initialRestoration = window.history.scrollRestoration
@@ -573,18 +598,18 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
   )
   const { Component } = state.page
   const layoutName = contentLayout(state.page.publicData.frontmatter)
-  const ContentLayout = Theme.layouts?.[layoutName]
-  const content = Theme.components ? (
-    <Component components={Theme.components} />
+  const ContentLayout = theme.layouts?.[layoutName]
+  const content = theme.components ? (
+    <Component components={theme.components} />
   ) : (
     <Component />
   )
   const page = (
-    <Theme.Layout>
+    <theme.Layout>
       {ContentLayout ? <ContentLayout>{content}</ContentLayout> : content}
-    </Theme.Layout>
+    </theme.Layout>
   )
-  const Root = Theme.wrapRoot
+  const Root = theme.wrapRoot
   return (
     <DataProvider value={state.page.publicData}>
       <RouterProvider value={router}>
