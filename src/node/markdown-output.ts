@@ -3,6 +3,7 @@ import remarkFrontmatter from 'remark-frontmatter'
 import remarkStringify from 'remark-stringify'
 import { unified } from 'unified'
 import type { CompiledPage } from './mdx.js'
+import { rewriteInternalPageLink } from './links.js'
 
 interface MarkdownAstNode {
   type: string
@@ -12,6 +13,7 @@ interface MarkdownAstNode {
     end?: { offset?: number }
   }
   value?: string
+  url?: string
 }
 
 const markdownParser = createProcessor({
@@ -66,18 +68,22 @@ function isGfmTable(value: string): boolean {
 function sanitizedChildren(
   nodes: readonly MarkdownAstNode[],
   source: string,
+  route: string,
+  base: string,
 ): MarkdownAstNode[] {
-  return nodes.flatMap((node) => sanitizeNode(node, source))
+  return nodes.flatMap((node) => sanitizeNode(node, source, route, base))
 }
 
 function sanitizeNode(
   node: MarkdownAstNode,
   source: string,
+  route: string,
+  base: string,
 ): MarkdownAstNode[] {
   if (omittedNodeTypes.has(node.type)) return []
 
   if (node.type === 'mdxJsxFlowElement' || node.type === 'mdxJsxTextElement') {
-    return sanitizedChildren(node.children ?? [], source)
+    return sanitizedChildren(node.children ?? [], source, route, base)
   }
 
   const original = sourceForNode(node, source)
@@ -85,21 +91,34 @@ function sanitizeNode(
     return [{ type: 'html', value: original.replace(/\r\n?/g, '\n') }]
   }
 
-  if (!node.children) return [{ ...node }]
+  const sanitized =
+    node.url &&
+    (node.type === 'link' ||
+      node.type === 'image' ||
+      node.type === 'definition')
+      ? { ...node, url: rewriteInternalPageLink(node.url, route, base) }
+      : { ...node }
+
+  if (!node.children) return [sanitized]
   return [
     {
-      ...node,
-      children: sanitizedChildren(node.children, source),
+      ...sanitized,
+      children: sanitizedChildren(node.children, source, route, base),
     },
   ]
 }
 
-export function serializePageMarkdown(page: CompiledPage): string {
+export function serializePageMarkdown(page: CompiledPage, base = '/'): string {
   const source = page.source.replace(/\r\n?/g, '\n')
   const parsed = markdownParser.parse(source) as unknown as MarkdownAstNode
   const tree: MarkdownAstNode = {
     ...parsed,
-    children: sanitizedChildren(parsed.children ?? [], source),
+    children: sanitizedChildren(
+      parsed.children ?? [],
+      source,
+      page.route,
+      base,
+    ),
   }
   return `${String(markdownSerializer.stringify(tree as never)).trimEnd()}\n`
 }

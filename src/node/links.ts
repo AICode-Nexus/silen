@@ -28,7 +28,8 @@ function routeAliases(route: string): string[] {
 
 function pageDirectory(route: string): string {
   if (route === '/') return '/'
-  return route.endsWith('/') ? route : `${route}/`
+  if (route.endsWith('/')) return route
+  return route.slice(0, route.lastIndexOf('/') + 1) || '/'
 }
 
 function stripBase(pathname: string, base: string): string {
@@ -48,33 +49,77 @@ function normalizePageExtension(pathname: string): string {
     : withoutExtension
 }
 
-function targetRoute(
+interface InternalPageTarget {
+  route: string
+  search: string
+  hash: string
+  malformed?: boolean
+}
+
+function internalPageTarget(
   link: string,
-  page: CompiledPage,
+  pageRoute: string,
   base: string,
-): string | undefined {
+): InternalPageTarget | undefined {
   const trimmed = link.trim()
   if (!trimmed || trimmed.startsWith('//') || absoluteScheme.test(trimmed)) {
     return undefined
   }
 
-  const mountedPage = `${base}${pageDirectory(page.route).replace(/^\//, '')}`
+  if (trimmed.startsWith('?') || trimmed.startsWith('#')) {
+    const current = new URL(
+      trimmed,
+      `https://silen.local${base}${pageRoute.slice(1)}`,
+    )
+    return { route: pageRoute, search: current.search, hash: current.hash }
+  }
+
+  const mountedPage = `${base}${pageDirectory(pageRoute).replace(/^\//, '')}`
   let url: URL
   try {
     url = new URL(trimmed, `https://silen.local${mountedPage}`)
   } catch {
-    return trimmed
+    return { route: trimmed, search: '', hash: '', malformed: true }
   }
 
   let pathname = stripBase(url.pathname, base)
   try {
     pathname = decodeURIComponent(pathname)
   } catch {
-    return pathname
+    return { route: pathname, search: '', hash: '', malformed: true }
   }
   pathname = pathname.replace(/\/{2,}/g, '/')
   if (staticAssetExtension.test(pathname)) return undefined
-  return normalizePageExtension(pathname) || '/'
+  return {
+    route: normalizePageExtension(pathname) || '/',
+    search: url.search,
+    hash: url.hash,
+  }
+}
+
+function targetRoute(
+  link: string,
+  page: CompiledPage,
+  base: string,
+): string | undefined {
+  return internalPageTarget(link, page.route, base)?.route
+}
+
+export function rewriteInternalPageLink(
+  link: string,
+  pageRoute: string,
+  configuredBase = '/',
+): string {
+  const trimmed = link.trim()
+  if (!/\.(?:md|mdx|html)(?:[?#]|$)/i.test(trimmed)) return link
+
+  const base = normalizedBase(configuredBase)
+  const target = internalPageTarget(trimmed, pageRoute, base)
+  if (!target || target.malformed) return link
+
+  const pathname =
+    target.route === '/' ? base : `${base}${target.route.replace(/^\//, '')}`
+  return `${pathname}${target.search}${target.hash}`
 }
 
 function formatDiagnostic(diagnostic: LinkDiagnostic): string {

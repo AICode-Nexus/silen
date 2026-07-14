@@ -90,10 +90,11 @@ function joinUrl(base: string, pathname: string): string {
 export function renderLlmsTxt(
   site: Pick<ResolvedConfig, 'title' | 'description' | 'base'>,
   pages: readonly AiPage[],
+  markdownRoutes = true,
 ): string {
   const links = pages.map(
     (page) =>
-      `- [${page.title}](${joinUrl(site.base, markdownUrlForRoute(page.route))})${page.description ? `: ${page.description}` : ''}`,
+      `- [${page.title}](${joinUrl(site.base, markdownRoutes ? markdownUrlForRoute(page.route) : page.route)})${page.description ? `: ${page.description}` : ''}`,
   )
   return normalizeText(
     [
@@ -146,7 +147,7 @@ export async function generateAiArtifacts(
   if (config.llmsTxt) {
     await writeFile(
       path.join(options.outDir, 'llms.txt'),
-      renderLlmsTxt(options.site, pages),
+      renderLlmsTxt(options.site, pages, config.markdownRoutes),
       'utf8',
     )
     files.push('llms.txt')

@@ -557,11 +557,11 @@ async function emitSearchIndex(
   }
 }
 
-function createAiPages(pages: readonly CompiledPage[]): AiPage[] {
+function createAiPages(pages: readonly CompiledPage[], base: string): AiPage[] {
   return pages.map((page) => ({
     route: page.route,
     title: page.title,
-    markdown: serializePageMarkdown(page),
+    markdown: serializePageMarkdown(page, base),
     ...(page.description ? { description: page.description } : {}),
     ...(page.frontmatter.draft === true ? { draft: true } : {}),
     ...(page.frontmatter.ai === false ? { ai: false } : {}),
@@ -628,7 +628,7 @@ async function buildSite(root: string): Promise<BuildResult> {
     await generateAiArtifacts({
       outDir: stagedOutDir,
       site: config,
-      pages: createAiPages(pages),
+      pages: createAiPages(pages, config.base),
       config: config.ai,
     })
     validateInternalLinks(routes, pages, config.onBrokenLinks, config.base)

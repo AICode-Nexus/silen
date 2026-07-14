@@ -73,6 +73,120 @@ describe('AI build artifacts', () => {
     )
   })
 
+  it('uses base-aware HTML routes in llms.txt when Markdown routes are disabled', async () => {
+    const outDir = await mkdtemp(path.join(os.tmpdir(), 'silen-ai-html-links-'))
+    try {
+      await generateAiArtifacts({
+        outDir,
+        site: {
+          title: 'HTML-only Docs',
+          description: 'Public HTML routes.',
+          base: '/project/',
+        },
+        pages: [
+          {
+            route: '/guide/',
+            title: 'Guide',
+            markdown: '# Guide\n',
+          },
+          {
+            route: '/reference/api',
+            title: 'API',
+            markdown: '# API\n',
+          },
+        ],
+        config: {
+          llmsTxt: true,
+          llmsFullTxt: true,
+          markdownRoutes: false,
+          index: true,
+        },
+      })
+
+      const manifest = await readFile(path.join(outDir, 'llms.txt'), 'utf8')
+      expect(manifest).toContain('- [Guide](/project/guide/)')
+      expect(manifest).toContain('- [API](/project/reference/api)')
+      expect(manifest).not.toContain('.md)')
+      await expectMissing(path.join(outDir, 'guide/index.md'))
+    } finally {
+      await rm(outDir, { force: true, recursive: true })
+    }
+  })
+
+  it('rewrites only internal Markdown destinations to mounted public routes in every AI artifact', async () => {
+    const linksRoot = path.resolve('tests/fixtures/ai-links-site')
+    const linksResult = await build(linksRoot)
+    try {
+      const [markdown, full, serializedIndex] = await Promise.all([
+        readFile(
+          path.join(linksResult.outDir, 'guide/getting-started.md'),
+          'utf8',
+        ),
+        readFile(path.join(linksResult.outDir, 'llms-full.txt'), 'utf8'),
+        readFile(path.join(linksResult.outDir, 'ai-index.json'), 'utf8'),
+      ])
+      const index = JSON.parse(serializedIndex) as {
+        pages: Array<{ route: string; markdown: string }>
+        chunks: Array<{ route: string; links: string[] }>
+      }
+      const indexedPage = index.pages.find(
+        (page) => page.route === '/guide/getting-started',
+      )
+      const indexedLinks = index.chunks
+        .filter((chunk) => chunk.route === '/guide/getting-started')
+        .flatMap((chunk) => chunk.links)
+      const publicOutputs = [markdown, full, indexedPage?.markdown ?? '']
+
+      for (const output of publicOutputs) {
+        expect(output).toContain(
+          '/knowledge/guide/getting-started?from=relative#package-manager',
+        )
+        expect(output).toContain(
+          '/knowledge/guide/getting-started?from=absolute#package-manager',
+        )
+        expect(output).toContain(
+          '/knowledge/guide/getting-started?from=base#package-manager',
+        )
+        expect(output).toContain(
+          '/knowledge/guide/getting-started?view=diagram#package-manager',
+        )
+        expect(output).toContain(
+          '/knowledge/guide/getting-started?from=reference#package-manager',
+        )
+        expect(output).toContain(
+          'https://example.com/reference.html?keep=1#top',
+        )
+        expect(output).toContain('mailto:docs@example.com')
+        expect(output).toContain('](#package-manager)')
+        expect(output).toContain('plain path guide/getting-started.md')
+        expect(output).toContain(
+          '[fenced example](./getting-started.md?from=fence#package-manager)',
+        )
+      }
+
+      expect(indexedLinks).toEqual(
+        expect.arrayContaining([
+          '/knowledge/guide/getting-started?from=relative#package-manager',
+          '/knowledge/guide/getting-started?from=absolute#package-manager',
+          '/knowledge/guide/getting-started?from=base#package-manager',
+          '/knowledge/guide/getting-started?from=reference#package-manager',
+          'https://example.com/reference.html?keep=1#top',
+          'mailto:docs@example.com',
+          '#package-manager',
+        ]),
+      )
+    } finally {
+      await rm(path.join(linksRoot, '.silen/dist'), {
+        force: true,
+        recursive: true,
+      })
+      await rm(path.join(linksRoot, '.silen/.temp'), {
+        force: true,
+        recursive: true,
+      })
+    }
+  })
+
   it('emits LF-terminated full context and stable two-space JSON without private fields', async () => {
     const [full, serializedIndex] = await Promise.all([
       readFile(path.join(result.outDir, 'llms-full.txt'), 'utf8'),
