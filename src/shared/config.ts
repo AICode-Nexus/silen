@@ -19,10 +19,17 @@ export interface ThemeLogo {
   readonly alt?: string
 }
 
+export interface ThemeSocialLink {
+  readonly icon: string
+  readonly link: string
+  readonly ariaLabel?: string
+}
+
 export interface ThemeConfig {
   readonly logo?: string | ThemeLogo
   readonly nav?: readonly ThemeNavItem[]
   readonly sidebar?: readonly ThemeSidebarGroup[]
+  readonly socialLinks?: readonly ThemeSocialLink[]
   readonly search?: boolean
 }
 

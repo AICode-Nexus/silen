@@ -86,6 +86,18 @@ describe('virtual modules', () => {
     const config = resolvedConfig(root) as ResolvedConfig &
       Record<string, unknown>
     config.privateToken = 'do-not-bundle'
+    config.themeConfig = Object.assign(
+      {
+        socialLinks: [
+          {
+            icon: 'github',
+            link: 'https://github.com/AICode-Nexus/silen',
+            ariaLabel: 'Silen on GitHub',
+          },
+        ],
+      },
+      { privateThemeToken: 'do-not-bundle-theme' },
+    )
 
     const source = createVirtualModules({
       routes: [],
@@ -101,9 +113,18 @@ describe('virtual modules', () => {
       description: 'Project documentation',
       lang: 'en-US',
       base: '/project/',
-      themeConfig: {},
+      themeConfig: {
+        socialLinks: [
+          {
+            icon: 'github',
+            link: 'https://github.com/AICode-Nexus/silen',
+            ariaLabel: 'Silen on GitHub',
+          },
+        ],
+      },
     })
     expect(source).not.toContain('do-not-bundle')
+    expect(source).not.toContain('do-not-bundle-theme')
     expect(source).not.toContain(root)
     expect(source).not.toContain('configFile')
     expect(source).not.toContain('outDir')

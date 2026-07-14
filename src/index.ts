@@ -16,5 +16,6 @@ export type {
   ThemeNavItem,
   ThemeSidebarGroup,
   ThemeSidebarItem,
+  ThemeSocialLink,
 } from './shared/config.js'
 export type { Heading } from './shared/page.js'

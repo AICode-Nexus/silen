@@ -47,10 +47,17 @@ declare module 'virtual:silen/config' {
     readonly alt?: string
   }
 
+  interface ThemeSocialLink {
+    readonly icon: string
+    readonly link: string
+    readonly ariaLabel?: string
+  }
+
   interface ThemeConfig {
     readonly logo?: string | ThemeLogo
     readonly nav?: readonly ThemeNavItem[]
     readonly sidebar?: readonly ThemeSidebarGroup[]
+    readonly socialLinks?: readonly ThemeSocialLink[]
     readonly search?: boolean
   }
 

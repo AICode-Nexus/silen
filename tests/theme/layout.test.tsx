@@ -106,6 +106,38 @@ describe('default documentation layout', () => {
     ).toBe(false)
   })
 
+  it.each([
+    ['root-relative', '/logo.svg', '/project/logo.svg'],
+    ['local-relative', 'images/logo.svg', '/project/images/logo.svg'],
+    ['base-aware', '/project/logo.svg', '/project/logo.svg'],
+    [
+      'HTTPS',
+      'https://cdn.example.com/logo.svg',
+      'https://cdn.example.com/logo.svg',
+    ],
+    [
+      'HTTP',
+      'http://cdn.example.com/logo.svg',
+      'http://cdn.example.com/logo.svg',
+    ],
+    [
+      'protocol-relative',
+      '//cdn.example.com/logo.svg',
+      '//cdn.example.com/logo.svg',
+    ],
+    ['data', 'data:image/svg+xml,%3Csvg/%3E', 'data:image/svg+xml,%3Csvg/%3E'],
+    ['blob', 'blob:https://example.com/logo', 'blob:https://example.com/logo'],
+    ['fragment', '#brand-logo', '#brand-logo'],
+  ])('classifies and resolves %s logo URLs', (_, logo, expected) => {
+    render(
+      <TestSiteProvider base="/project/" themeConfig={{ logo }}>
+        <Layout>Guide</Layout>
+      </TestSiteProvider>,
+    )
+
+    expect(document.querySelector('img')?.getAttribute('src')).toBe(expected)
+  })
+
   it('keeps the active group expanded and lets other groups collapse', async () => {
     const user = userEvent.setup()
     const themeConfig: ThemeConfig = {
@@ -196,6 +228,24 @@ describe('default documentation layout', () => {
     ).toBe('#options')
     expect(within(outline).queryByText('Ignored detail')).toBeNull()
     expect(screen.getAllByRole('navigation')).toHaveLength(2)
+  })
+
+  it('shows the outline in the complete desktop grid from 960px upward', () => {
+    render(
+      <TestSiteProvider>
+        <Layout>Guide</Layout>
+      </TestSiteProvider>,
+    )
+
+    const outline = screen.getByRole('complementary', { name: 'On this page' })
+    const grid = screen.getByRole('main').parentElement
+
+    expect(outline.className).toContain('min-[60rem]:block')
+    expect(outline.className).not.toContain('min-[75rem]:block')
+    expect(grid?.className).toContain(
+      'min-[60rem]:grid-cols-[var(--silen-sidebar-width)_minmax(0,1fr)_14rem]',
+    )
+    expect(grid?.className).not.toContain('min-[75rem]:grid-cols-')
   })
 
   it('hydrates the complete server-rendered shell without recovering markup', async () => {

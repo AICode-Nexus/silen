@@ -8,6 +8,14 @@ export default defineConfig({
   themeConfig: {
     search: true,
     logo: '/project/logo.svg',
+    socialLinks: [
+      {
+        icon: 'github',
+        link: 'https://github.com/AICode-Nexus/silen',
+        ariaLabel: 'Silen on GitHub',
+      },
+    ],
+    privateThemeToken: 'do-not-serialize-theme',
   },
   privateToken: 'do-not-serialize',
 })

@@ -17,7 +17,7 @@ export function Layout({
         Skip to content
       </a>
       <Nav />
-      <div className="mx-auto grid max-w-[var(--silen-layout-width)] min-[60rem]:grid-cols-[var(--silen-sidebar-width)_minmax(0,1fr)] min-[75rem]:grid-cols-[var(--silen-sidebar-width)_minmax(0,1fr)_14rem]">
+      <div className="mx-auto grid max-w-[var(--silen-layout-width)] min-[60rem]:grid-cols-[var(--silen-sidebar-width)_minmax(0,1fr)_14rem]">
         <Sidebar />
         <main
           id="main-content"

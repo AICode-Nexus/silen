@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { ResolvedConfig } from '../shared/config.js'
+import type { ResolvedConfig, ThemeConfig } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
 
 export const virtualModuleIds = {
@@ -49,6 +49,53 @@ function defaultThemeFile(): string {
   )
 }
 
+function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
+  return {
+    ...(themeConfig.logo === undefined
+      ? {}
+      : {
+          logo:
+            typeof themeConfig.logo === 'string'
+              ? themeConfig.logo
+              : {
+                  src: themeConfig.logo.src,
+                  ...(themeConfig.logo.alt === undefined
+                    ? {}
+                    : { alt: themeConfig.logo.alt }),
+                },
+        }),
+    ...(themeConfig.nav === undefined
+      ? {}
+      : {
+          nav: themeConfig.nav.map(({ text, link }) => ({ text, link })),
+        }),
+    ...(themeConfig.sidebar === undefined
+      ? {}
+      : {
+          sidebar: themeConfig.sidebar.map(({ text, collapsed, items }) => ({
+            text,
+            ...(collapsed === undefined ? {} : { collapsed }),
+            items: items.map(({ text: itemText, link }) => ({
+              text: itemText,
+              link,
+            })),
+          })),
+        }),
+    ...(themeConfig.socialLinks === undefined
+      ? {}
+      : {
+          socialLinks: themeConfig.socialLinks.map(
+            ({ icon, link, ariaLabel }) => ({
+              icon,
+              link,
+              ...(ariaLabel === undefined ? {} : { ariaLabel }),
+            }),
+          ),
+        }),
+    ...(themeConfig.search === undefined ? {} : { search: themeConfig.search }),
+  }
+}
+
 function serializeConfig(
   config: ResolvedConfig,
   publicConfigOnly: boolean,
@@ -59,7 +106,7 @@ function serializeConfig(
         description: config.description,
         lang: config.lang,
         base: config.base,
-        themeConfig: config.themeConfig,
+        themeConfig: publicThemeConfig(config.themeConfig),
       }
     : config
   const serialized = JSON.stringify(value)

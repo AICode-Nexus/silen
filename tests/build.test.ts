@@ -95,12 +95,20 @@ describe('static production build', () => {
       'content="Description &quot;quoted&quot; &amp; safe"',
     )
     expect(home).not.toContain('do-not-serialize')
+    expect(home).not.toContain('do-not-serialize-theme')
     expect(home).not.toContain(root)
     expect(home).not.toContain('configFile')
     expect(home).not.toContain('outDir')
     expect(data.themeConfig).toEqual({
       search: true,
       logo: '/project/logo.svg',
+      socialLinks: [
+        {
+          icon: 'github',
+          link: 'https://github.com/AICode-Nexus/silen',
+          ariaLabel: 'Silen on GitHub',
+        },
+      ],
     })
     expect(data.route).toBe('/')
   })

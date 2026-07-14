@@ -7,7 +7,7 @@ export function Outline(): React.JSX.Element {
   return (
     <aside
       aria-label="On this page"
-      className="sticky top-[var(--silen-nav-height)] hidden h-[calc(100svh-var(--silen-nav-height))] px-6 py-10 min-[75rem]:block"
+      className="sticky top-[var(--silen-nav-height)] hidden h-[calc(100svh-var(--silen-nav-height))] px-6 py-10 min-[60rem]:block"
     >
       <h2 className="mb-3 text-sm font-semibold">On this page</h2>
       <ul className="flex flex-col gap-2 border-l pl-4">

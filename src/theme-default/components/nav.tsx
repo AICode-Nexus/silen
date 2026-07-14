@@ -8,6 +8,7 @@ export function Nav(): React.JSX.Element {
   const { base, siteTitle, themeConfig } = useData()
   const currentRoute = useRoute()
   const logo = themeConfig?.logo
+  const logoSource = typeof logo === 'string' ? logo : logo?.src
   return (
     <header className="sticky top-0 z-40 h-[var(--silen-nav-height)] border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
       <nav
@@ -18,9 +19,9 @@ export function Nav(): React.JSX.Element {
           href={resolveThemeLink('/', base)}
           className="mr-auto flex min-w-0 items-center gap-2 rounded-md font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          {logo ? (
+          {logoSource ? (
             <img
-              src={typeof logo === 'string' ? logo : logo.src}
+              src={resolveThemeLink(logoSource, base)}
               alt=""
               aria-hidden="true"
               className="size-7 object-contain"
