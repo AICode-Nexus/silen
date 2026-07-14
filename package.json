@@ -1,8 +1,27 @@
 {
   "name": "silen",
   "version": "0.1.0-alpha.0",
+  "description": "A lightweight documentation-first static site generator powered by React, TypeScript, Vite, and MDX.",
+  "keywords": [
+    "documentation",
+    "static-site-generator",
+    "react",
+    "vite",
+    "mdx"
+  ],
+  "homepage": "https://github.com/AICode-Nexus/silen#readme",
+  "bugs": {
+    "url": "https://github.com/AICode-Nexus/silen/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AICode-Nexus/silen.git"
+  },
   "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "packageManager": "pnpm@11.12.0",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
