@@ -24,8 +24,9 @@ describe('AI release CI gate', () => {
     expect(runtimeRelease).toContain('corepack pnpm install --frozen-lockfile')
     expect(runtimeRelease).toContain('corepack pnpm build')
     expect(runtimeRelease).toContain(
-      'corepack pnpm test -- --maxWorkers=1 --no-file-parallelism',
+      'corepack pnpm test --maxWorkers=1 --no-file-parallelism',
     )
+    expect(runtimeRelease).not.toContain('corepack pnpm test -- --maxWorkers')
     expect(runtimeRelease).toContain('corepack pnpm exec publint')
 
     expect(browser).toContain('node-version: 20.19.0')

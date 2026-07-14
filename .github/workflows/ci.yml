@@ -73,7 +73,7 @@ jobs:
         run: corepack pnpm build
 
       - name: Run single-worker tests, built stdio, and package smoke
-        run: corepack pnpm test -- --maxWorkers=1 --no-file-parallelism
+        run: corepack pnpm test --maxWorkers=1 --no-file-parallelism
 
       - name: Validate published package metadata
         run: corepack pnpm exec publint
