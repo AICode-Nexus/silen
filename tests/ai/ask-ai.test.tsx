@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AskAiAdapter, AskAiEvent, AskAiRequest } from '../../src/client'
+import { createEndpointAskAiAdapter } from '../../src/client'
 import { Nav } from '../../src/theme-default/components/nav'
 import { AskAiDialog } from '../../src/theme-default/components/ask-ai'
 import { TestSiteProvider } from '../helpers/test-site-provider'
@@ -78,13 +79,33 @@ describe('AskAiDialog', () => {
         yield {
           type: 'citation',
           title: 'Reference',
-          url: 'https://docs.example.com/reference',
+          url: 'HTTPS://DOCS.Example.COM:443/a/../reference',
         }
         yield { type: 'citation', title: 'Script', url: 'javascript:alert(1)' }
         yield {
           type: 'citation',
           title: 'Inline data',
           url: 'data:text/html,x',
+        }
+        yield {
+          type: 'citation',
+          title: 'Protocol relative',
+          url: '//docs.example.com/reference',
+        }
+        yield {
+          type: 'citation',
+          title: 'Tabbed URL',
+          url: 'https://docs.example.com/\treference',
+        }
+        yield {
+          type: 'citation',
+          title: 'Newline URL',
+          url: 'https://docs.example.com/\nreference',
+        }
+        yield {
+          type: 'citation',
+          title: 'DEL URL',
+          url: 'https://docs.example.com/\u007freference',
         }
         yield {
           type: 'error',
@@ -114,10 +135,17 @@ describe('AskAiDialog', () => {
       screen.getByRole('link', { name: 'Guide' }).getAttribute('href'),
     ).toBe('/guide/')
     expect(
+      screen.getByRole('link', { name: 'Reference' }).getAttribute('href'),
+    ).toBe('https://docs.example.com/reference')
+    expect(
       screen.getByRole('link', { name: 'Reference' }).getAttribute('rel'),
     ).toBe('noreferrer')
     expect(screen.queryByRole('link', { name: 'Script' })).toBeNull()
     expect(screen.queryByRole('link', { name: 'Inline data' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Protocol relative' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Tabbed URL' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Newline URL' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'DEL URL' })).toBeNull()
     expect(screen.getByText('Script')).not.toBeNull()
     expect(screen.getByText('Inline data')).not.toBeNull()
     expect(screen.getByRole('alert').textContent).toContain(
@@ -155,6 +183,45 @@ describe('AskAiDialog', () => {
     expect(await screen.findByText('second answer')).not.toBeNull()
     act(() => pending.get('first')?.resolve())
     await waitFor(() => expect(screen.queryByText('first answer')).toBeNull())
+  })
+
+  it('cancels endpoint streams once when superseded and when closed', async () => {
+    const user = userEvent.setup()
+    const cancellations: Array<ReturnType<typeof vi.fn>> = []
+    const adapter = createEndpointAskAiAdapter('/api/ask', {
+      fetch: () => {
+        const cancel = vi.fn()
+        cancellations.push(cancel)
+        return Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start(controller) {
+                controller.enqueue(
+                  new TextEncoder().encode(
+                    '{"type":"text","value":"streaming"}\n',
+                  ),
+                )
+              },
+              cancel,
+            }),
+            { headers: { 'content-type': 'application/x-ndjson' } },
+          ),
+        )
+      },
+    })
+    render(<DialogHarness adapter={adapter} />)
+
+    await user.click(screen.getByRole('button', { name: 'Open Ask AI' }))
+    const input = screen.getByRole('textbox', { name: 'Question' })
+    await user.type(input, 'first{Enter}')
+    expect(await screen.findByText('streaming')).not.toBeNull()
+
+    await user.type(input, 'second{Enter}')
+    await waitFor(() => expect(cancellations).toHaveLength(2))
+    expect(cancellations[0]).toHaveBeenCalledOnce()
+
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(cancellations[1]).toHaveBeenCalledOnce())
   })
 
   it('aborts on close and unmount and hides thrown provider details', async () => {

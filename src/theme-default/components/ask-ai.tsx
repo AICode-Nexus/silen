@@ -45,17 +45,19 @@ const PROVIDER_FAILURE = 'The AI provider could not complete this request.'
 
 function hasControlCharacter(value: string): boolean {
   for (const character of value) {
-    if ((character.codePointAt(0) ?? 0) < 0x20) return true
+    const codePoint = character.codePointAt(0) ?? 0
+    if (codePoint < 0x20 || codePoint === 0x7f) return true
   }
   return false
 }
 
 function citationUrl(value: string): string | undefined {
+  if (hasControlCharacter(value)) return undefined
+
   if (
     value.startsWith('/') &&
     !value.startsWith('//') &&
-    !value.includes('\\') &&
-    !hasControlCharacter(value)
+    !value.includes('\\')
   ) {
     return value
   }
@@ -63,7 +65,7 @@ function citationUrl(value: string): string | undefined {
   try {
     const url = new URL(value)
     return url.protocol === 'http:' || url.protocol === 'https:'
-      ? value
+      ? url.href
       : undefined
   } catch {
     return undefined

@@ -172,14 +172,37 @@ async function* readNdjson(
   if (!response.body) throw invalidResponse()
 
   const reader = response.body.getReader()
-  const decoder = new TextDecoder()
+  const decoder = new TextDecoder('utf-8', { fatal: true })
   let buffer = ''
   let totalBytes = 0
   let eventCount = 0
+  let completed = false
+  let cancellation: Promise<void> | undefined
+  const cancelReader = (): Promise<void> => {
+    if (!cancellation) {
+      try {
+        cancellation = reader.cancel().then(
+          () => undefined,
+          () => undefined,
+        )
+      } catch {
+        cancellation = Promise.resolve()
+      }
+    }
+    return cancellation
+  }
   const cancel = (): void => {
-    void reader.cancel().catch(() => undefined)
+    void cancelReader()
   }
   signal.addEventListener('abort', cancel, { once: true })
+
+  const decode = (chunk?: Uint8Array): string => {
+    try {
+      return chunk ? decoder.decode(chunk, { stream: true }) : decoder.decode()
+    } catch {
+      throw invalidResponse()
+    }
+  }
 
   const parseLine = (line: string): AskAiEvent | undefined => {
     const normalized = line.endsWith('\r') ? line.slice(0, -1) : line
@@ -197,7 +220,7 @@ async function* readNdjson(
       if (chunk.done) break
       totalBytes += chunk.value.byteLength
       if (totalBytes > MAX_RESPONSE_BYTES) throw invalidResponse()
-      buffer += decoder.decode(chunk.value, { stream: true })
+      buffer += decode(chunk.value)
 
       let newline = buffer.indexOf('\n')
       while (newline !== -1) {
@@ -209,11 +232,13 @@ async function* readNdjson(
       if (byteLength(buffer) > MAX_LINE_BYTES) throw invalidResponse()
     }
 
-    buffer += decoder.decode()
+    buffer += decode()
     const event = parseLine(buffer)
     if (event) yield event
+    completed = true
   } finally {
     signal.removeEventListener('abort', cancel)
+    if (!completed) await cancelReader()
     reader.releaseLock()
   }
 }
