@@ -12,6 +12,7 @@
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"],
+      "silen": ["./src/index.ts"],
       "silen/theme": ["./src/theme-default/index.tsx"]
     },
     "types": ["node", "vitest/globals"]
@@ -22,6 +23,8 @@
     "tests/fixtures/**/.silen/*.ts",
     "tests/fixtures/**/.silen/*.tsx",
     "tooling",
+    "website/.silen/*.ts",
+    "website/.silen/*.tsx",
     "*.ts"
   ]
 }

@@ -9,7 +9,7 @@ const typeCheckedConfigs = tseslint.configs.recommendedTypeChecked.map(
 )
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'docs/.silen'] },
+  { ignores: ['dist', 'coverage', '**/.silen/dist', 'docs/.silen'] },
   eslint.configs.recommended,
   ...typeCheckedConfigs,
   {
