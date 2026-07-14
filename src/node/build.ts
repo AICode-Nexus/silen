@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import {
+  mkdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -95,16 +102,71 @@ function buildError(
   )
 }
 
-function assertSafeOutDir(config: ResolvedConfig): void {
-  const relativeRoot = path.relative(config.outDir, config.root)
+function containsPath(directory: string, target: string): boolean {
+  const relative = path.relative(directory, target)
+  return (
+    relative === '' ||
+    (!relative.startsWith(`..${path.sep}`) &&
+      relative !== '..' &&
+      !path.isAbsolute(relative))
+  )
+}
+
+async function physicalPath(file: string): Promise<string> {
+  let existing = path.resolve(file)
+  const missingSegments: string[] = []
+
+  for (;;) {
+    try {
+      return path.resolve(await realpath(existing), ...missingSegments)
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code !== 'ENOENT' && code !== 'ENOTDIR') throw error
+
+      const parent = path.dirname(existing)
+      if (parent === existing) throw error
+      missingSegments.unshift(path.basename(existing))
+      existing = parent
+    }
+  }
+}
+
+async function assertSafeOutDir(
+  config: ResolvedConfig,
+  routes: readonly RouteRecord[],
+): Promise<void> {
+  const absoluteOutDir = path.resolve(config.outDir)
+  const absoluteRoot = path.resolve(config.root)
+  const protectedFiles = [
+    config.configFile,
+    ...routes.map((route) => route.file),
+  ]
+  const [outDir, root, ...resolvedProtectedFiles] = await Promise.all([
+    physicalPath(config.outDir),
+    physicalPath(config.root),
+    ...protectedFiles.map(physicalPath),
+  ])
+
   if (
-    relativeRoot === '' ||
-    (!relativeRoot.startsWith(`..${path.sep}`) &&
-      relativeRoot !== '..' &&
-      !path.isAbsolute(relativeRoot))
+    containsPath(absoluteOutDir, absoluteRoot) ||
+    containsPath(outDir, root)
   ) {
     throw new Error(
       `Refusing to replace output directory ${config.outDir} because it contains the Silen root ${config.root}`,
+    )
+  }
+
+  const protectedIndex = resolvedProtectedFiles.findIndex((file, index) => {
+    const protectedFile = protectedFiles[index]
+    return (
+      protectedFile !== undefined &&
+      (containsPath(absoluteOutDir, path.resolve(protectedFile)) ||
+        containsPath(outDir, file))
+    )
+  })
+  if (protectedIndex !== -1) {
+    throw new Error(
+      `Refusing to replace output directory ${config.outDir} because it contains protected file ${protectedFiles[protectedIndex]}`,
     )
   }
 }
@@ -486,8 +548,8 @@ async function installOutput(
 
 export async function build(root: string): Promise<BuildResult> {
   const config = await resolveConfig(root, 'build')
-  assertSafeOutDir(config)
   const routes = await scanRoutes(config.root)
+  await assertSafeOutDir(config, routes)
   const routeOutputs = planRouteOutputs(config.outDir, routes)
   const pages = await compilePages(routes)
   validateInternalLinks(routes, pages, config.onBrokenLinks, config.base)
