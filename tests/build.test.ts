@@ -65,12 +65,17 @@ describe('static production build', () => {
       { path: '/guide/', file: path.join(root, 'guide/index.mdx') },
       { path: '/', file: path.join(root, 'index.mdx') },
     ])
-    expect(home).toContain('<h1>Basic Docs</h1>')
+    expect(home).toContain('<h1')
+    expect(home).toContain('Silen browser fixture</h1>')
+    expect(home).toContain('<h2>Basic Docs</h2>')
     expect(home).toContain('The complete home document is server rendered.')
     expect(guide).toContain('<h1>Getting Started</h1>')
     expect(guide).toContain('<h2>Install</h2>')
     expect(about).toContain('<h1>About this fixture</h1>')
     expect(about).toContain('no-trailing canonical route')
+    expect(home).toContain('data-custom-root=""')
+    expect(about).toContain('data-demo=""')
+    expect(about).toContain('Custom theme component')
   })
 
   it('uses manifest-resolved filenames for base-aware hashed JS, CSS, and assets', () => {
@@ -101,7 +106,20 @@ describe('static production build', () => {
     expect(home).not.toContain('outDir')
     expect(data.themeConfig).toEqual({
       search: true,
-      logo: '/project/logo.svg',
+      nav: [
+        { text: 'Home', link: '/' },
+        { text: 'Guide', link: '/guide/' },
+        { text: 'About', link: '/about' },
+      ],
+      sidebar: [
+        {
+          text: 'Documentation',
+          items: [
+            { text: 'Getting Started', link: '/guide/' },
+            { text: 'About', link: '/about' },
+          ],
+        },
+      ],
       socialLinks: [
         {
           icon: 'github',

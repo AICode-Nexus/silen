@@ -125,6 +125,9 @@ vi.mock('virtual:silen/routes', async () => {
 
 vi.mock('virtual:silen/theme', () => ({
   default: {
+    wrapRoot({ children }: { children: React.ReactNode }) {
+      return <div data-fixture-root="">{children}</div>
+    },
     Layout({ children }: { children: React.ReactNode }) {
       return (
         <main id="main-content" tabIndex={-1}>
@@ -339,6 +342,7 @@ describe('hydration and browser navigation', () => {
     const root = await act(async () => hydrate(container))
 
     expect(container.innerHTML).toBe(serverHtml)
+    expect(container.querySelector('[data-fixture-root]')).not.toBeNull()
     expect(screen.getByRole('heading', { name: 'Guide' })).toBeTruthy()
     expect(screen.getByTestId('route').textContent).toBe(
       '/project/guide?source=ssr#install',

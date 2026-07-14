@@ -32,6 +32,7 @@ function normalizedBase(base: string): string {
 }
 
 function assetUrl(base: string, file: string): string {
+  if (/^\/@(?:fs|id|vite)\//.test(file)) return file
   return `${normalizedBase(base)}${file.replace(/^\/+/, '')}`
 }
 

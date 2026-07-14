@@ -39,7 +39,7 @@ function viteImportPath(file: string): string {
   return normalized
 }
 
-function defaultThemeFile(): string {
+export function defaultThemeFile(): string {
   const sourceExtension = path.extname(fileURLToPath(import.meta.url)) === '.ts'
   return fileURLToPath(
     new URL(

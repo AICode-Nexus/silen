@@ -10,13 +10,17 @@
     "exactOptionalPropertyTypes": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "paths": { "@/*": ["./src/*"] },
+    "paths": {
+      "@/*": ["./src/*"],
+      "silen/theme": ["./src/theme-default/index.tsx"]
+    },
     "types": ["node", "vitest/globals"]
   },
   "include": [
     "src",
     "tests",
     "tests/fixtures/**/.silen/*.ts",
+    "tests/fixtures/**/.silen/*.tsx",
     "tooling",
     "*.ts"
   ]

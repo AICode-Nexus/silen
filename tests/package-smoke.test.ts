@@ -142,6 +142,9 @@ describe('published package smoke test', () => {
               'react-dom': '19.2.7',
               silen: `file:${archivePath}`,
             },
+            devDependencies: {
+              '@types/react': '19.2.17',
+            },
           },
           null,
           2,
@@ -160,6 +163,24 @@ export default defineConfig({
 `,
       ),
       writeFile(
+        path.join(consumer, 'docs', '.silen', 'theme.tsx'),
+        `import type { ReactNode } from 'react'
+import DefaultTheme, { defineTheme } from 'silen/theme'
+
+function Demo({ children }: { readonly children?: ReactNode }) {
+  return <aside data-packed-demo="">{children}</aside>
+}
+
+export default defineTheme({
+  extends: DefaultTheme,
+  components: { Demo },
+  wrapRoot({ children }) {
+    return <div data-packed-root="">{children}</div>
+  },
+})
+`,
+      ),
+      writeFile(
         path.join(consumer, 'docs', 'index.mdx'),
         `---
 title: Package home
@@ -168,6 +189,8 @@ title: Package home
 # Installed package
 
 This page is rendered from a clean external project.
+
+<Demo>Installed theme extension</Demo>
 
 [Read the guide](./guide/)
 
@@ -193,6 +216,24 @@ The nested route was generated.
       { cwd: consumer, reject: false, all: true },
     )
     expect(install.exitCode, install.all).toBe(0)
+
+    const themeTypecheck = await execa(
+      path.resolve('node_modules/.bin/tsc'),
+      [
+        '--noEmit',
+        '--strict',
+        '--jsx',
+        'react-jsx',
+        '--module',
+        'NodeNext',
+        '--moduleResolution',
+        'NodeNext',
+        '--skipLibCheck',
+        'docs/.silen/theme.tsx',
+      ],
+      { cwd: consumer, reject: false, all: true },
+    )
+    expect(themeTypecheck.exitCode, themeTypecheck.all).toBe(0)
 
     const executable = path.join(consumer, 'node_modules/.bin/silen')
     const [help, version] = await Promise.all([
@@ -230,6 +271,9 @@ The nested route was generated.
     expect(home).toContain('<!doctype html>')
     expect(home).toContain('<title>Package home</title>')
     expect(home).toContain('<h1>Installed package</h1>')
+    expect(home).toContain('data-packed-root=""')
+    expect(home).toContain('data-packed-demo=""')
+    expect(home).toContain('Installed theme extension')
     expect(home).toMatch(/src="\/handbook\/assets\/.+\.js"/)
     expect(home).toContain('</html>')
     expect(guide).toContain('<h1>External guide</h1>')

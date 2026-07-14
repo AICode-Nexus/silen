@@ -39,7 +39,8 @@ pnpm silen preview docs
 ```text
 docs/
 ├── .silen/
-│   └── config.ts
+│   ├── config.ts
+│   └── theme.tsx        # optional default-theme extension
 ├── public/
 │   └── logo.svg
 ├── guide/
@@ -72,6 +73,109 @@ export default defineConfig({
 resolved from the documentation root and defaults to `.silen/dist`.
 `onBrokenLinks` accepts `error`, `warn`, or `ignore`.
 
+## Default theme and layouts
+
+The built-in theme provides a responsive navigation shell, local search,
+light/dark/system appearance, Shiki code highlighting and copy controls,
+document outlines, sidebars, home-page heroes and features, page navigation,
+and a complete 404 screen.
+
+Select a content layout in frontmatter:
+
+```md
+---
+layout: home
+---
+```
+
+- `doc` is the default and adds documentation typography plus previous/next
+  links from `themeConfig.sidebar`.
+- `home` renders the configured or frontmatter-defined hero and features in a
+  full-width shell.
+- `page` keeps the document shell but uses a neutral article layout without
+  documentation paging.
+
+At widths below `60rem` (960px), the desktop sidebar becomes a modal navigation
+Sheet. At 960px and above, the persistent documentation sidebar and outline are
+shown.
+
+## Theme tokens
+
+Override semantic CSS variables instead of internal utility classes. Import
+the override from `docs/.silen/theme.tsx` so Vite includes it:
+
+```css
+/* docs/.silen/custom.css */
+:root {
+  --silen-primary: oklch(0.58 0.2 250);
+  --silen-radius: 0.5rem;
+  --silen-content-width: 48rem;
+}
+
+.dark {
+  --silen-primary: oklch(0.75 0.14 250);
+}
+```
+
+The color tokens are `--silen-background`, `--silen-foreground`,
+`--silen-primary`, `--silen-primary-foreground`, `--silen-muted`,
+`--silen-muted-foreground`, `--silen-border`, and `--silen-ring`. Shape and
+layout tokens are `--silen-radius`, `--silen-nav-height`,
+`--silen-sidebar-width`, `--silen-content-width`, and `--silen-layout-width`.
+Light values live on `:root`; dark overrides live on `.dark`.
+
+## Extending the default theme
+
+Create `docs/.silen/theme.tsx`:
+
+```tsx
+import type { ReactNode } from 'react'
+import DefaultTheme, { defineTheme } from 'silen/theme'
+import './custom.css'
+
+function Demo({ children }: { readonly children?: ReactNode }) {
+  return <section className="demo">{children}</section>
+}
+
+export default defineTheme({
+  extends: DefaultTheme,
+  components: { Demo },
+  wrapRoot({ children }) {
+    return <div data-site-root="">{children}</div>
+  },
+})
+```
+
+`extends` inherits the base `Layout` and merges `layouts` and MDX `components`
+by key, so an extension can replace one entry without copying the rest.
+`NotFound` is inherited unless explicitly replaced. `wrapRoot` runs during both
+server rendering and hydration; when a base theme also has a wrapper, the
+extension wrapper is composed outside it. A theme definition cannot extend
+itself recursively.
+
+Use custom components directly from trusted MDX:
+
+```mdx
+<Demo>Rendered through the project theme.</Demo>
+```
+
+The same `silen/theme` runtime and declarations are included in the packed
+package, so theme files type-check and build without source aliases.
+
+## Accessibility and keyboard behavior
+
+The default shell includes a skip link and visible focus indicators. Mobile
+navigation is a labelled modal Sheet: opening moves focus into the active
+navigation item, Escape closes it, and focus returns to the trigger. Search is
+loaded only when requested, opens with `Control+K` or `Command+K`, supports
+arrow-key selection and Enter, and restores focus when dismissed.
+
+The appearance control cycles system, light, and dark, persists the selection
+in `localStorage`, follows operating-system changes in system mode, and applies
+the stored mode from an inline head script before hydration to avoid a color
+flash. Code-copy controls are keyboard buttons with live success/failure
+labels. Reduced-motion preferences disable nonessential transitions.
+
 ## Trusted MDX
 
 MDX may import and run React components. Treat it as trusted executable project
@@ -88,6 +192,7 @@ assets without rewriting their URLs.
 
 Core Alpha includes typed configuration, static file routing, MDX compilation,
 server-rendered HTML, hydration, client navigation, internal-link validation,
-and the `dev`, `build`, and `preview` commands. The polished default theme,
-search, AI-readable artifacts, local MCP tools, and Ask AI integration belong
-to later plans and are not implemented in this package yet.
+the responsive extensible default theme, local documentation search, and the
+`dev`, `build`, and `preview` commands. AI-readable artifacts, local MCP tools,
+and Ask AI integration belong to later plans and are not implemented in this
+package yet.

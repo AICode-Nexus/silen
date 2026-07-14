@@ -7,7 +7,20 @@ export default defineConfig({
   base: '/project',
   themeConfig: {
     search: true,
-    logo: '/project/logo.svg',
+    nav: [
+      { text: 'Home', link: '/' },
+      { text: 'Guide', link: '/guide/' },
+      { text: 'About', link: '/about' },
+    ],
+    sidebar: [
+      {
+        text: 'Documentation',
+        items: [
+          { text: 'Getting Started', link: '/guide/' },
+          { text: 'About', link: '/about' },
+        ],
+      },
+    ],
     socialLinks: [
       {
         icon: 'github',

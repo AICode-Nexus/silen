@@ -1,4 +1,4 @@
-import { useEffect, type ComponentProps } from 'react'
+import { useEffect, useRef, type ComponentProps } from 'react'
 
 const resetDelay = 2_000
 const resetTimers = new Map<HTMLButtonElement, number>()
@@ -93,7 +93,23 @@ export function CodeBlock({
   'data-language': dataLanguage,
   ...props
 }: CodeBlockProps): React.JSX.Element {
-  useEffect(subscribeToCodeCopy, [])
+  const copyButton = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    const button = copyButton.current
+    const handleButtonClick = (event: MouseEvent): void => {
+      if (!button) return
+      event.stopPropagation()
+      void copyCode(button)
+    }
+    button?.setAttribute('data-silen-copy-ready', '')
+    button?.addEventListener('click', handleButtonClick)
+    const unsubscribe = subscribeToCodeCopy()
+    return () => {
+      button?.removeAttribute('data-silen-copy-ready')
+      button?.removeEventListener('click', handleButtonClick)
+      unsubscribe()
+    }
+  }, [])
   const sourceLanguage = language ?? dataLanguage
 
   return (
@@ -105,6 +121,7 @@ export function CodeBlock({
           <span aria-hidden="true" />
         )}
         <button
+          ref={copyButton}
           type="button"
           className="silen-code-copy"
           data-silen-copy=""

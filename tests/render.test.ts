@@ -85,4 +85,30 @@ describe('renderDocument', () => {
     expect('inherited' in restoredFrontmatter).toBe(false)
     expect(Object.prototype).not.toHaveProperty('polluted')
   })
+
+  it('keeps Vite development module URLs outside the configured site base', () => {
+    const document = renderDocument(
+      {
+        appHtml: '<main>Development page</main>',
+        status: 200,
+        title: 'Development',
+        description: '',
+        publicData: {
+          siteTitle: 'Fixture Docs',
+          lang: 'en-US',
+          base: '/project/',
+          route: '/',
+        },
+      },
+      {
+        base: '/project/',
+        clientEntry: '/@fs/repo/src/client/entry.tsx',
+      },
+    )
+
+    expect(document).toContain(
+      '<script type="module" src="/@fs/repo/src/client/entry.tsx"></script>',
+    )
+    expect(document).not.toContain('/project/@fs/')
+  })
 })

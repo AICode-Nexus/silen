@@ -11,6 +11,7 @@ import config from 'virtual:silen/config'
 import routes from 'virtual:silen/routes'
 import Theme from 'virtual:silen/theme'
 import type { JsonObject } from '../shared/page.js'
+import type { ThemeMdxComponents } from '../theme-default/index.js'
 import { DataProvider, type PagePublicData } from './data.js'
 import { navigateDocument } from './navigation.js'
 import { resolveInternalUrl, RouterProvider, type Router } from './router.js'
@@ -23,9 +24,7 @@ export interface ResolvedPage {
 }
 
 interface MdxContentProps {
-  readonly components?: Readonly<
-    Record<string, ComponentType<never> | keyof React.JSX.IntrinsicElements>
-  >
+  readonly components?: ThemeMdxComponents
 }
 
 export interface RouteMatch {
@@ -580,12 +579,16 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
   ) : (
     <Component />
   )
+  const page = (
+    <Theme.Layout>
+      {ContentLayout ? <ContentLayout>{content}</ContentLayout> : content}
+    </Theme.Layout>
+  )
+  const Root = Theme.wrapRoot
   return (
     <DataProvider value={state.page.publicData}>
       <RouterProvider value={router}>
-        <Theme.Layout>
-          {ContentLayout ? <ContentLayout>{content}</ContentLayout> : content}
-        </Theme.Layout>
+        {Root ? <Root>{page}</Root> : page}
       </RouterProvider>
     </DataProvider>
   )

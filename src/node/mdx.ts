@@ -228,6 +228,7 @@ export function createMdxPlugins(): Plugin[] {
   // adapter exposes the Rollup Plugin type. Vite accepts that adapter at
   // runtime; bridge only the incompatible declaration families here.
   const mdxPlugin = mdx({
+    development: false,
     remarkPlugins: [remarkPageData],
     rehypePlugins: [rehypeHighlightCode],
   }) as unknown as Plugin

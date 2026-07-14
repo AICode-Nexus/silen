@@ -506,13 +506,30 @@ export async function createDevServer(
     appType: 'custom',
     base: config.base,
     configFile: false,
+    optimizeDeps: {
+      include: [
+        'class-variance-authority',
+        'clsx',
+        'cmdk',
+        'lucide-react',
+        'minisearch',
+        'radix-ui',
+        'react',
+        'react-dom',
+        'react-dom/client',
+        'react/jsx-runtime',
+        'tailwind-merge',
+      ],
+    },
     plugins: [
       react(),
       ...(await silenPlugin(config, { publicConfigOnly: true })),
       ...createMdxPlugins(),
     ],
+    oxc: { jsx: { development: false } },
+    resolve: { dedupe: ['react', 'react-dom'] },
     root: config.root,
-    server: { middlewareMode: true },
+    server: { middlewareMode: true, hmr: false },
   })
   const server = createHttpServer(createDevRequestHandler(vite, config.base))
   try {

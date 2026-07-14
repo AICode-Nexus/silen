@@ -114,19 +114,18 @@ declare module 'virtual:silen/config' {
 }
 
 declare module 'virtual:silen/theme' {
-  import type { ComponentType, ReactNode } from 'react'
+  import type { ComponentType, ElementType, ReactNode } from 'react'
 
   export type LayoutComponent = ComponentType<{ children: ReactNode }>
   export type ContentLayoutName = 'doc' | 'home' | 'page'
-  export type ThemeMdxComponent =
-    ComponentType<never> | keyof React.JSX.IntrinsicElements
-  export type ThemeMdxComponents = Readonly<Record<string, ThemeMdxComponent>>
+  export type ThemeMdxComponents = Readonly<Record<string, ElementType>>
 
   export interface Theme {
     Layout: LayoutComponent
     layouts?: Readonly<Record<ContentLayoutName, LayoutComponent>>
     NotFound?: ComponentType
     components?: ThemeMdxComponents
+    wrapRoot?: LayoutComponent
   }
 
   export const Layout: LayoutComponent
