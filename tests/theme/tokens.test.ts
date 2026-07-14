@@ -35,11 +35,21 @@ describe('default theme tokens', () => {
     for (const token of [
       'background',
       'foreground',
+      'card',
+      'card-foreground',
       'primary',
       'primary-foreground',
+      'secondary',
+      'secondary-foreground',
       'muted',
       'muted-foreground',
+      'popover',
+      'popover-foreground',
+      'accent',
+      'accent-foreground',
+      'destructive',
       'border',
+      'input',
       'ring',
     ]) {
       expect(light).toContain(`--silen-${token}:`)
@@ -84,7 +94,7 @@ export default defineConfig({
       ),
       writeFile(
         path.join(root, 'index.mdx'),
-        `<div className="bg-background text-foreground border-border focus-visible:outline-ring">Semantic theme</div>\n`,
+        `<div className="bg-background text-foreground bg-card text-card-foreground bg-secondary text-secondary-foreground bg-popover text-popover-foreground border-border border-input text-destructive focus:bg-accent focus:text-accent-foreground focus-visible:outline-ring">Semantic theme</div>\n`,
       ),
     ])
 
@@ -104,7 +114,17 @@ export default defineConfig({
     expect(css).toContain('--silen-background:')
     expect(css).toContain('.bg-background')
     expect(css).toContain('.text-foreground')
+    expect(css).toContain('.bg-card')
+    expect(css).toContain('.text-card-foreground')
+    expect(css).toContain('.bg-secondary')
+    expect(css).toContain('.text-secondary-foreground')
+    expect(css).toContain('.bg-popover')
+    expect(css).toContain('.text-popover-foreground')
     expect(css).toContain('.border-border')
+    expect(css).toContain('.border-input')
+    expect(css).toContain('.text-destructive')
+    expect(css).toContain('.focus\\:bg-accent:focus')
+    expect(css).toContain('.focus\\:text-accent-foreground:focus')
     expect(css).toContain('outline-color:var(--silen-ring)')
     expect(css).not.toContain(path.resolve('src/theme-default'))
     expect(css).not.toContain('src/theme-default/styles')

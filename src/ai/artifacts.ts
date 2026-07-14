@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { AiChunk, AiPage } from '../shared/ai.js'
 import type { AiArtifactConfig, ResolvedConfig } from '../shared/config.js'
+import { joinBaseRoute } from '../shared/url.js'
 import { createAiChunks } from './chunks.js'
 
 export interface AiIndexFile {
@@ -83,10 +84,6 @@ function markdownOutputFile(outDir: string, route: string): string {
   return path.resolve(outDir, ...segments)
 }
 
-function joinUrl(base: string, pathname: string): string {
-  return `${base.replace(/\/$/, '')}/${pathname.replace(/^\//, '')}`
-}
-
 export function renderLlmsTxt(
   site: Pick<ResolvedConfig, 'title' | 'description' | 'base'>,
   pages: readonly AiPage[],
@@ -94,7 +91,7 @@ export function renderLlmsTxt(
 ): string {
   const links = pages.map(
     (page) =>
-      `- [${page.title}](${joinUrl(site.base, markdownRoutes ? markdownUrlForRoute(page.route) : page.route)})${page.description ? `: ${page.description}` : ''}`,
+      `- [${page.title}](${joinBaseRoute(site.base, markdownRoutes ? markdownUrlForRoute(page.route) : page.route)})${page.description ? `: ${page.description}` : ''}`,
   )
   return normalizeText(
     [

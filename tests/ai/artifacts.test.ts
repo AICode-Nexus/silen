@@ -4,6 +4,7 @@ import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   generateAiArtifacts,
+  renderLlmsTxt,
   type ArtifactOptions,
 } from '../../src/ai/artifacts'
 import { build, type BuildResult } from '../../src/node/build'
@@ -25,6 +26,25 @@ async function expectMissing(file: string): Promise<void> {
 }
 
 describe('AI build artifacts', () => {
+  it.each([
+    ['root', '/', '/docs/'],
+    ['index route', '/guide/', '/docs/guide/'],
+    ['query and hash', '/guide?mode=raw#setup', '/docs/guide?mode=raw#setup'],
+    ['ordinary route', '/guide/intro', '/docs/guide/intro'],
+    ['route that repeats the base prefix', '/docs/intro', '/docs/docs/intro'],
+  ])(
+    'joins the base with a %s without prefix deduplication',
+    (_name, route, expected) => {
+      const manifest = renderLlmsTxt(
+        { title: 'Docs', description: 'Docs.', base: '/docs/' },
+        [{ route, title: 'Page', markdown: '# Page\n' }],
+        false,
+      )
+
+      expect(manifest).toContain(`- [Page](${expected})`)
+    },
+  )
+
   it('emits canonical per-page Markdown and excludes drafts and opted-out pages', async () => {
     const [home, guide] = await Promise.all([
       readFile(path.join(result.outDir, 'index.md'), 'utf8'),

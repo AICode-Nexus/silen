@@ -154,6 +154,34 @@ it('uses the document route to create base-aware Markdown and canonical URLs', a
   )
 })
 
+it('always joins the configured base with an identically prefixed document route', async () => {
+  const user = userEvent.setup()
+  const fetch = vi.fn().mockResolvedValue(new Response('# Intro\n'))
+  vi.stubGlobal('fetch', fetch)
+  const writeText = clipboard()
+
+  render(
+    <TestSiteProvider
+      base="/docs/"
+      frontmatter={{ title: 'Intro' }}
+      path="/docs/intro"
+    >
+      <DocLayout>
+        <h1>Intro</h1>
+      </DocLayout>
+    </TestSiteProvider>,
+  )
+
+  await chooseCopyAction(user, 'Copy for AI')
+
+  expect(fetch).toHaveBeenCalledWith('/docs/docs/intro.md')
+  expect(writeText).toHaveBeenCalledWith(
+    expect.stringContaining(
+      `Source: ${new URL('/docs/docs/intro', window.location.href).href}`,
+    ),
+  )
+})
+
 it('hides copy actions when global Markdown routes are disabled', () => {
   render(
     <TestSiteProvider

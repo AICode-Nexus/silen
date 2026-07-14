@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
 import { Link, useData, useRoute } from '../../client/index.js'
 import type { ThemeSidebarItem } from '../../shared/config.js'
+import { joinBaseRoute } from '../../shared/url.js'
 import { isActiveThemeLink, resolveThemeLink } from '../lib/navigation.js'
 import { AiPageActions } from './ai-actions.js'
 import {
@@ -77,8 +78,8 @@ export function DocLayout({
       {hasPublicMarkdown ? (
         <AiPageActions
           title={title}
-          markdownUrl={resolveThemeLink(markdownPath, base)}
-          canonicalUrl={resolveThemeLink(route, base)}
+          markdownUrl={joinBaseRoute(base, markdownPath)}
+          canonicalUrl={joinBaseRoute(base, route)}
         />
       ) : null}
       {previous || next ? (
