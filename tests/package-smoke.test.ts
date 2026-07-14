@@ -57,6 +57,10 @@ describe('published package smoke test', () => {
       cwd: packageSource,
       reject: false,
       all: true,
+      env: {
+        ...process.env,
+        SILEN_PACK_SCAN_SECRET: 'silen-env-value-must-not-ship',
+      },
     })
     expect(packageBuild.exitCode, packageBuild.all).toBe(0)
 
@@ -114,6 +118,7 @@ describe('published package smoke test', () => {
       ),
     ).toBe(false)
     expect(files.some((file) => file.includes('/.vite/'))).toBe(false)
+    expect(files.some((file) => file.includes('/.silen/ai/'))).toBe(false)
     expect(packedManifest).toMatchObject({
       bin: { silen: './dist/node/cli.js' },
       engines: { node: '^20.19.0 || >=22.12.0' },
@@ -128,6 +133,21 @@ describe('published package smoke test', () => {
       (await execa('tar', ['-xOzf', archivePath, 'package/dist/node/cli.js']))
         .stdout,
     ).toMatch(/^#!\/usr\/bin\/env node/)
+    const packedContent = (
+      await execa('tar', ['-xOzf', archivePath], {
+        maxBuffer: 20 * 1024 * 1024,
+      })
+    ).stdout
+    for (const forbidden of [
+      packageSource,
+      path.resolve('tests/fixtures'),
+      'tests/fixtures',
+      'silen-env-value-must-not-ship',
+      'do-not-bundle-ask-ai-key',
+      'do-not-bundle-disabled-ai-key',
+    ]) {
+      expect(packedContent).not.toContain(forbidden)
+    }
 
     const consumer = path.join(temporaryDirectory, 'consumer')
     await mkdir(path.join(consumer, 'docs', '.silen'), { recursive: true })

@@ -73,6 +73,109 @@ export default defineConfig({
 resolved from the documentation root and defaults to `.silen/dist`.
 `onBrokenLinks` accepts `error`, `warn`, or `ignore`.
 
+## AI-readable build output
+
+Every build produces deterministic AI-readable files without calling a model
+or requiring an API key. With `base: '/handbook/'`, the public URLs are
+`/handbook/llms.txt`, `/handbook/llms-full.txt`,
+`/handbook/ai-index.json`, and one clean Markdown URL per page, such as
+`/handbook/index.md`, `/handbook/guide/index.md`, or
+`/handbook/about.md`. Copy Markdown and Copy for AI use those same files.
+
+`llms.txt` is an emerging convention, not a finalized web standard. Pages with
+`draft: true` or `ai: false` frontmatter are excluded from every public AI
+artifact. Each output can be disabled independently; all four switches default
+to `true`:
+
+```ts
+export default defineConfig({
+  ai: {
+    llmsTxt: true,
+    llmsFullTxt: true,
+    markdownRoutes: true,
+    index: true,
+  },
+})
+```
+
+## Local AI workspace and MCP
+
+The workspace commands are deterministic and model-free:
+
+```sh
+pnpm silen ai init docs
+pnpm silen ai index docs
+pnpm silen ai audit docs
+```
+
+`ai init` creates `wiki/` and the ignored `.silen/ai/` cache without changing
+existing MDX. `ai index` rebuilds the local search index. `ai audit` checks
+links, citations, generated artifacts, and index freshness, and exits nonzero
+when it finds an issue.
+
+Configure an MCP client from the repository root like this:
+
+```json
+{
+  "mcpServers": {
+    "silen": {
+      "command": "pnpm",
+      "args": ["silen", "mcp", "docs"]
+    }
+  }
+}
+```
+
+The default server registers exactly seven read-only tools: `guide`, `list`,
+`search`, `read`, `backlinks`, `citations`, and `build`. The `build` tool is a
+safe preflight: it reads bounded Markdown inputs and existing artifacts, but
+does not load project config, execute MDX, invoke Vite, or write files.
+
+Write tools do not exist unless the process is started explicitly with
+`pnpm silen mcp docs --allow-write`. That flag adds exactly three tools:
+`write`, `link`, and `append`. They can change content, so grant this permission
+only to a trusted local client and review its Git diff. Writes accept only
+workspace-relative `.md` or `.mdx` paths, reject traversal and escaping
+symlinks, use atomic replacement, and enforce a 2 MiB UTF-8 limit. MCP never
+offers arbitrary shell execution.
+
+## Ask AI endpoint
+
+Ask AI is an optional endpoint-only integration. Public configuration contains
+only the endpoint URL:
+
+```ts
+export default defineConfig({
+  themeConfig: {
+    ai: { endpoint: '/api/ask' },
+  },
+})
+```
+
+Silen sends an HTTP `POST` with this JSON shape:
+
+```json
+{
+  "route": "/guide/",
+  "selectedText": "optional selected text",
+  "messages": [{ "role": "user", "content": "How do I install it?" }]
+}
+```
+
+The server responds with `Content-Type: application/x-ndjson`, one event per
+line. This is a complete valid response:
+
+```ndjson
+{"type":"text","value":"Install with pnpm."}
+{"type":"citation","title":"Installation guide","url":"/guide/"}
+```
+
+The accepted event types are `text`, `citation`, and `error`. Citations become
+links only for safe site-relative or HTTP(S) URLs; unsafe URLs render as plain
+text. Provider keys stay on the server—never put credentials, provider headers,
+or raw upstream errors in `.silen/config.ts` or an NDJSON response. With no
+endpoint, no Ask AI button or client bundle is emitted.
+
 ## Default theme and layouts
 
 The built-in theme provides a responsive navigation shell, local search,
@@ -193,6 +296,6 @@ assets without rewriting their URLs.
 Core Alpha includes typed configuration, static file routing, MDX compilation,
 server-rendered HTML, hydration, client navigation, internal-link validation,
 the responsive extensible default theme, local documentation search, and the
-`dev`, `build`, and `preview` commands. AI-readable artifacts, local MCP tools,
-and Ask AI integration belong to later plans and are not implemented in this
-package yet.
+`dev`, `build`, and `preview` commands. It also includes deterministic AI
+artifacts, the permission-gated local MCP workspace, and optional endpoint-only
+Ask AI integration.

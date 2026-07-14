@@ -5,7 +5,9 @@ import { build } from '../../src/node/build'
 import { createPreviewServer, type SilenServer } from '../../src/node/server'
 
 const root = path.resolve('tests/fixtures/basic')
+const askAiRoot = path.resolve('tests/fixtures/ask-ai-enabled')
 let preview: SilenServer | undefined
+let askAiPreview: SilenServer | undefined
 let expectedMarkdown = ''
 
 test.setTimeout(120_000)
@@ -15,19 +17,32 @@ function serverUrl(route = ''): string {
   return new URL(route, preview.url).href
 }
 
+function askAiServerUrl(route = ''): string {
+  if (!askAiPreview)
+    throw new Error('Expected the Ask AI preview to be running')
+  return new URL(route, askAiPreview.url).href
+}
+
 test.beforeAll(async () => {
-  const result = await build(root)
+  const [result] = await Promise.all([build(root), build(askAiRoot)])
   expectedMarkdown = await readFile(
     path.join(result.outDir, 'guide/index.md'),
     'utf8',
   )
-  preview = await createPreviewServer(root, { port: 0 })
+  ;[preview, askAiPreview] = await Promise.all([
+    createPreviewServer(root, { port: 0 }),
+    createPreviewServer(askAiRoot, { port: 0 }),
+  ])
 })
 
 test.afterAll(async () => {
-  await preview?.close()
-  await rm(path.join(root, '.silen/dist'), { force: true, recursive: true })
-  await rm(path.join(root, '.silen/.temp'), { force: true, recursive: true })
+  await Promise.all([preview?.close(), askAiPreview?.close()])
+  await Promise.all(
+    [root, askAiRoot].flatMap((fixture) => [
+      rm(path.join(fixture, '.silen/dist'), { force: true, recursive: true }),
+      rm(path.join(fixture, '.silen/.temp'), { force: true, recursive: true }),
+    ]),
+  )
 })
 
 async function chooseCopyAction(
@@ -47,6 +62,8 @@ test('copy actions use base-aware Markdown and preserve page navigation', async 
   })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(serverUrl('guide/'))
+
+  await expect(page.getByRole('button', { name: 'Ask AI' })).toHaveCount(0)
 
   const copy = page.getByRole('button', { name: 'Copy', exact: true })
   await expect(copy).toBeVisible()
@@ -82,6 +99,94 @@ test('copy actions use base-aware Markdown and preserve page navigation', async 
 
   await page.getByRole('link', { name: 'Next: About' }).click()
   await expect(page).toHaveURL(serverUrl('about'))
+})
+
+test('configured Ask AI uses the endpoint NDJSON protocol safely', async ({
+  page,
+}) => {
+  const requestBodies: unknown[] = []
+  await page.route('**/api/ask', async (route) => {
+    const body: unknown = route.request().postDataJSON()
+    requestBodies.push(body)
+    const question = (
+      body as { messages?: Array<{ content?: unknown }> }
+    ).messages?.at(-1)?.content
+
+    if (question === 'abort') {
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/x-ndjson',
+        body: '{"type":"text","value":"late answer"}\n',
+      })
+      return
+    }
+    if (question === 'error') {
+      await route.fulfill({
+        status: 502,
+        contentType: 'text/plain',
+        body: 'raw provider failure sk-must-not-render',
+      })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/x-ndjson',
+      body: [
+        '{"type":"text","value":"Install "}',
+        '{"type":"text","value":"with pnpm."}',
+        '{"type":"citation","title":"Reference","url":"/reference?from=ask-ai#sources"}',
+        '{"type":"citation","title":"Unsafe script","url":"javascript:alert(1)"}',
+      ].join('\n'),
+    })
+  })
+
+  await page.goto(askAiServerUrl())
+  const originalUrl = page.url()
+  await page.getByRole('button', { name: 'Ask AI' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ask AI' })
+  await expect(dialog).toBeVisible()
+  await page.getByRole('textbox', { name: 'Question' }).fill('install')
+  await page.getByRole('button', { name: 'Ask', exact: true }).click()
+  await expect(dialog.getByText('Install')).toBeVisible()
+  await expect(dialog.getByText('with pnpm.')).toBeVisible()
+  await expect(dialog.getByRole('link', { name: 'Reference' })).toHaveAttribute(
+    'rel',
+    'noreferrer',
+  )
+  await expect(dialog.getByRole('link', { name: 'Unsafe script' })).toHaveCount(
+    0,
+  )
+  await expect(dialog.getByText('Unsafe script')).toBeVisible()
+  expect(requestBodies[0]).toEqual({
+    route: '/',
+    messages: [{ role: 'user', content: 'install' }],
+  })
+
+  const popupPromise = page.waitForEvent('popup')
+  await dialog.getByRole('link', { name: 'Reference' }).click()
+  const popup = await popupPromise
+  await popup.waitForLoadState('domcontentloaded')
+  await expect(popup).toHaveURL(askAiServerUrl('reference?from=ask-ai#sources'))
+  await popup.close()
+  expect(page.url()).toBe(originalUrl)
+
+  await page.getByRole('textbox', { name: 'Question' }).fill('abort')
+  await page.getByRole('button', { name: 'Ask', exact: true }).click()
+  await expect(dialog.getByRole('status')).toContainText('Generating answer')
+  await dialog.getByRole('button', { name: 'Close' }).click()
+  await expect(dialog).toBeHidden()
+  await page.waitForTimeout(600)
+  await page.getByRole('button', { name: 'Ask AI' }).click()
+  await expect(dialog.getByText('late answer')).toHaveCount(0)
+
+  await page.getByRole('textbox', { name: 'Question' }).fill('error')
+  await page.getByRole('button', { name: 'Ask', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText(
+    'The AI provider could not complete this request.',
+  )
+  await expect(dialog.getByText(/sk-must-not-render/)).toHaveCount(0)
+  expect(page.url()).toBe(originalUrl)
 })
 
 test('copy actions expose fetch and clipboard failures to assistive tech', async ({

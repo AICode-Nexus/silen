@@ -31,6 +31,7 @@ export async function serveMcp(options: CreateMcpOptions): Promise<void> {
   }
   process.on('SIGINT', close)
   process.on('SIGTERM', close)
+  process.stdin.once('end', close)
   try {
     await server.connect(transport)
     await closed
@@ -38,5 +39,6 @@ export async function serveMcp(options: CreateMcpOptions): Promise<void> {
   } finally {
     process.off('SIGINT', close)
     process.off('SIGTERM', close)
+    process.stdin.off('end', close)
   }
 }
