@@ -1,6 +1,13 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createMcpServer } from '../../src/ai/mcp/server'
@@ -148,5 +155,28 @@ describe('MCP write permission gate', () => {
       reason: 'Path is outside the content root',
     })
     expect(text(result)).not.toContain(path.dirname(root))
+  })
+
+  it('returns an error without changing content when index replacement fails', async () => {
+    const { client, root } = await startTestMcp({ allowWrite: true })
+    const existing = path.join(root, 'existing.md')
+    await writeFile(existing, '# Existing\n')
+    await mkdir(path.join(root, '.silen/ai/index.json'), { recursive: true })
+
+    const replaced = await client.callTool({
+      name: 'write',
+      arguments: { path: 'existing.md', content: '# Replaced\n' },
+    })
+    const created = await client.callTool({
+      name: 'write',
+      arguments: { path: 'created.md', content: '# Created\n' },
+    })
+
+    expect(replaced.isError).toBe(true)
+    expect(created.isError).toBe(true)
+    expect(await readFile(existing, 'utf8')).toBe('# Existing\n')
+    await expect(lstat(path.join(root, 'created.md'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
   })
 })

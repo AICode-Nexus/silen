@@ -1,17 +1,42 @@
 import {
+  chmod,
   lstat,
   mkdir,
   mkdtemp,
   readFile,
   readdir,
   rm,
+  stat,
   symlink,
   truncate,
   writeFile,
 } from 'node:fs/promises'
 import path from 'node:path'
-import { afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createWorkspace } from '../../src/ai/workspace'
+
+const fileSystemHooks = vi.hoisted(() => ({
+  afterLink: undefined as
+    | ((existingPath: string, newPath: string) => void | Promise<void>)
+    | undefined,
+  afterUnlink: undefined as
+    ((target: string) => void | Promise<void>) | undefined,
+}))
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return {
+    ...actual,
+    link: async (existingPath: string, newPath: string) => {
+      await actual.link(existingPath, newPath)
+      await fileSystemHooks.afterLink?.(existingPath, newPath)
+    },
+    unlink: async (target: string) => {
+      await actual.unlink(target)
+      await fileSystemHooks.afterUnlink?.(target)
+    },
+  }
+})
 
 const roots: string[] = []
 
@@ -20,6 +45,8 @@ beforeAll(async () => {
 })
 
 afterEach(async () => {
+  fileSystemHooks.afterLink = undefined
+  fileSystemHooks.afterUnlink = undefined
   await Promise.all(
     roots.splice(0).map((root) => rm(root, { force: true, recursive: true })),
   )
@@ -32,6 +59,227 @@ async function temporaryRoot(prefix = 'workspace-write-') {
 }
 
 describe('workspace mutations', () => {
+  it('rejects invalid frontmatter without changing content or leaving a stale index', async () => {
+    const root = await temporaryRoot('workspace-frontmatter-')
+    const existing = path.join(root, 'existing.md')
+    await writeFile(existing, '# Existing\n')
+    const workspace = await createWorkspace(root)
+    await workspace.reindex()
+
+    await expect(
+      workspace.write({
+        path: 'created.md',
+        content: '---\ntitle: [unterminated\n---\n# Created\n',
+      }),
+    ).rejects.toBeDefined()
+    await expect(
+      workspace.write({
+        path: 'existing.md',
+        content: '---\ntitle: *missing\n---\n# Replaced\n',
+      }),
+    ).rejects.toBeDefined()
+
+    await expect(lstat(path.join(root, 'created.md'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+    expect(await readFile(existing, 'utf8')).toBe('# Existing\n')
+    expect((await workspace.audit()).issues).not.toContainEqual(
+      expect.objectContaining({ code: 'index' }),
+    )
+    expect(
+      (await readdir(root)).filter((entry) => /\.(?:tmp|backup)$/.test(entry)),
+    ).toEqual([])
+  })
+
+  it('keeps existing and new content unchanged when the index cannot be replaced', async () => {
+    const root = await temporaryRoot('workspace-index-failure-')
+    const existing = path.join(root, 'existing.md')
+    await writeFile(existing, '# Existing\n')
+    await chmod(existing, 0o754)
+    await mkdir(path.join(root, '.silen/ai/index.json'), { recursive: true })
+    const workspace = await createWorkspace(root)
+
+    await expect(
+      workspace.write({ path: 'existing.md', content: '# Replaced\n' }),
+    ).rejects.toBeDefined()
+    await expect(
+      workspace.write({ path: 'created.md', content: '# Created\n' }),
+    ).rejects.toBeDefined()
+
+    expect(await readFile(existing, 'utf8')).toBe('# Existing\n')
+    expect((await stat(existing)).mode & 0o7777).toBe(0o754)
+    await expect(lstat(path.join(root, 'created.md'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+    expect(
+      (await readdir(root)).filter((entry) => /\.(?:tmp|backup)$/.test(entry)),
+    ).toEqual([])
+    expect(
+      (await readdir(path.join(root, '.silen/ai'))).filter((entry) =>
+        /\.(?:tmp|backup)$/.test(entry),
+      ),
+    ).toEqual([])
+  })
+
+  it('rolls content back and does not overwrite an externally swapped index target', async () => {
+    const root = await temporaryRoot('workspace-index-swap-')
+    const existing = path.join(root, 'existing.md')
+    const index = path.join(root, '.silen/ai/index.json')
+    await writeFile(existing, '# Existing\n')
+    await chmod(existing, 0o754)
+    const workspace = await createWorkspace(root)
+    await workspace.reindex()
+
+    let swapped = false
+    fileSystemHooks.afterLink = async (source, destination) => {
+      if (swapped || destination !== existing || !source.endsWith('.tmp')) {
+        return
+      }
+      swapped = true
+      await rm(index)
+      await mkdir(index)
+    }
+    await expect(
+      workspace.write({ path: 'existing.md', content: '# Replaced\n' }),
+    ).rejects.toBeDefined()
+
+    expect(swapped).toBe(true)
+    expect(await readFile(existing, 'utf8')).toBe('# Existing\n')
+    expect((await stat(existing)).mode & 0o7777).toBe(0o754)
+    expect((await stat(index)).isDirectory()).toBe(true)
+    expect(
+      (await readdir(root)).filter((entry) => /\.(?:tmp|backup)$/.test(entry)),
+    ).toEqual([])
+    expect(
+      (await readdir(path.join(root, '.silen/ai'))).filter((entry) =>
+        /\.(?:tmp|backup)$/.test(entry),
+      ),
+    ).toEqual([])
+  })
+
+  it('does not overwrite an external file created after replacement unlinks the checked target', async () => {
+    const root = await temporaryRoot('workspace-target-swap-')
+    const page = path.join(root, 'page.md')
+    await writeFile(page, '# Original\n')
+    const workspace = await createWorkspace(root)
+    await workspace.reindex()
+
+    let swapped = false
+    fileSystemHooks.afterUnlink = async (target) => {
+      if (swapped || target !== page) return
+      swapped = true
+      await writeFile(page, '# External\n', { mode: 0o640 })
+    }
+    await expect(
+      workspace.write({ path: 'page.md', content: '# Silen\n' }),
+    ).rejects.toBeDefined()
+
+    expect(swapped).toBe(true)
+    expect(await readFile(page, 'utf8')).toBe('# External\n')
+    expect((await stat(page)).mode & 0o7777).toBe(0o640)
+    expect(
+      (await readdir(root)).filter((entry) => /\.(?:tmp|backup)$/.test(entry)),
+    ).toEqual([])
+    expect(
+      (await readdir(path.join(root, '.silen/ai'))).filter((entry) =>
+        /\.(?:tmp|backup)$/.test(entry),
+      ),
+    ).toEqual([])
+  })
+
+  it('rejects ignored path segments at every depth and scans them case-insensitively', async () => {
+    const root = await temporaryRoot('workspace-ignored-')
+    const ignored = [
+      'nested/.git/page.md',
+      'nested/.SILEN/page.md',
+      'nested/Node_Modules/page.md',
+    ]
+    for (const relative of ignored) {
+      await mkdir(path.dirname(path.join(root, relative)), { recursive: true })
+      await writeFile(path.join(root, relative), '# Private\n')
+    }
+    await mkdir(path.join(root, 'docs'))
+    await writeFile(path.join(root, 'docs/public.md'), '# Public\n')
+    const workspace = await createWorkspace(root)
+
+    await expect(workspace.list()).resolves.toEqual({
+      path: '.',
+      files: [
+        { path: 'docs/public.md', route: '/docs/public', title: 'Public' },
+      ],
+    })
+    for (const relative of ignored) {
+      await expect(
+        workspace.list(path.posix.dirname(relative)),
+      ).rejects.toMatchObject({
+        code: 'UNSUPPORTED_FILE',
+      })
+      await expect(
+        workspace.write({ path: relative, content: '# Changed\n' }),
+      ).rejects.toMatchObject({ code: 'UNSUPPORTED_FILE' })
+      expect(await readFile(path.join(root, relative), 'utf8')).toBe(
+        '# Private\n',
+      )
+    }
+  })
+
+  it('preserves permission bits for replace, append, and link while creates use a safe mode', async () => {
+    const root = await temporaryRoot('workspace-mode-')
+    const page = path.join(root, 'page.md')
+    const target = path.join(root, 'target.md')
+    await writeFile(page, '# Page\n')
+    await chmod(page, 0o754)
+    await writeFile(target, '# Target\n')
+    const workspace = await createWorkspace(root)
+
+    await workspace.write({ path: 'page.md', content: '# Replaced\n' })
+    expect((await stat(page)).mode & 0o7777).toBe(0o754)
+    await workspace.append({ path: 'page.md', content: 'Appended' })
+    expect((await stat(page)).mode & 0o7777).toBe(0o754)
+    await workspace.link({
+      path: 'page.md',
+      target: 'target.md',
+      label: 'Target',
+    })
+    expect((await stat(page)).mode & 0o7777).toBe(0o754)
+
+    const created = path.join(root, 'created.md')
+    await workspace.write({ path: 'created.md', content: '# Created\n' })
+    expect((await stat(created)).mode & 0o7777).toBe(0o600)
+  })
+
+  it.skipIf(process.platform !== 'darwin')(
+    'serializes concurrent case-alias mutations across workspace instances',
+    async () => {
+      const root = await temporaryRoot('workspace-case-alias-')
+      await mkdir(path.join(root, 'Docs'))
+      const page = path.join(root, 'Docs/Page.md')
+      await writeFile(page, '# Events\n')
+      const first = await createWorkspace(root)
+      const second = await createWorkspace(root)
+      const additions = Array.from(
+        { length: 24 },
+        (_, index) => `entry-${index}`,
+      )
+
+      await Promise.all(
+        additions.map((content, index) =>
+          (index % 2 === 0 ? first : second).append({
+            path: index % 2 === 0 ? 'Docs/Page.md' : 'docs/page.md',
+            content,
+          }),
+        ),
+      )
+
+      const lines = (await readFile(page, 'utf8')).split('\n')
+      expect(lines[0]).toBe('# Events')
+      expect(lines.slice(1).sort()).toEqual([...additions].sort())
+      expect((await first.audit()).issues).not.toContainEqual(
+        expect.objectContaining({ code: 'index' }),
+      )
+    },
+  )
+
   it('atomically creates and exactly replaces Markdown with LF content and a fresh index', async () => {
     const root = await temporaryRoot()
     await mkdir(path.join(root, 'docs'))

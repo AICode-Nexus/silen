@@ -2,11 +2,11 @@ import { randomBytes } from 'node:crypto'
 import { constants, type Stats } from 'node:fs'
 import {
   lstat,
+  link,
   mkdir,
   open,
   readdir,
   realpath,
-  rename,
   stat,
   unlink,
 } from 'node:fs/promises'
@@ -41,8 +41,7 @@ const OPEN_READ_FLAGS = constants.O_RDONLY | NO_FOLLOW
 const OPEN_WRITE_FLAGS =
   constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW
 const ignoredDirectories = new Set(['.git', '.silen', 'node_modules'])
-const mutationPathLocks = new Map<string, Promise<void>>()
-const workspaceIndexLocks = new Map<string, Promise<void>>()
+const workspaceOperationLocks = new Map<string, Promise<void>>()
 
 export class WorkspaceError extends Error {
   constructor(
@@ -133,6 +132,23 @@ interface PathSnapshot {
   stats: Stats
 }
 
+interface MutationState {
+  before: string
+  created: boolean
+  target?: PathSnapshot
+}
+
+interface StagedFile {
+  target: string
+  parent: PathSnapshot
+  before?: PathSnapshot
+  temporary: string
+  temporaryStats: Stats
+  backup?: string
+  installed: boolean
+  originalRemoved: boolean
+}
+
 function posixPath(value: string): string {
   return value.split(path.sep).join('/')
 }
@@ -186,6 +202,14 @@ function containsControlCharacter(value: string): boolean {
   })
 }
 
+function normalizedPathSegment(value: string): string {
+  return value.normalize('NFKC').toLocaleLowerCase('en-US')
+}
+
+function isIgnoredDirectory(value: string): boolean {
+  return ignoredDirectories.has(normalizedPathSegment(value))
+}
+
 function normalizeMutationPath(value: string): string {
   validatePathInput(value)
   const components = value.split('/')
@@ -206,7 +230,7 @@ function normalizeMutationPath(value: string): string {
       'Only Markdown and MDX files can be changed',
     )
   }
-  if (ignoredDirectories.has(components[0]!)) {
+  if (components.some(isIgnoredDirectory)) {
     throw new WorkspaceError(
       'UNSUPPORTED_FILE',
       'Only indexed Markdown and MDX files can be changed',
@@ -231,6 +255,17 @@ function normalizeMutationContent(value: string): string {
     )
   }
   return normalized
+}
+
+function validateMutationDocument(value: string): void {
+  try {
+    matter(value)
+  } catch {
+    throw new WorkspaceError(
+      'INVALID_CONTENT',
+      'Markdown frontmatter could not be parsed',
+    )
+  }
 }
 
 function appendWithSeparator(existing: string, addition: string): string {
@@ -411,19 +446,10 @@ export async function createWorkspace(root: string): Promise<Workspace> {
     path.relative(process.cwd(), contentRoot) || '.',
   )
 
-  async function withPathLock<T>(
-    relative: string,
+  async function withWorkspaceOperationLock<T>(
     operation: () => Promise<T>,
   ): Promise<T> {
-    return withNamedLock(
-      mutationPathLocks,
-      `${contentRoot}\0${relative}`,
-      operation,
-    )
-  }
-
-  async function withIndexLock<T>(operation: () => Promise<T>): Promise<T> {
-    return withNamedLock(workspaceIndexLocks, contentRoot, operation)
+    return withNamedLock(workspaceOperationLocks, contentRoot, operation)
   }
 
   async function assertRootStable(): Promise<void> {
@@ -596,6 +622,13 @@ export async function createWorkspace(root: string): Promise<Workspace> {
   async function documentsWithin(
     requestedPath = '.',
   ): Promise<WorkspaceDocument[]> {
+    validatePathInput(requestedPath)
+    if (requestedPath.split('/').some(isIgnoredDirectory)) {
+      throw new WorkspaceError(
+        'UNSUPPORTED_FILE',
+        'Only indexed Markdown and MDX files can be read',
+      )
+    }
     const start = lexicalPath(requestedPath)
     const startSnapshot = await snapshotPath(start)
     const files: Array<{ lexical: string; relative: string }> = []
@@ -643,7 +676,7 @@ export async function createWorkspace(root: string): Promise<Workspace> {
           throw unsafePath('Workspace symlinks are not allowed')
         }
         if (entryStats.isDirectory()) {
-          if (!ignoredDirectories.has(entry.name)) await visit(candidate)
+          if (!isIgnoredDirectory(entry.name)) await visit(candidate)
           continue
         }
         if (!entryStats.isFile() || !/\.mdx?$/i.test(entry.name)) continue
@@ -726,14 +759,18 @@ export async function createWorkspace(root: string): Promise<Workspace> {
     return lexical
   }
 
-  async function safeAtomicWrite(
+  async function stageAtomicWrite(
     requestedPath: string,
     content: string,
-  ): Promise<void> {
+    expected?: PathSnapshot,
+  ): Promise<StagedFile> {
     const target = lexicalPath(requestedPath)
-    const parent = path.dirname(target)
-    const parentBefore = await snapshotPath(parent)
+    const parentBefore = await snapshotPath(path.dirname(target))
     if (!parentBefore.stats.isDirectory()) throw unsafePath()
+    const physicalTarget = path.join(
+      parentBefore.physical,
+      path.basename(target),
+    )
 
     const targetExists = await assertNoSymlinkComponents(target, true)
     let targetBefore: PathSnapshot | undefined
@@ -743,22 +780,40 @@ export async function createWorkspace(root: string): Promise<Workspace> {
         throw unsafePath('Safe workspace output path is not a file')
       }
     }
+    if (
+      (expected &&
+        (!targetBefore ||
+          expected.physical !== targetBefore.physical ||
+          !sameIdentity(expected.stats, targetBefore.stats))) ||
+      (!expected && targetBefore)
+    ) {
+      throw unsafePath()
+    }
 
     const temporary = path.join(
-      parent,
+      parentBefore.physical,
       `.${path.basename(target)}.${randomBytes(16).toString('hex')}.tmp`,
     )
+    const backup = targetBefore
+      ? path.join(
+          parentBefore.physical,
+          `.${path.basename(target)}.${randomBytes(16).toString('hex')}.backup`,
+        )
+      : undefined
     let handle
     let temporaryStats: Stats | undefined
+    let keepStagedFiles = false
     try {
-      handle = await open(temporary, OPEN_WRITE_FLAGS, 0o600)
+      const mode = targetBefore ? targetBefore.stats.mode & 0o7777 : 0o600
+      handle = await open(temporary, OPEN_WRITE_FLAGS, mode)
       temporaryStats = await handle.stat()
+      await handle.chmod(mode)
       await handle.writeFile(content, { encoding: 'utf8' })
       await handle.sync()
       await handle.close()
       handle = undefined
 
-      const parentAfter = await snapshotPath(parent)
+      const parentAfter = await snapshotPath(parentBefore.physical)
       assertSameSnapshot(parentBefore, parentAfter)
       const targetStillExists = await assertNoSymlinkComponents(target, true)
       if (targetBefore) {
@@ -779,54 +834,221 @@ export async function createWorkspace(root: string): Promise<Workspace> {
       ) {
         throw unsafePath()
       }
-      const parentImmediatelyBeforeRename = await snapshotPath(parent)
-      assertSameSnapshot(parentBefore, parentImmediatelyBeforeRename)
-      await rename(temporary, target)
-      const written = await snapshotPath(target)
-      if (!sameIdentity(temporaryStats, written.stats)) throw unsafePath()
+      if (targetBefore && backup) {
+        await link(physicalTarget, backup)
+        const [backupSnapshot, targetAfterBackup] = await Promise.all([
+          snapshotPath(backup),
+          snapshotPath(target),
+        ])
+        if (
+          !sameIdentity(targetBefore.stats, backupSnapshot.stats) ||
+          !sameIdentity(targetBefore.stats, targetAfterBackup.stats)
+        ) {
+          throw unsafePath()
+        }
+      }
+      const parentAfterStage = await snapshotPath(parentBefore.physical)
+      assertSameSnapshot(parentBefore, parentAfterStage)
+      keepStagedFiles = true
+      return {
+        target: physicalTarget,
+        parent: parentBefore,
+        ...(targetBefore ? { before: targetBefore } : {}),
+        temporary,
+        temporaryStats,
+        ...(backup ? { backup } : {}),
+        installed: false,
+        originalRemoved: false,
+      }
     } catch (error) {
       if (error instanceof WorkspaceError) throw error
-      throw unsafePath('Unable to write a safe workspace file')
+      throw unsafePath('Unable to stage a safe workspace file')
     } finally {
       await handle?.close().catch(() => undefined)
-      await unlink(temporary).catch(() => undefined)
+      if (!keepStagedFiles) {
+        await unlink(temporary).catch(() => undefined)
+        if (backup) await unlink(backup).catch(() => undefined)
+      }
     }
   }
 
-  async function writeIndex(documents: WorkspaceDocument[]) {
+  async function currentSnapshot(
+    target: string,
+  ): Promise<PathSnapshot | undefined> {
+    const exists = await assertNoSymlinkComponents(target, true)
+    return exists ? snapshotPath(target) : undefined
+  }
+
+  async function commitStagedFile(staged: StagedFile): Promise<void> {
+    try {
+      assertSameSnapshot(
+        staged.parent,
+        await snapshotPath(staged.parent.physical),
+      )
+      const current = await currentSnapshot(staged.target)
+      if (staged.before) {
+        if (
+          !current ||
+          current.physical !== staged.before.physical ||
+          !sameIdentity(current.stats, staged.before.stats)
+        ) {
+          throw unsafePath()
+        }
+        await unlink(staged.target)
+        staged.originalRemoved = true
+      } else if (current) {
+        throw unsafePath()
+      }
+
+      await link(staged.temporary, staged.target)
+      staged.installed = true
+      const installed = await snapshotPath(staged.target)
+      if (!sameIdentity(staged.temporaryStats, installed.stats)) {
+        throw unsafePath()
+      }
+      assertSameSnapshot(
+        staged.parent,
+        await snapshotPath(staged.parent.physical),
+      )
+    } catch (error) {
+      if (error instanceof WorkspaceError) throw error
+      throw unsafePath('Unable to commit a safe workspace file')
+    }
+  }
+
+  async function rollbackStagedFile(staged: StagedFile): Promise<void> {
+    try {
+      let current = await currentSnapshot(staged.target)
+      if (
+        staged.installed &&
+        current &&
+        sameIdentity(current.stats, staged.temporaryStats)
+      ) {
+        await unlink(staged.target)
+        staged.installed = false
+        current = undefined
+      }
+      if (staged.before && staged.backup) {
+        if (!current) {
+          await link(staged.backup, staged.target)
+          staged.originalRemoved = false
+          current = await snapshotPath(staged.target)
+        }
+        if (!sameIdentity(current.stats, staged.before.stats)) {
+          throw unsafePath('Unable to roll back a changed workspace target')
+        }
+      } else if (!staged.before && current) {
+        throw unsafePath('Unable to roll back a changed workspace target')
+      }
+      assertSameSnapshot(
+        staged.parent,
+        await snapshotPath(staged.parent.physical),
+      )
+    } catch (error) {
+      if (error instanceof WorkspaceError) throw error
+      throw unsafePath('Unable to roll back a safe workspace file')
+    }
+  }
+
+  async function cleanupStagedFile(staged: StagedFile): Promise<void> {
+    await unlink(staged.temporary).catch(() => undefined)
+    if (staged.backup) await unlink(staged.backup).catch(() => undefined)
+  }
+
+  async function safeAtomicWrite(
+    requestedPath: string,
+    content: string,
+  ): Promise<void> {
+    const target = lexicalPath(requestedPath)
+    const exists = await assertNoSymlinkComponents(target, true)
+    const expected = exists ? await snapshotPath(target) : undefined
+    let staged: StagedFile | undefined
+    try {
+      staged = await stageAtomicWrite(requestedPath, content, expected)
+      await commitStagedFile(staged)
+    } catch (error) {
+      if (staged) await rollbackStagedFile(staged)
+      throw error
+    } finally {
+      if (staged) await cleanupStagedFile(staged)
+    }
+  }
+
+  function serializeIndex(documents: WorkspaceDocument[]): {
+    index: SerializedWorkspaceIndex
+    text: string
+  } {
     const index: SerializedWorkspaceIndex = {
       version: 1,
       fingerprint: fingerprintDocuments(documents),
       documents,
     }
+    return { index, text: `${JSON.stringify(index)}\n` }
+  }
+
+  async function writeIndex(documents: WorkspaceDocument[]) {
+    const serialized = serializeIndex(documents)
     await safeEnsureDirectory('.silen')
     await safeEnsureDirectory('.silen/ai')
-    await safeAtomicWrite('.silen/ai/index.json', `${JSON.stringify(index)}\n`)
-    return index
+    await safeAtomicWrite('.silen/ai/index.json', serialized.text)
+    return serialized.index
+  }
+
+  async function refreshIndexUnlocked() {
+    const documents = await documentsWithin()
+    const index = await writeIndex(documents)
+    return {
+      fileCount: documents.length,
+      index: '.silen/ai/index.json' as const,
+      fingerprint: index.fingerprint,
+    }
   }
 
   async function refreshIndex() {
-    return withIndexLock(async () => {
-      const documents = await documentsWithin()
-      const index = await writeIndex(documents)
-      return {
-        fileCount: documents.length,
-        index: '.silen/ai/index.json' as const,
-        fingerprint: index.fingerprint,
-      }
-    })
+    return withWorkspaceOperationLock(refreshIndexUnlocked)
   }
 
-  async function prepareMutationIndex(): Promise<void> {
-    await documentsWithin()
+  async function prepareMutationIndex(
+    relative: string,
+    after: string,
+  ): Promise<{
+    documents: WorkspaceDocument[]
+    index: SerializedWorkspaceIndex
+    text: string
+  }> {
+    const documents = await documentsWithin()
+    const parent = await snapshotPath(path.dirname(lexicalPath(relative)))
+    const finalRelative = posixPath(
+      path.relative(
+        contentRoot,
+        path.join(parent.physical, path.basename(relative)),
+      ),
+    )
+    const pathKey = (value: string) =>
+      process.platform === 'win32' || process.platform === 'darwin'
+        ? value.normalize('NFKC').toLocaleLowerCase('en-US')
+        : value
+    const finalKey = pathKey(finalRelative)
+    const withoutTarget = documents.filter(
+      (document) => pathKey(document.path) !== finalKey,
+    )
+    withoutTarget.push({
+      id: finalRelative,
+      path: finalRelative,
+      route: routeForFile(finalRelative),
+      title: documentTitle(after, finalRelative),
+      text: after,
+    })
+    withoutTarget.sort((left, right) => left.path.localeCompare(right.path))
     await safeEnsureDirectory('.silen')
     await safeEnsureDirectory('.silen/ai')
+    return { documents: withoutTarget, ...serializeIndex(withoutTarget) }
   }
 
   async function readMutationState(
     relative: string,
     requireExisting: boolean,
-  ): Promise<{ before: string; created: boolean }> {
+  ): Promise<MutationState> {
     const target = lexicalPath(relative)
     const parent = await snapshotPath(path.dirname(target))
     if (!parent.stats.isDirectory()) {
@@ -842,9 +1064,13 @@ export async function createWorkspace(root: string): Promise<Workspace> {
       }
       return { before: '', created: true }
     }
+    const targetBefore = await snapshotPath(target)
+    const before = await secureReadText(target, relative, MAX_FILE_BYTES)
+    assertSameSnapshot(targetBefore, await snapshotPath(target))
     return {
-      before: await secureReadText(target, relative, MAX_FILE_BYTES),
+      before,
       created: false,
+      target: targetBefore,
     }
   }
 
@@ -856,17 +1082,54 @@ export async function createWorkspace(root: string): Promise<Workspace> {
   async function mutate(
     relative: string,
     requireExisting: boolean,
-    transform: (before: string) => string,
+    transform: (before: string) => string | Promise<string>,
   ): Promise<WorkspaceMutationResult> {
-    return withPathLock(relative, async () => {
-      const { before, created } = await readMutationState(
-        relative,
-        requireExisting,
-      )
-      const after = normalizeMutationContent(transform(before))
-      await prepareMutationIndex()
-      await safeAtomicWrite(relative, after)
-      const index = await refreshIndex()
+    return withWorkspaceOperationLock(async () => {
+      const state = await readMutationState(relative, requireExisting)
+      const { before, created } = state
+      const after = normalizeMutationContent(await transform(before))
+      validateMutationDocument(after)
+      const prepared = await prepareMutationIndex(relative, after)
+      const indexTarget = lexicalPath('.silen/ai/index.json')
+      const indexExists = await assertNoSymlinkComponents(indexTarget, true)
+      const indexBefore = indexExists
+        ? await snapshotPath(indexTarget)
+        : undefined
+      let stagedIndex: StagedFile | undefined
+      let stagedContent: StagedFile | undefined
+      let failure: unknown
+      try {
+        stagedIndex = await stageAtomicWrite(
+          '.silen/ai/index.json',
+          prepared.text,
+          indexBefore,
+        )
+        stagedContent = await stageAtomicWrite(relative, after, state.target)
+        await commitStagedFile(stagedContent)
+        await commitStagedFile(stagedIndex)
+      } catch (error) {
+        failure = error
+        for (const staged of [stagedIndex, stagedContent]) {
+          if (!staged) continue
+          try {
+            await rollbackStagedFile(staged)
+          } catch (rollbackError) {
+            failure = rollbackError
+          }
+        }
+      } finally {
+        if (stagedContent) await cleanupStagedFile(stagedContent)
+        if (stagedIndex) await cleanupStagedFile(stagedIndex)
+      }
+      if (failure) {
+        if (failure instanceof Error) throw failure
+        throw unsafePath('Workspace mutation failed')
+      }
+      const index = {
+        fileCount: prepared.documents.length,
+        index: '.silen/ai/index.json' as const,
+        fingerprint: prepared.index.fingerprint,
+      }
       return {
         path: relative,
         created,
@@ -1051,28 +1314,14 @@ export async function createWorkspace(root: string): Promise<Workspace> {
       const relative = normalizeMutationPath(requestedPath)
       const relativeTarget = normalizeMutationPath(target)
       const escapedLabel = escapeLinkLabel(label)
-      return withPathLock(relative, async () => {
+      return mutate(relative, true, async (before) => {
         await assertLinkTarget(relativeTarget)
-        const { before, created } = await readMutationState(relative, true)
         const destination = path.posix
           .relative(path.posix.dirname(relative), relativeTarget)
           .split('/')
           .map((component) => encodeURIComponent(component))
           .join('/')
-        const after = normalizeMutationContent(
-          appendWithSeparator(before, `[${escapedLabel}](${destination})`),
-        )
-        await prepareMutationIndex()
-        await safeAtomicWrite(relative, after)
-        const index = await refreshIndex()
-        return {
-          path: relative,
-          created,
-          bytesBefore: Buffer.byteLength(before, 'utf8'),
-          bytesAfter: Buffer.byteLength(after, 'utf8'),
-          diff: unifiedDiffSummary(relative, before, after),
-          index,
-        }
+        return appendWithSeparator(before, `[${escapedLabel}](${destination})`)
       })
     },
     async append({ path: requestedPath, content }) {
