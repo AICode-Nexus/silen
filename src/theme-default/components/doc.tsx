@@ -3,6 +3,7 @@ import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
 import { Link, useData, useRoute } from '../../client/index.js'
 import type { ThemeSidebarItem } from '../../shared/config.js'
 import { isActiveThemeLink, resolveThemeLink } from '../lib/navigation.js'
+import { AiPageActions } from './ai-actions.js'
 import {
   Card,
   CardContent,
@@ -49,7 +50,7 @@ export function DocLayout({
 }: {
   readonly children: ReactNode
 }): React.JSX.Element {
-  const { base, themeConfig } = useData()
+  const { base, frontmatter, route, siteTitle, themeConfig } = useData()
   const currentRoute = useRoute()
   const pages = (themeConfig?.sidebar ?? []).flatMap((group) => group.items)
   const currentIndex = pages.findIndex((item) =>
@@ -57,10 +58,23 @@ export function DocLayout({
   )
   const previous = currentIndex > 0 ? pages[currentIndex - 1] : undefined
   const next = currentIndex >= 0 ? pages[currentIndex + 1] : undefined
+  const title =
+    typeof frontmatter?.title === 'string' ? frontmatter.title : siteTitle
+  const markdownPath =
+    route === '/'
+      ? '/index.md'
+      : route.endsWith('/')
+        ? `${route}index.md`
+        : `${route}.md`
 
   return (
     <article className="silen-doc">
       {children}
+      <AiPageActions
+        title={title}
+        markdownUrl={resolveThemeLink(markdownPath, base)}
+        canonicalUrl={resolveThemeLink(route, base)}
+      />
       {previous || next ? (
         <nav aria-label="Page navigation" className="silen-pager">
           {previous ? (
