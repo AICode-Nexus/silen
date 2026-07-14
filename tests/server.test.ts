@@ -203,10 +203,13 @@ describe('development server', () => {
       await expect
         .poll(async () => {
           const response = await fetch(new URL('dynamic', server.url))
-          return { body: await response.text(), status: response.status }
+          return {
+            containsTitle: (await response.text()).includes('Dynamic route'),
+            status: response.status,
+          }
         })
-        .toMatchObject({
-          body: expect.stringContaining('Dynamic route'),
+        .toEqual({
+          containsTitle: true,
           status: 200,
         })
 
