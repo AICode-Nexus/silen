@@ -9,18 +9,32 @@ export interface CreateMcpOptions {
 
 export async function serveMcp(options: CreateMcpOptions): Promise<void> {
   const server = createMcpServer(options)
-  let closing = false
+  const transport = new StdioServerTransport()
+  let resolveClosed!: () => void
+  let rejectClosed!: (error: unknown) => void
+  const closed = new Promise<void>((resolve, reject) => {
+    resolveClosed = resolve
+    rejectClosed = reject
+  })
+  const previousOnClose = transport.onclose
+  transport.onclose = () => {
+    previousOnClose?.()
+    resolveClosed()
+  }
+  let closePromise: Promise<void> | undefined
+  const closeServer = (): Promise<void> => {
+    closePromise ??= Promise.resolve().then(() => server.close())
+    return closePromise
+  }
   const close = (): void => {
-    if (closing) return
-    closing = true
-    process.off('SIGINT', close)
-    process.off('SIGTERM', close)
-    void server.close().finally(() => process.exit(0))
+    void closeServer().catch(rejectClosed)
   }
   process.once('SIGINT', close)
   process.once('SIGTERM', close)
   try {
-    await server.connect(new StdioServerTransport())
+    await server.connect(transport)
+    await closed
+    if (closePromise) await closePromise
   } finally {
     process.off('SIGINT', close)
     process.off('SIGTERM', close)
