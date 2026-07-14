@@ -127,6 +127,20 @@ describe('development server', () => {
 describe('preview server', () => {
   beforeAll(async () => {
     await build(root)
+    await mkdir(path.join(root, 'output', '.well-known'), { recursive: true })
+    await writeFile(
+      path.join(root, 'output', '.well-known/security.txt'),
+      'Contact: mailto:security@example.test\n',
+    )
+    await writeFile(
+      path.join(root, 'output', '.hidden.txt'),
+      'internal preview metadata\n',
+    )
+    await mkdir(path.join(root, 'output', '.internal'), { recursive: true })
+    await writeFile(
+      path.join(root, 'output', '.internal/metadata.json'),
+      '{"source":"index.mdx"}\n',
+    )
     await symlink(
       path.join(root, 'secret.txt'),
       path.join(root, 'output', 'leak.txt'),
@@ -181,6 +195,36 @@ describe('preview server', () => {
     ).toBe(404)
     expect(await rawStatus(new URL(server.url), '/docs/%2fetc/passwd')).toBe(
       404,
+    )
+  })
+
+  it('denies internal dot paths without leaking content', async () => {
+    const server = await createPreviewServer(root, {
+      host: '127.0.0.1',
+      port: 0,
+    })
+    runningServers.push(server)
+
+    for (const path of [
+      '.vite/manifest.json',
+      '.hidden.txt',
+      '.internal/metadata.json',
+      '%2einternal/metadata.json',
+    ]) {
+      const response = await fetch(new URL(path, server.url))
+      expect(response.status).toBe(404)
+      const body = await response.text()
+      expect(body).toBe('Not found\n')
+      expect(body).not.toContain('index.mdx')
+      expect(body).not.toContain('internal preview metadata')
+    }
+
+    const wellKnown = await fetch(
+      new URL('.well-known/security.txt', server.url),
+    )
+    expect(wellKnown.status).toBe(200)
+    expect(await wellKnown.text()).toBe(
+      'Contact: mailto:security@example.test\n',
     )
   })
 

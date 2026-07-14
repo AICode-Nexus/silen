@@ -586,6 +586,7 @@ export async function build(root: string): Promise<BuildResult> {
       loadRenderer(ssrEntry, routes),
     ])
     await renderRoutes(config, routeOutputs, renderer, manifest, stagedOutDir)
+    await rm(path.join(stagedOutDir, '.vite'), { force: true, recursive: true })
     await installOutput(stagedOutDir, config.outDir, backupDir)
     installed = true
   } finally {

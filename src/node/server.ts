@@ -326,7 +326,9 @@ function previewSegments(pathname: string, base: string): string[] | undefined {
       segment === '..' ||
       segment.includes('/') ||
       segment.includes('\\') ||
-      segment.includes('\0')
+      segment.includes('\0') ||
+      (segment.startsWith('.') &&
+        !(segments.length === 0 && segment === '.well-known'))
     ) {
       return undefined
     }

@@ -1,17 +1,8 @@
-import { readFile, rm } from 'node:fs/promises'
+import { readFile, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { build, routeOutputFile, type BuildResult } from '../src/node/build'
 import type { JsonObject } from '../src/shared/page'
-
-interface ManifestChunk {
-  assets?: string[]
-  css?: string[]
-  file: string
-  isEntry?: boolean
-}
-
-type Manifest = Record<string, ManifestChunk>
 
 function hydrationData(document: string): JsonObject {
   const match =
@@ -27,17 +18,13 @@ let result: BuildResult
 let home: string
 let guide: string
 let about: string
-let manifest: Manifest
 
 beforeAll(async () => {
   result = await build(root)
-  ;[home, guide, about, manifest] = await Promise.all([
+  ;[home, guide, about] = await Promise.all([
     readFile(path.join(result.outDir, 'index.html'), 'utf8'),
     readFile(path.join(result.outDir, 'guide/index.html'), 'utf8'),
     readFile(path.join(result.outDir, 'about/index.html'), 'utf8'),
-    readFile(path.join(result.outDir, '.vite/manifest.json'), 'utf8').then(
-      (source) => JSON.parse(source) as Manifest,
-    ),
   ])
 })
 
@@ -47,6 +34,12 @@ afterAll(async () => {
 })
 
 describe('static production build', () => {
+  it('omits internal Vite metadata from the installed output', async () => {
+    await expect(
+      readFile(path.join(result.outDir, '.vite/manifest.json'), 'utf8'),
+    ).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
   it('keeps root, nested-index, and no-trailing routes inside outDir', () => {
     expect(routeOutputFile('/tmp/silen-out', '/')).toBe(
       '/tmp/silen-out/index.html',
@@ -80,24 +73,16 @@ describe('static production build', () => {
     expect(about).toContain('no-trailing canonical route')
   })
 
-  it('uses Vite manifest filenames for base-aware hashed JS, CSS, and assets', () => {
-    const entry = Object.values(manifest).find((chunk) => chunk.isEntry)
-    const css = Object.values(manifest).flatMap((chunk) => chunk.css ?? [])
-    const assets = Object.values(manifest).flatMap(
-      (chunk) => chunk.assets ?? [],
+  it('uses manifest-resolved filenames for base-aware hashed JS, CSS, and assets', () => {
+    expect(home).toMatch(
+      /<script type="module" src="\/project\/assets\/.+-[\w-]+\.js"><\/script>/,
     )
-
-    expect(entry).toBeDefined()
-    expect(entry!.file).toMatch(/^assets\/.+-[\w-]+\.js$/)
-    expect(home).toContain(
-      `<script type="module" src="/project/${entry!.file}"></script>`,
+    expect(home).toMatch(
+      /<link rel="stylesheet" href="\/project\/assets\/.+-[\w-]+\.css">/,
     )
-    expect(css).not.toHaveLength(0)
-    expect(assets).not.toHaveLength(0)
-    expect(css.every((file) => /-[\w-]+\.css$/.test(file))).toBe(true)
-    expect(assets.every((file) => /-[\w-]+\.[a-z]+$/.test(file))).toBe(true)
-    expect(css.some((file) => home.includes(`/project/${file}`))).toBe(true)
-    expect(assets.some((file) => home.includes(`/project/${file}`))).toBe(true)
+    expect(home).toMatch(
+      /<link rel="preload" as="image" href="\/project\/assets\/.+-[\w-]+\.[a-z]+">/,
+    )
     expect(home).not.toContain('/project/assets/entry.js')
   })
 
@@ -121,10 +106,13 @@ describe('static production build', () => {
   })
 
   it('does not leak resolved config or private filesystem fields into client chunks', async () => {
+    const assetFiles = await readdir(path.join(result.outDir, 'assets'))
     const chunks = await Promise.all(
-      [...new Set(Object.values(manifest).map((chunk) => chunk.file))]
+      assetFiles
         .filter((file) => file.endsWith('.js'))
-        .map((file) => readFile(path.join(result.outDir, file), 'utf8')),
+        .map((file) =>
+          readFile(path.join(result.outDir, 'assets', file), 'utf8'),
+        ),
     )
     const clientSource = chunks.join('\n')
 
