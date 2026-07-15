@@ -9,6 +9,46 @@ Silen treats AI access as part of the documentation build instead of an
 afterthought. The default output is deterministic, inspectable, and does not
 call a model.
 
+## Agent Contract
+
+Silen gives an AI one versioned discovery entry point instead of making every
+client memorize a separate tutorial:
+
+- For a local project, begin with
+  `@aicode-nexus/silen/agent/manifest.json` from the installed package. It links
+  to the exact config, CLI, MCP, and public TypeScript API plus task playbooks
+  such as `agent/tasks/create-site.md`.
+- For a deployed site, begin with
+  `/.well-known/silen/manifest.json`. This official site publishes it at
+  `/silen/.well-known/silen/manifest.json`.
+- For bounded local reads, start `pnpm silen mcp docs`. It is read-only unless
+  the user explicitly adds `--allow-write`.
+
+Codex, Claude Code, and Cursor should all read that same manifest and use the
+same local MCP command. Client setup stays thin; the contract remains the
+single API reference.
+
+If a client does not support the declared schema version, it must fall back to
+the linked public Markdown and remain read-only.
+
+## Add public project instructions
+
+Only publish instructions that are safe for every site visitor:
+
+```ts
+export default defineConfig({
+  ai: {
+    contract: {
+      instructions: '.silen/ai-public.md',
+      tasksDir: '.silen/ai-tasks',
+    },
+  },
+})
+```
+
+These files become explicit public Agent instructions. Never place private
+paths, secrets, internal endpoints, or credentials in them.
+
 ## Public AI artifacts
 
 Each production build can emit:

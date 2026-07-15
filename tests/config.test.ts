@@ -66,10 +66,25 @@ describe('resolveConfig', () => {
         llmsFullTxt: true,
         markdownRoutes: true,
         index: true,
+        contract: { enabled: true },
       },
       command: 'build',
       root,
       configFile: path.join(root, '.silen/config.ts'),
+    })
+  })
+
+  it('can disable only the Agent Contract while retaining AI artifacts', async () => {
+    await expect(
+      resolveInlineConfig({ ai: { contract: { enabled: false } } }),
+    ).resolves.toMatchObject({
+      ai: {
+        llmsTxt: true,
+        llmsFullTxt: true,
+        markdownRoutes: true,
+        index: true,
+        contract: { enabled: false },
+      },
     })
   })
 

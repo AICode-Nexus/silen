@@ -62,7 +62,7 @@ describe('AI build artifacts', () => {
       String.raw`- [Guide \\ \] continued](/docs/guide.md): First line second line`,
     )
     expect(
-      manifest.split('\n').filter((line) => line.startsWith('- [')),
+      manifest.split('\n').filter((line) => line.startsWith('- [Guide')),
     ).toHaveLength(1)
   })
 
@@ -97,6 +97,10 @@ describe('AI build artifacts', () => {
         '',
         '- [Getting Started](/knowledge/guide/getting-started.md): Install Silen',
         '- [AI Fixture Home](/knowledge/index.md): Explore the documentation',
+        '',
+        '## Agent Contract',
+        '',
+        '- [Silen Agent Contract](/knowledge/.well-known/silen/manifest.json)',
         '',
       ].join('\n'),
     )

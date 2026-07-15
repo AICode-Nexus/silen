@@ -101,6 +101,29 @@ test('copy actions use base-aware Markdown and preserve page navigation', async 
   await expect(page).toHaveURL(serverUrl('about'))
 })
 
+test('serves the site Agent Contract from its advertised base route', async ({
+  request,
+}) => {
+  const llms = await request.get(serverUrl('llms.txt'))
+  expect(llms.ok()).toBe(true)
+  expect(await llms.text()).toContain(
+    '[Silen Agent Contract](/project/.well-known/silen/manifest.json)',
+  )
+
+  const response = await request.get(
+    serverUrl('.well-known/silen/manifest.json'),
+  )
+  expect(response.ok()).toBe(true)
+  expect(await response.json()).toMatchObject({
+    schemaVersion: 1,
+    kind: 'silen-site',
+    site: { base: '/project/' },
+    capabilities: {
+      mcp: { readOnlyByDefault: true, writeRequiresFlag: '--allow-write' },
+    },
+  })
+})
+
 test('configured Ask AI uses the endpoint NDJSON protocol safely', async ({
   page,
 }) => {

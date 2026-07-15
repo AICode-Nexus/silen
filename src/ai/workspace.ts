@@ -14,6 +14,7 @@ import {
 import path from 'node:path'
 import matter from 'gray-matter'
 import {
+  auditAgentContract,
   auditDocuments,
   findBacklinks,
   inspectCitations,
@@ -1221,7 +1222,21 @@ export async function createWorkspace(root: string): Promise<Workspace> {
         artifacts.add(artifact)
       }
     }
-    return auditDocuments(documents, { artifacts, indexFresh })
+    const llmsTxt = await readOptionalFile(
+      '.silen/dist/llms.txt',
+      MAX_FILE_BYTES,
+    )
+    const contractIssues = await auditAgentContract({
+      ...(llmsTxt === undefined ? {} : { llmsTxt }),
+      read(relativeOutputPath) {
+        return readOptionalFile(relativeOutputPath, MAX_FILE_BYTES)
+      },
+    })
+    return auditDocuments(documents, {
+      artifacts,
+      indexFresh,
+      contractIssues,
+    })
   }
 
   const workspace: Workspace = {
@@ -1239,7 +1254,7 @@ export async function createWorkspace(root: string): Promise<Workspace> {
     },
     guide() {
       return Promise.resolve(
-        'Silen exposes a read-only documentation workspace by default. Use list or search before read; all paths are relative to the documentation root. Search runs purely in memory. The build tool performs a read-only preflight and never executes workspace code. No model, embeddings, shell commands, or write tools are used.',
+        'Silen exposes a read-only documentation workspace by default. Discover a built site through llms.txt and .well-known/silen/manifest.json, then use list or search before read; all paths are relative to the documentation root. Search runs purely in memory. The build tool performs a read-only preflight and never executes workspace config or MDX. Write tools appear only after explicit --allow-write authorization. After authorized changes, run audit and build, inspect the Git diff, and stop before commit or deployment unless separately authorized. No model, embeddings, or shell commands are used.',
       )
     },
     async list(requestedPath = '.') {

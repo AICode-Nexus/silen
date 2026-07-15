@@ -38,6 +38,9 @@ describe('published package smoke test', () => {
       cp(path.resolve('src'), path.join(packageSource, 'src'), {
         recursive: true,
       }),
+      cp(path.resolve('tooling'), path.join(packageSource, 'tooling'), {
+        recursive: true,
+      }),
       ...[
         'LICENSE',
         'README.md',
@@ -105,6 +108,14 @@ describe('published package smoke test', () => {
     expect(files).toContain('package/dist/client/hmr.js')
     expect(files).toContain('package/dist/client/hmr.d.ts')
     expect(files).toContain('package/dist/theme-default/index.css')
+    expect(files).toContain('package/dist/agent/manifest.json')
+    expect(files).toContain('package/dist/agent/api.json')
+    expect(files).toContain('package/dist/agent/guide.md')
+    expect(files).toContain('package/dist/agent/tasks/create-site.md')
+    expect(files).toContain('package/dist/agent/locales/zh-CN/guide.md')
+    expect(files).toContain(
+      'package/dist/agent/locales/zh-CN/tasks/create-site.md',
+    )
     expect(files.some((file) => file.endsWith('.d.ts'))).toBe(true)
     expect(
       files.filter(
@@ -277,6 +288,35 @@ The nested route was generated.
       { cwd: consumer, reject: false, all: true },
     )
     expect(install.exitCode, install.all).toBe(0)
+
+    const agentContract = await execa(
+      'node',
+      [
+        '--input-type=module',
+        '--eval',
+        `import { readFile } from 'node:fs/promises'
+const specifiers = [
+  '@aicode-nexus/silen/agent/manifest.json',
+  '@aicode-nexus/silen/agent/api.json',
+  '@aicode-nexus/silen/agent/tasks/create-site.md',
+]
+const values = await Promise.all(specifiers.map(async (specifier) =>
+  readFile(new URL(import.meta.resolve(specifier)), 'utf8')
+))
+console.log(JSON.stringify(values))`,
+      ],
+      { cwd: consumer, reject: false, all: true },
+    )
+    expect(agentContract.exitCode, agentContract.all).toBe(0)
+    const [frameworkManifest, frameworkApi, createSiteTask] = JSON.parse(
+      agentContract.stdout,
+    ) as string[]
+    expect(JSON.parse(frameworkManifest!)).toMatchObject({
+      kind: 'silen-framework',
+      generator: { version: '0.1.0-alpha.3' },
+    })
+    expect(JSON.parse(frameworkApi!)).toMatchObject({ schemaVersion: 1 })
+    expect(createSiteTask).toContain('id: create-site')
 
     const themeTypecheck = await execa(
       path.resolve('node_modules/.bin/tsc'),

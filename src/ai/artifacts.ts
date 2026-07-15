@@ -16,7 +16,9 @@ export interface ArtifactOptions {
   outDir: string
   site: Pick<ResolvedConfig, 'title' | 'description' | 'base'>
   pages: readonly AiPage[]
-  config?: Partial<AiArtifactConfig>
+  config?: Partial<AiArtifactConfig> & {
+    readonly contract?: { readonly enabled?: boolean }
+  }
 }
 
 export interface ArtifactResult {
@@ -25,7 +27,7 @@ export interface ArtifactResult {
   chunkCount: number
 }
 
-const defaultConfig: AiArtifactConfig = {
+const defaultConfig = {
   llmsTxt: true,
   llmsFullTxt: true,
   markdownRoutes: true,
@@ -96,6 +98,7 @@ export function renderLlmsTxt(
   site: Pick<ResolvedConfig, 'title' | 'description' | 'base'>,
   pages: readonly AiPage[],
   markdownRoutes = true,
+  contractEnabled = true,
 ): string {
   const links = pages.map(
     (page) =>
@@ -110,6 +113,14 @@ export function renderLlmsTxt(
       '## Documentation',
       '',
       ...links,
+      ...(contractEnabled
+        ? [
+            '',
+            '## Agent Contract',
+            '',
+            `- [Silen Agent Contract](${joinBaseRoute(site.base, '/.well-known/silen/manifest.json')})`,
+          ]
+        : []),
     ].join('\n'),
   )
 }
@@ -152,7 +163,12 @@ export async function generateAiArtifacts(
   if (config.llmsTxt) {
     await writeFile(
       path.join(options.outDir, 'llms.txt'),
-      renderLlmsTxt(options.site, pages, config.markdownRoutes),
+      renderLlmsTxt(
+        options.site,
+        pages,
+        config.markdownRoutes,
+        options.config?.contract?.enabled !== false,
+      ),
       'utf8',
     )
     files.push('llms.txt')

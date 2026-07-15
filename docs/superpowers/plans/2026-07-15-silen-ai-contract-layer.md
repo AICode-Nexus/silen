@@ -115,7 +115,7 @@ the ownership boundaries and public outputs in this plan must remain intact.
 - serializeContractJson(value) with stable key and array ordering and one final
   newline.
 
-- [ ] **Step 1: Add failing manifest and API schema tests**
+- [x] **Step 1: Add failing manifest and API schema tests**
 
 Cover:
 
@@ -135,7 +135,7 @@ pnpm test tests/ai/contract-schema.test.ts
 Expected: the new test fails because contract types and serializers do not
 exist.
 
-- [ ] **Step 2: Implement the smallest v1 schemas and serializer**
+- [x] **Step 2: Implement the smallest v1 schemas and serializer**
 
 Use strict Zod objects for public JSON. Preserve deterministic ordering by
 sorting resources by id and language, tasks by id and language, config fields by
@@ -144,7 +144,7 @@ symbol.
 
 Do not add site file loading or output writes in this task.
 
-- [ ] **Step 3: Centralize the package version**
+- [x] **Step 3: Centralize the package version**
 
 Move the duplicated CLI and MCP version string into src/shared/version.ts.
 Add a test that compares SILEN_VERSION with package.json. This keeps the value
@@ -159,7 +159,7 @@ pnpm typecheck
 
 Expected: all selected tests and typecheck pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ~~~bash
 git add src/shared/ai-contract.ts src/shared/version.ts src/ai/contract/schema.ts src/ai/contract/serialize.ts src/node/cli.ts src/ai/mcp/server.ts tests/ai/contract-schema.test.ts tests/cli.test.ts tests/ai/mcp-stdio.test.ts
@@ -191,7 +191,7 @@ git commit -m "feat(ai): define the versioned Agent Contract"
 - loadBuiltInTaskPack(locale) returns one guide and six tasks.
 - loadCustomTaskPack(options) remains path-injected and is completed in Task 6.
 
-- [ ] **Step 1: Add failing task-frontmatter tests**
+- [x] **Step 1: Add failing task-frontmatter tests**
 
 Test valid read and write tasks plus these failures:
 
@@ -215,14 +215,14 @@ pnpm test tests/ai/task-contract.test.ts
 
 Expected: failure because the task parser and content do not exist.
 
-- [ ] **Step 2: Implement frontmatter parsing and size limits**
+- [x] **Step 2: Implement frontmatter parsing and size limits**
 
 Use gray-matter, which is already a dependency. Normalize line endings, require
 one trailing newline, reject executable MDX, and allow plain Markdown only.
 
 Use stable relative paths in errors. Never include the absolute source root.
 
-- [ ] **Step 3: Author the canonical English task pack**
+- [x] **Step 3: Author the canonical English task pack**
 
 Each task must include:
 
@@ -238,12 +238,12 @@ create-site must work with an installed package and an otherwise empty content
 directory. deploy-site must stop at verified static output and avoid assuming a
 specific host.
 
-- [ ] **Step 4: Author the Chinese task pack**
+- [x] **Step 4: Author the Chinese task pack**
 
 Keep task ids and contract references identical to the English pack. Translate
 explanatory text and expected reports, not commands or identifiers.
 
-- [ ] **Step 5: Verify both packs**
+- [x] **Step 5: Verify both packs**
 
 ~~~bash
 pnpm test tests/ai/task-contract.test.ts
@@ -253,7 +253,7 @@ pnpm format:check
 Expected: both language packs contain the same six ids, all references resolve
 against the injected contract set, and formatting passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add src/ai/contract/tasks.ts src/ai/contract/content tests/ai/task-contract.test.ts
@@ -284,7 +284,7 @@ git commit -m "feat(ai): add bilingual Agent task playbooks"
 - userConfigSchema is used by resolveConfig and API generation.
 - configApiEntries are generated from the schema metadata.
 
-- [ ] **Step 1: Reconcile the current config implementation**
+- [x] **Step 1: Reconcile the current config implementation**
 
 Before editing, inspect the final plugin and analytics changes and run:
 
@@ -296,7 +296,7 @@ pnpm test tests/config.test.ts tests/plugin.test.ts tests/analytics.test.tsx
 Expected: the active branch is isolated from unrelated edits and the current
 config regression set passes.
 
-- [ ] **Step 2: Add failing contract-config tests**
+- [x] **Step 2: Add failing contract-config tests**
 
 Cover:
 
@@ -316,7 +316,7 @@ pnpm test tests/ai/config-contract.test.ts tests/config.test.ts
 
 Expected: failure because contract config and API metadata are absent.
 
-- [ ] **Step 3: Extract and annotate the runtime schema**
+- [x] **Step 3: Extract and annotate the runtime schema**
 
 Move the settled Zod schema out of src/node/config.ts without changing existing
 validation semantics. Add descriptions, defaults, and introduced-version
@@ -330,12 +330,12 @@ public plugins field through explicit checked metadata so it still appears in
 the config API. The drift test compares that metadata with UserConfig instead
 of pretending plugin factories are JSON Schema.
 
-- [ ] **Step 4: Add public and resolved config types**
+- [x] **Step 4: Add public and resolved config types**
 
 Keep defineConfig inference stable. Update exported config types without
 exporting internal absolute paths or plugin runner state.
 
-- [ ] **Step 5: Generate the config API section**
+- [x] **Step 5: Generate the config API section**
 
 Convert Zod schemas to JSON-compatible type and constraint descriptions. Ensure
 the output contains safe literal defaults only.
@@ -350,7 +350,7 @@ pnpm typecheck
 Expected: config resolution and existing features remain green; generated API
 coverage matches public config.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add src/node/config-schema.ts src/ai/contract/config-api.ts src/shared/config.ts src/node/config.ts src/index.ts tests/config.test.ts tests/ai/config-contract.test.ts tests/plugin.test.ts tests/analytics.test.tsx
@@ -377,7 +377,7 @@ git commit -m "feat(ai): derive config docs from runtime schema"
 - createCliApiContract(descriptors) omits handlers and serializes only public
   metadata.
 
-- [ ] **Step 1: Add failing parity tests**
+- [x] **Step 1: Add failing parity tests**
 
 For dev, build, preview, ai, and mcp assert:
 
@@ -396,13 +396,13 @@ pnpm test tests/ai/cli-contract.test.ts tests/cli.test.ts
 
 Expected: failure because CLI metadata is embedded inside cli.ts.
 
-- [ ] **Step 2: Extract descriptors without changing behavior**
+- [x] **Step 2: Extract descriptors without changing behavior**
 
 Move handlers behind dependency injection so tests can exercise descriptors
 without starting long-lived servers. CAC registration must iterate the same
 descriptors exported to the API contract.
 
-- [ ] **Step 3: Generate the CLI API section**
+- [x] **Step 3: Generate the CLI API section**
 
 Strip handler functions and serialize:
 
@@ -421,7 +421,7 @@ pnpm typecheck
 
 Expected: CLI behavior and help remain unchanged and contract parity passes.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ~~~bash
 git add src/node/commands.ts src/ai/contract/cli-api.ts src/node/cli.ts tests/cli.test.ts tests/ai/cli-contract.test.ts
@@ -450,7 +450,7 @@ git commit -m "refactor(cli): share command metadata with AI"
   description, Zod schema, annotations, and bounded execute handler.
 - createMcpApiContract reads the same descriptors used for registration.
 
-- [ ] **Step 1: Add failing registry parity tests**
+- [x] **Step 1: Add failing registry parity tests**
 
 Assert:
 
@@ -471,14 +471,14 @@ pnpm test tests/ai/mcp-contract.test.ts tests/ai/mcp-read.test.ts tests/ai/mcp-w
 Expected: failure because schemas and metadata are embedded in registration
 functions.
 
-- [ ] **Step 2: Extract read and write descriptors**
+- [x] **Step 2: Extract read and write descriptors**
 
 Preserve safeFailure behavior, structuredContent, path limits, and all existing
 tool names. Registration loops over the descriptor collections. Keep write
 descriptors in a separate export so default server construction cannot register
 them accidentally.
 
-- [ ] **Step 3: Generate the MCP API section**
+- [x] **Step 3: Generate the MCP API section**
 
 Use Zod 4 JSON Schema conversion. Serialize tool annotations and the explicit
 authorization requirement, never handler functions or Workspace objects.
@@ -492,7 +492,7 @@ pnpm typecheck
 
 Expected: all current MCP behavior stays green and contract parity passes.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ~~~bash
 git add src/ai/mcp/contracts.ts src/ai/contract/mcp-api.ts src/ai/mcp/read-tools.ts src/ai/mcp/write-tools.ts src/ai/mcp/server.ts tests/ai/mcp-contract.test.ts tests/ai/mcp-read.test.ts tests/ai/mcp-write.test.ts tests/ai/mcp-e2e.test.ts
@@ -524,7 +524,7 @@ git commit -m "refactor(ai): share MCP tool contracts"
 - dist/agent/locales/zh-CN/guide.md
 - dist/agent/locales/zh-CN/tasks/*.md
 
-- [ ] **Step 1: Add failing framework assembly tests**
+- [x] **Step 1: Add failing framework assembly tests**
 
 Assert:
 
@@ -544,7 +544,7 @@ pnpm test tests/ai/framework-contract.test.ts
 
 Expected: failure because no framework assembler exists.
 
-- [ ] **Step 2: Index emitted declaration files**
+- [x] **Step 2: Index emitted declaration files**
 
 Use the TypeScript compiler API from the existing dev dependency in the
 release-time tooling only. Record entry point, exported symbol, symbol kind,
@@ -552,12 +552,12 @@ declaration signature, and declaration-file reference.
 
 Do not ship the compiler or parse consumer TypeScript during site builds.
 
-- [ ] **Step 3: Assemble the framework contract**
+- [x] **Step 3: Assemble the framework contract**
 
 Merge config, CLI, MCP, declaration, guide, and task sources. Validate the final
 objects through the v1 schemas before writing.
 
-- [ ] **Step 4: Wire the release build**
+- [x] **Step 4: Wire the release build**
 
 After tsup and declaration generation succeed, run the TypeScript tooling
 through the existing jiti dependency and write dist/agent. The generator must
@@ -585,7 +585,7 @@ Add package exports:
 }
 ~~~
 
-- [ ] **Step 5: Extend package and tarball tests**
+- [x] **Step 5: Extend package and tarball tests**
 
 The real tarball must contain:
 
@@ -609,7 +609,7 @@ pnpm exec publint
 
 Expected: build, contract checks, real tarball smoke, and publint pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add src/ai/contract/framework.ts src/ai/contract/declarations.ts tooling/build-agent-contract.ts package.json tsup.config.ts tests/package.test.ts tests/package-smoke.test.ts tests/ai/framework-contract.test.ts tests/ai/public-api.test.ts
@@ -646,7 +646,7 @@ Do not stage generated dist files if the repository continues to ignore dist.
   Markdown inside the content root.
 - generateSiteContract(options) writes .well-known/silen into the staged output.
 
-- [ ] **Step 1: Add failing site-output tests**
+- [x] **Step 1: Add failing site-output tests**
 
 Cover:
 
@@ -674,7 +674,7 @@ pnpm test tests/ai/site-contract.test.ts tests/ai/artifacts.test.ts
 
 Expected: failure because the site contract is not emitted.
 
-- [ ] **Step 2: Resolve packaged assets safely**
+- [x] **Step 2: Resolve packaged assets safely**
 
 Starting from import.meta.url, walk upward to the package.json whose name is
 @aicode-nexus/silen, then resolve dist/agent. Allow tests to inject an asset
@@ -685,7 +685,7 @@ Integration tests either inject a freshly generated temporary framework
 contract or run pnpm build first. They must never silently pass against a stale
 dist/agent from an earlier checkout.
 
-- [ ] **Step 3: Load explicit public custom content**
+- [x] **Step 3: Load explicit public custom content**
 
 Resolve real paths inside config.root. Reject:
 
@@ -698,7 +698,7 @@ Resolve real paths inside config.root. Reject:
 
 Do not execute MDX or import task files.
 
-- [ ] **Step 4: Assemble and write the site contract**
+- [x] **Step 4: Assemble and write the site contract**
 
 Specialize the framework manifest with title, description, base, lang, locales,
 capabilities, canonical resources, and local MCP permission metadata. Copy the
@@ -707,7 +707,7 @@ tasks.
 
 Use a temporary contract directory and atomic rename within the staged build.
 
-- [ ] **Step 5: Integrate discovery and reserved-path checks**
+- [x] **Step 5: Integrate discovery and reserved-path checks**
 
 Add a concise Agent Contract section to llms.txt that links to the manifest.
 Reserve .well-known/silen without blocking other .well-known public files.
@@ -723,7 +723,7 @@ pnpm typecheck
 Expected: site contract, existing artifacts, build installation, link handling,
 and preview safety all pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add src/ai/contract/package-assets.ts src/ai/contract/site.ts src/ai/contract/public-files.ts src/ai/artifacts.ts src/ai/index.ts src/node/build.ts src/node/links.ts tests/ai/artifacts.test.ts tests/ai/site-contract.test.ts tests/fixtures/ai-contract-site
@@ -756,7 +756,7 @@ unrelated plugin changes.
   write enablement, and audit/build/diff verification.
 - MCP does not run the full executable MDX build.
 
-- [ ] **Step 1: Add failing audit and fallback tests**
+- [x] **Step 1: Add failing audit and fallback tests**
 
 Cover:
 
@@ -777,7 +777,7 @@ pnpm test tests/ai/contract-audit.test.ts tests/ai/workspace.test.ts tests/ai/mc
 Expected: failure because audit knows only the original three artifacts and
 index freshness.
 
-- [ ] **Step 2: Add contract audit issue types**
+- [x] **Step 2: Add contract audit issue types**
 
 Extend issue codes without changing existing broken-link, citation, artifact,
 and index behavior. Keep audit deterministic and model-free.
@@ -787,12 +787,12 @@ outDir cannot be established through bounded local build metadata, return a
 specific audit limitation instead of guessing or scanning outside the
 documentation root.
 
-- [ ] **Step 3: Align workspace and MCP guidance**
+- [x] **Step 3: Align workspace and MCP guidance**
 
 Generate the guide from stable contract facts rather than duplicating tool
 lists. The response must still be safe when no build output exists.
 
-- [ ] **Step 4: Run the audit and MCP regression set**
+- [x] **Step 4: Run the audit and MCP regression set**
 
 Run:
 
@@ -803,7 +803,7 @@ pnpm typecheck
 
 Expected: audit, guide, and types pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add src/ai/audit.ts src/ai/workspace.ts src/ai/mcp/server.ts src/ai/mcp/read-tools.ts tests/ai/contract-audit.test.ts tests/ai/workspace.test.ts tests/ai/mcp-read.test.ts
@@ -829,7 +829,7 @@ git commit -m "feat(ai): audit Agent Contract integrity"
 - Modify: tests/ai/documentation.test.ts
 - Create: tests/ai/agent-scenarios.test.ts
 
-- [ ] **Step 1: Add failing official-site assertions**
+- [x] **Step 1: Add failing official-site assertions**
 
 After site build, verify:
 
@@ -841,13 +841,13 @@ After site build, verify:
   settle.
 - No official public contract contains the checkout path.
 
-- [ ] **Step 2: Add explicit official instructions**
+- [x] **Step 2: Add explicit official instructions**
 
 Explain that the official package contract is authoritative for an installed
 version, and that the website contract is authoritative for the deployed
 official site. Keep tutorials task-oriented and avoid copying API tables.
 
-- [ ] **Step 3: Update human-facing AI documentation**
+- [x] **Step 3: Update human-facing AI documentation**
 
 The human pages explain how a user points an AI client at:
 
@@ -858,7 +858,7 @@ The human pages explain how a user points an AI client at:
 Add thin examples for Codex, Claude Code, and Cursor that all reference the same
 contract. Do not maintain client-specific API copies.
 
-- [ ] **Step 4: Update documentation contract tests**
+- [x] **Step 4: Update documentation contract tests**
 
 README and the official site must mention:
 
@@ -868,7 +868,7 @@ README and the official site must mention:
 - Explicit public instructions.
 - Unsupported-schema fallback.
 
-- [ ] **Step 5: Add deterministic Agent scenarios**
+- [x] **Step 5: Add deterministic Agent scenarios**
 
 Scenario A:
 
@@ -899,7 +899,7 @@ pnpm exec playwright test tests/e2e/ai.spec.ts
 
 Expected: official contract and both Agent scenarios pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add website/.silen/config.ts website/.silen/ai-public.md website/.silen/ai-tasks website/ai/index.mdx website/zh/ai/index.mdx website/guide/index.mdx website/zh/guide/index.mdx README.md tests/website.test.ts tests/e2e/ai.spec.ts tests/ai/documentation.test.ts tests/ai/agent-scenarios.test.ts
@@ -915,7 +915,7 @@ git commit -m "docs(ai): publish the official Agent Contract"
 - Modify only files required by failures attributable to this feature.
 - Update the plan checkboxes and final verification record.
 
-- [ ] **Step 1: Run static quality checks**
+- [x] **Step 1: Run static quality checks**
 
 ~~~bash
 pnpm format:check
@@ -925,7 +925,7 @@ pnpm typecheck
 
 Expected: all commands exit 0.
 
-- [ ] **Step 2: Run the complete unit and integration suite**
+- [x] **Step 2: Run the complete unit and integration suite**
 
 ~~~bash
 pnpm test --maxWorkers=1 --no-file-parallelism
@@ -934,7 +934,7 @@ pnpm test --maxWorkers=1 --no-file-parallelism
 Expected: all tests pass. Investigate a one-off CLI timeout by rerunning the
 specific test before changing production code.
 
-- [ ] **Step 3: Run build, package, and publication checks**
+- [x] **Step 3: Run build, package, and publication checks**
 
 ~~~bash
 pnpm build
@@ -950,7 +950,7 @@ Expected:
 - Package exports resolve.
 - The tarball contains no source, tests, caches, local Agent files, or secrets.
 
-- [ ] **Step 4: Run browser verification**
+- [x] **Step 4: Run browser verification**
 
 ~~~bash
 pnpm exec playwright test tests/e2e
@@ -959,7 +959,7 @@ pnpm exec playwright test tests/e2e
 Expected: all browser tests pass, including existing AI actions, navigation,
 search, and the official contract routes.
 
-- [ ] **Step 5: Perform explicit output inspection**
+- [x] **Step 5: Perform explicit output inspection**
 
 Check:
 
@@ -971,7 +971,7 @@ Check:
 - Unsupported schema test remains read-only.
 - Git diff contains only intended source, tests, docs, and plan checkbox changes.
 
-- [ ] **Step 6: Record the final checkpoint and commit fixes**
+- [x] **Step 6: Record the final checkpoint and commit fixes**
 
 If the gate required scoped fixes, commit them with:
 
@@ -983,15 +983,15 @@ Do not create an empty commit when no fix was required.
 
 ## Final definition of done
 
-- [ ] The installed npm package contains a readable versioned framework
+- [x] The installed npm package contains a readable versioned framework
   contract and exact public Agent paths.
-- [ ] Every default site build emits a base-aware manifest, guide, API, and
+- [x] Every default site build emits a base-aware manifest, guide, API, and
   bilingual built-in task resources.
-- [ ] llms.txt points AI clients to the manifest.
-- [ ] Config, CLI, and MCP facts come from the same registries used at runtime.
-- [ ] Public TypeScript exports are indexed from emitted declarations.
-- [ ] Custom public instructions and tasks are opt-in and path-bounded.
-- [ ] AGENTS.md, CLAUDE.md, secrets, and absolute paths never leak.
-- [ ] MCP remains read-only by default and write tools require --allow-write.
-- [ ] A deterministic client completes both create and maintain scenarios.
-- [ ] Audit, build, Git diff, package smoke, publint, and browser gates pass.
+- [x] llms.txt points AI clients to the manifest.
+- [x] Config, CLI, and MCP facts come from the same registries used at runtime.
+- [x] Public TypeScript exports are indexed from emitted declarations.
+- [x] Custom public instructions and tasks are opt-in and path-bounded.
+- [x] AGENTS.md, CLAUDE.md, secrets, and absolute paths never leak.
+- [x] MCP remains read-only by default and write tools require --allow-write.
+- [x] A deterministic client completes both create and maintain scenarios.
+- [x] Audit, build, Git diff, package smoke, publint, and browser gates pass.

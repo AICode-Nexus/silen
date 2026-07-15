@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   mkdir,
+  lstat,
   readFile,
   realpath,
   rename,
@@ -18,6 +19,7 @@ import {
 } from 'vite'
 import type { RenderedPage } from '../client/app.js'
 import { generateAiArtifacts } from '../ai/artifacts.js'
+import { generateSiteContract } from '../ai/contract/site.js'
 import type { AiPage } from '../shared/ai.js'
 import type { ResolvedConfig } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
@@ -255,6 +257,31 @@ function planRouteOutputs(
     seen.set(key, planned)
     return planned
   })
+}
+
+function assertNoReservedContractRoutes(routes: readonly RouteRecord[]): void {
+  const collision = routes.find(
+    (route) =>
+      route.path === '/.well-known/silen' ||
+      route.path.startsWith('/.well-known/silen/'),
+  )
+  if (collision !== undefined) {
+    throw new Error(
+      `Reserved output collision at .well-known/silen from ${collision.relativeFile}`,
+    )
+  }
+}
+
+async function assertNoReservedContractPublicFiles(
+  outDir: string,
+): Promise<void> {
+  try {
+    await lstat(path.join(outDir, '.well-known', 'silen'))
+    throw new Error('Reserved output collision at .well-known/silen')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+    throw error
+  }
 }
 
 async function compilePages(
@@ -636,6 +663,7 @@ async function buildSite(root: string): Promise<BuildResult> {
   const config = await resolveConfig(root, 'build')
   const runner = pluginRunnerFor(config)
   const routes = await scanRoutes(config.root)
+  assertNoReservedContractRoutes(routes)
   await assertSafeOutDir(config, routes)
   const routeOutputs = planRouteOutputs(config.outDir, routes)
   const pages = await compilePages(routes, runner)
@@ -654,6 +682,7 @@ async function buildSite(root: string): Promise<BuildResult> {
   await mkdir(outParent, { recursive: true })
   try {
     await buildClient(config, stagedOutDir, routes, pages)
+    await assertNoReservedContractPublicFiles(stagedOutDir)
     const ssrEntry = await buildServerRenderer(config, ssrOutDir, routes, pages)
     const favicon = await ensureBuildFavicon(stagedOutDir)
     const [manifest, renderer] = await Promise.all([
@@ -675,6 +704,10 @@ async function buildSite(root: string): Promise<BuildResult> {
       site: config,
       pages: createAiPages(pages, config.base),
       config: config.ai,
+    })
+    await generateSiteContract({
+      outDir: stagedOutDir,
+      config,
     })
     validateInternalLinks(routes, pages, config.onBrokenLinks, config.base)
     await emitSearchIndex(config, pages, stagedOutDir)

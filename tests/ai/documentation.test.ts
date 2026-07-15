@@ -38,6 +38,19 @@ describe('AI Alpha documentation contract', () => {
     expect(readme).toContain('--allow-write')
     expect(readme).toContain('2 MiB')
 
+    for (const value of [
+      '@aicode-nexus/silen/agent/manifest.json',
+      '@aicode-nexus/silen/agent/api.json',
+      '@aicode-nexus/silen/agent/tasks/create-site.md',
+      '/handbook/.well-known/silen/manifest.json',
+      "instructions: '.silen/ai-public.md'",
+      "tasksDir: '.silen/ai-tasks'",
+      'Codex, Claude Code, Cursor',
+      'fall back to linked public Markdown and remain read-only',
+    ]) {
+      expect(readme).toContain(value)
+    }
+
     for (const command of ['ai init', 'ai index', 'ai audit']) {
       expect(readme).toContain(command)
     }

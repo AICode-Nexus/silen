@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { execa } from 'execa'
+import { SILEN_VERSION } from '../src/shared/version'
 
 const temporaryDirectories: string[] = []
 const cliRunner = path.resolve('node_modules/.bin/jiti')
@@ -52,7 +53,7 @@ describe('CLI dispatch', () => {
     expect(help.stdout).toContain('mcp [root]')
 
     const version = await execa(cliRunner, [cli, '--version'])
-    expect(version.stdout).toContain('silen/0.1.0-alpha.3')
+    expect(version.stdout).toContain(`silen/${SILEN_VERSION}`)
   })
 
   it('awaits a successful build and writes static HTML', async () => {

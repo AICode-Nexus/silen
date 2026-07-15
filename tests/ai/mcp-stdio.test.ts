@@ -3,6 +3,7 @@ import { execa } from 'execa'
 import { createInterface } from 'node:readline'
 import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SILEN_VERSION } from '../../src/shared/version'
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(() => Promise.resolve()),
@@ -203,7 +204,9 @@ describe('MCP stdio lifecycle', () => {
         expect(await nextProtocolLine(lines)).toMatchObject({
           jsonrpc: '2.0',
           id: 1,
-          result: { serverInfo: { name: 'silen' } },
+          result: {
+            serverInfo: { name: 'silen', version: SILEN_VERSION },
+          },
         })
 
         child.stdin?.write(

@@ -59,7 +59,11 @@ describe('packed package declarations', () => {
           'react-dom': '19.2.7',
           '@aicode-nexus/silen': `file:${archivePath}`,
         },
-        devDependencies: { '@types/react': '19.2.17' },
+        devDependencies: {
+          '@types/node': '26.1.1',
+          '@types/react': '19.2.17',
+          '@types/react-dom': '19.2.3',
+        },
       }),
     )
     await writeFile(
@@ -72,6 +76,8 @@ describe('packed package declarations', () => {
           skipLibCheck: true,
           strict: true,
           target: 'ES2023',
+          lib: ['ESNext', 'DOM'],
+          skipLibCheck: true,
         },
         include: ['index.ts', 'page.mdx'],
       }),

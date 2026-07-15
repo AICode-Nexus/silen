@@ -10,6 +10,11 @@ export type {
   ArtifactResult,
 } from './artifacts.js'
 export { createAiChunks } from './chunks.js'
+export { generateSiteContract } from './contract/site.js'
+export type {
+  SiteContractOptions,
+  SiteContractResult,
+} from './contract/site.js'
 export { createMcpServer } from './mcp/server.js'
 export type { CreateMcpServerOptions } from './mcp/server.js'
 export { serveMcp } from './mcp/stdio.js'
@@ -26,3 +31,10 @@ export type {
   WorkspaceWriteInput,
 } from './workspace.js'
 export type { AiChunk, AiPage } from '../shared/ai.js'
+export type {
+  SilenApiContract,
+  SilenContractManifest,
+  SilenFrameworkContractManifest,
+  SilenSiteContractManifest,
+  SilenTaskMetadata,
+} from '../shared/ai-contract.js'

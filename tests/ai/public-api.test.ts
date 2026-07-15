@@ -5,6 +5,7 @@ import {
   createMcpServer,
   createWorkspace,
   WorkspaceError,
+  type SilenContractManifest,
   type Workspace,
 } from '../../src/ai/index'
 
@@ -13,7 +14,27 @@ it('exports the promised workspace and MCP interfaces from @aicode-nexus/silen/a
   await writeFile(path.join(root, 'index.md'), '# Public API\n')
   try {
     const workspace: Workspace = await createWorkspace(root)
+    const manifest: SilenContractManifest = {
+      schemaVersion: 1,
+      kind: 'silen-framework',
+      generator: { name: 'Silen', version: 'test' },
+      capabilities: {
+        llmsTxt: true,
+        llmsFullTxt: true,
+        markdownRoutes: true,
+        index: true,
+        mcp: {
+          transport: 'stdio',
+          localOnly: true,
+          readOnlyByDefault: true,
+          writeRequiresFlag: '--allow-write',
+        },
+      },
+      resources: [],
+      tasks: [],
+    }
     expect((await workspace.list()).files).toHaveLength(1)
+    expect(manifest.kind).toBe('silen-framework')
     expect(createMcpServer({ workspace, allowWrite: false })).toBeDefined()
     expect(new WorkspaceError('TEST', 'safe').code).toBe('TEST')
   } finally {
