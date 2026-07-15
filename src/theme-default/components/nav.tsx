@@ -257,7 +257,7 @@ export function Nav(): React.JSX.Element {
               src={resolveThemeLink(logoSource, base)}
               alt=""
               aria-hidden="true"
-              className="size-7 object-contain"
+              className="size-7 shrink-0 object-contain"
             />
           ) : null}
           <span className="truncate">{siteTitle}</span>

@@ -57,7 +57,7 @@ export default defineConfig({
             tagline:
               '使用 MDX 写作、用 React 扩展，再从同一个可信源输出静态 HTML、本地搜索、干净 Markdown 与可选 MCP 工作区。',
             image: {
-              src: '/silen-workflow.svg',
+              src: '/silen-workflow.png',
               alt: 'Silen 将 MDX 与 React 内容构建为静态 HTML、搜索、Markdown、llms.txt 和 MCP 工作区',
             },
             actions: [
@@ -106,7 +106,7 @@ export default defineConfig({
         tagline:
           'Write in MDX, extend with React, and ship static HTML, local search, clean Markdown, and an optional MCP workspace from one trusted source.',
         image: {
-          src: '/silen-workflow.svg',
+          src: '/silen-workflow.png',
           alt: 'Silen builds MDX and React content into static HTML, search, Markdown, llms.txt, and an MCP workspace',
         },
         actions: [

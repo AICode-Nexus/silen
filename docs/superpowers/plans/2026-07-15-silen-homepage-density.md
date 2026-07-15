@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
 
+> **Post-implementation update (2026-07-15):** The original hand-authored `silen-workflow.svg` was later replaced by the approved, image-generated `silen-workflow.png` at 1200×800. The original SVG steps below remain as implementation history.
+
 **Goal:** Deliver a denser bilingual Silen homepage, a base-safe workflow visual, an AI Dev Hub WeChat contact section, and zero-error SSR hydration.
 
-**Architecture:** Keep the public hero/features configuration model small. Fix development SSR at the HTML-transform boundary, strengthen the reusable HomeLayout with stable class hooks and Lucide icon tokens, and author the richer product narrative in the English and Chinese MDX pages. Use a public SVG for the configured hero image and a Vite-imported PNG for the QR code so each asset follows the correct base-path pipeline.
+**Architecture:** Keep the public hero/features configuration model small. Fix development SSR at the HTML-transform boundary, strengthen the reusable HomeLayout with stable class hooks and Lucide icon tokens, and author the richer product narrative in the English and Chinese MDX pages. Use a public workflow image for the configured hero and a Vite-imported PNG for the QR code so each asset follows the correct base-path pipeline.
 
 **Tech Stack:** TypeScript 7, React 19, Vite 8, MDX 3, Tailwind CSS 4, Lucide React, Vitest, Testing Library, Playwright CLI, macOS sips.
 

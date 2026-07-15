@@ -68,7 +68,7 @@ Use a hybrid theme-and-content approach:
 - Keep the existing public `hero` and `features` configuration shape.
 - Treat known feature icon names as Lucide icons while retaining a safe text fallback for existing custom values.
 - Author the deeper quick-start, dual-audience, output, and contact sections in the example site's MDX.
-- Add a lightweight, locally stored SVG workflow illustration for the hero because no image-generation API key is configured.
+- Add a locally stored, web-optimized workflow illustration for the hero, redrawn in the Silen brand palette with clearer hierarchy and higher contrast.
 - Store the QR code as a local site asset and import it through MDX so Vite owns hashing and base-path-safe URLs.
 
 This approach improves every Silen homepage while avoiding a premature, highly structured landing-page schema during Alpha.
@@ -257,7 +257,7 @@ The likely implementation files are:
 - `website/.silen/config.ts`
 - `website/index.mdx`
 - `website/zh/index.mdx`
-- `website/public/silen-workflow.svg` for the base-aware hero illustration
+- `website/public/silen-workflow.png` for the base-aware hero illustration
 - `website/assets/wechat-ai-dev-hub.png` for MDX-imported QR content
 - Theme, render, server, build, and content tests that cover the changed contracts
 

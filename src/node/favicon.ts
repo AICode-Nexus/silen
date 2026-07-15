@@ -17,13 +17,13 @@ export const defaultFavicon = faviconCandidates[0]
 
 export const defaultFaviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Silen">
   <defs>
-    <linearGradient id="silen-favicon-gradient" x1="24" y1="20" x2="138" y2="142" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8b5cf6"/>
+    <linearGradient id="silen-favicon-gradient" x1="20" y1="16" x2="140" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c3aed"/>
       <stop offset="1" stop-color="#2563eb"/>
     </linearGradient>
   </defs>
-  <rect width="160" height="160" rx="42" fill="#0b1020"/>
-  <path d="M118 45c-9-11-22-17-39-17-23 0-39 12-39 30 0 16 11 24 35 29l10 2c10 2 15 6 15 12 0 8-8 13-20 13-15 0-27-6-37-18l-18 17c13 16 31 24 54 24 28 0 47-14 47-36 0-18-12-28-38-33l-10-2c-8-2-12-5-12-10 0-6 6-10 15-10 11 0 20 4 28 13l19-14z" fill="url(#silen-favicon-gradient)"/>
+  <rect x="2" y="2" width="156" height="156" rx="40" fill="url(#silen-favicon-gradient)" stroke="#fff" stroke-opacity=".18" stroke-width="4"/>
+  <path d="M118 45c-9-11-22-17-39-17-23 0-39 12-39 30 0 16 11 24 35 29l10 2c10 2 15 6 15 12 0 8-8 13-20 13-15 0-27-6-37-18l-18 17c13 16 31 24 54 24 28 0 47-14 47-36 0-18-12-28-38-33l-10-2c-8-2-12-5-12-10 0-6 6-10 15-10 11 0 20 4 28 13l19-14z" fill="#fff"/>
 </svg>
 `
 
