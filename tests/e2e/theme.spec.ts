@@ -124,7 +124,7 @@ test('serves the complete built theme at the exact desktop boundary', async ({
   await copy.click()
   await expect
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
-    .toContain('pnpm add silen')
+    .toContain('pnpm add @aicode-nexus/silen')
 
   await page.goto(serverUrl(preview, 'about'))
   await expect(page.locator('[data-demo]')).toContainText(

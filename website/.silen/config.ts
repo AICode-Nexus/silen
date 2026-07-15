@@ -1,4 +1,4 @@
-import { defineConfig } from 'silen'
+import { defineConfig } from '@aicode-nexus/silen'
 
 export default defineConfig({
   title: 'Silen',

@@ -12,8 +12,8 @@
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"],
-      "silen": ["./src/index.ts"],
-      "silen/theme": ["./src/theme-default/index.tsx"]
+      "@aicode-nexus/silen": ["./src/index.ts"],
+      "@aicode-nexus/silen/theme": ["./src/theme-default/index.tsx"]
     },
     "types": ["node", "vitest/globals"]
   },

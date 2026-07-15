@@ -12,7 +12,7 @@ Silen supports Node.js `^20.19.0 || >=22.12.0` and pnpm `10.34.0`. React
 `^19.2.7` and React DOM `^19.2.7` are peer dependencies.
 
 ```sh
-pnpm add -D silen
+pnpm add -D @aicode-nexus/silen
 ```
 
 ## Quick start
@@ -20,7 +20,7 @@ pnpm add -D silen
 Create `docs/.silen/config.ts`:
 
 ```ts
-import { defineConfig } from 'silen'
+import { defineConfig } from '@aicode-nexus/silen'
 
 export default defineConfig({ title: 'My documentation' })
 ```
@@ -61,7 +61,7 @@ HTML page.
 ## Configuration
 
 ```ts
-import { defineConfig } from 'silen'
+import { defineConfig } from '@aicode-nexus/silen'
 
 export default defineConfig({
   title: 'My documentation',
@@ -258,7 +258,7 @@ Create `docs/.silen/theme.tsx`:
 
 ```tsx
 import type { ReactNode } from 'react'
-import DefaultTheme, { defineTheme } from 'silen/theme'
+import DefaultTheme, { defineTheme } from '@aicode-nexus/silen/theme'
 import './custom.css'
 
 function Demo({ children }: { readonly children?: ReactNode }) {
@@ -287,7 +287,7 @@ Use custom components directly from trusted MDX:
 <Demo>Rendered through the project theme.</Demo>
 ```
 
-The same `silen/theme` runtime and declarations are included in the packed
+The same `@aicode-nexus/silen/theme` runtime and declarations are included in the packed
 package, so theme files type-check and build without source aliases.
 
 ## Accessibility and keyboard behavior

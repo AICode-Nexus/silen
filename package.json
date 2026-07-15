@@ -1,6 +1,6 @@
 {
-  "name": "silen",
-  "version": "0.1.0-alpha.0",
+  "name": "@aicode-nexus/silen",
+  "version": "0.1.0-alpha.1",
   "description": "A lightweight documentation-first static site generator powered by React, TypeScript, Vite, and MDX.",
   "keywords": [
     "documentation",
@@ -20,7 +20,8 @@
   "license": "MIT",
   "type": "module",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "packageManager": "pnpm@10.34.0",
   "engines": {

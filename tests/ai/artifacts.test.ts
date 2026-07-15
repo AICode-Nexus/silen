@@ -76,7 +76,7 @@ describe('AI build artifacts', () => {
       '# AI Fixture Home\n\nRead the [getting started guide](/guide/getting-started).\n',
     )
     expect(guide).toContain('# Getting Started\n')
-    expect(guide).toContain('```sh\npnpm add silen\n```')
+    expect(guide).toContain('```sh\npnpm add @aicode-nexus/silen\n```')
     await expectMissing(path.join(result.outDir, 'draft.md'))
     await expectMissing(path.join(result.outDir, 'guide/hidden.md'))
   })
@@ -251,7 +251,7 @@ describe('AI build artifacts', () => {
         route: '/guide/getting-started',
         title: 'Getting Started',
         markdown:
-          '# Getting Started\n\nInstall the package.\n\n## Package manager\n\n```sh\npnpm add silen\n```\n',
+          '# Getting Started\n\nInstall the package.\n\n## Package manager\n\n```sh\npnpm add @aicode-nexus/silen\n```\n',
         description: 'Install Silen',
       },
       {

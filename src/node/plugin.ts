@@ -165,7 +165,7 @@ export async function silenPlugin(
       },
       resolveId(id, importer) {
         if (
-          id === 'silen/theme' &&
+          id === '@aicode-nexus/silen/theme' &&
           themeFile !== undefined &&
           importer !== undefined &&
           !importer.startsWith(resolvedPrefix) &&

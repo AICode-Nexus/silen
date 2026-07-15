@@ -469,7 +469,7 @@ describe('delegated code copy', () => {
 
     render(
       <>
-        <CodeBlock code="pnpm add silen" language="sh" />
+        <CodeBlock code="pnpm add @aicode-nexus/silen" language="sh" />
         <CodeBlock code="pnpm test" language="sh" />
       </>,
     )

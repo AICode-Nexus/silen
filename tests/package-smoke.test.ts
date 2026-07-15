@@ -85,8 +85,10 @@ describe('published package smoke test', () => {
       bin?: Record<string, string>
       engines?: Record<string, string>
       license?: string
+      name?: string
       publishConfig?: Record<string, string>
       repository?: { type?: string; url?: string }
+      version?: string
     }
 
     expect(files).toContain('package/README.md')
@@ -123,11 +125,16 @@ describe('published package smoke test', () => {
       bin: { silen: './dist/node/cli.js' },
       engines: { node: '^20.19.0 || >=22.12.0' },
       license: 'MIT',
-      publishConfig: { access: 'public' },
+      name: '@aicode-nexus/silen',
+      publishConfig: {
+        access: 'public',
+        registry: 'https://registry.npmjs.org/',
+      },
       repository: {
         type: 'git',
         url: 'git+https://github.com/AICode-Nexus/silen.git',
       },
+      version: '0.1.0-alpha.1',
     })
     expect(
       (await execa('tar', ['-xOzf', archivePath, 'package/dist/node/cli.js']))
@@ -163,7 +170,7 @@ describe('published package smoke test', () => {
             dependencies: {
               react: '19.2.7',
               'react-dom': '19.2.7',
-              silen: `file:${archivePath}`,
+              '@aicode-nexus/silen': `file:${archivePath}`,
             },
             devDependencies: {
               '@types/react': '19.2.17',
@@ -175,7 +182,7 @@ describe('published package smoke test', () => {
       ),
       writeFile(
         path.join(consumer, 'docs', '.silen', 'config.ts'),
-        `import { defineConfig } from 'silen'
+        `import { defineConfig } from '@aicode-nexus/silen'
 
 export default defineConfig({
   title: 'External package smoke',
@@ -188,8 +195,8 @@ export default defineConfig({
       writeFile(
         path.join(consumer, 'docs', '.silen', 'theme.tsx'),
         `import type { ReactNode } from 'react'
-import { useData } from 'silen/client'
-import DefaultTheme, { defineTheme } from 'silen/theme'
+import { useData } from '@aicode-nexus/silen/client'
+import DefaultTheme, { defineTheme } from '@aicode-nexus/silen/theme'
 
 function Demo({ children }: { readonly children?: ReactNode }) {
   const { base } = useData()
@@ -276,7 +283,7 @@ The nested route was generated.
     expect(help.exitCode, help.all).toBe(0)
     expect(help.all).toContain('build [root]')
     expect(version.exitCode, version.all).toBe(0)
-    expect(version.all).toContain('silen/0.1.0-alpha.0')
+    expect(version.all).toContain('silen/0.1.0-alpha.1')
 
     const built = await execa(executable, ['build', 'docs'], {
       cwd: consumer,
@@ -371,6 +378,7 @@ The nested route was generated.
         path.join(
           consumer,
           'node_modules',
+          '@aicode-nexus',
           'silen',
           'dist',
           'client',

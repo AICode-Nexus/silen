@@ -8,7 +8,7 @@ import {
   type Workspace,
 } from '../../src/ai/index'
 
-it('exports the promised workspace and MCP interfaces from silen/ai', async () => {
+it('exports the promised workspace and MCP interfaces from @aicode-nexus/silen/ai', async () => {
   const root = await mkdtemp(path.resolve('.silen/.temp/public-ai-api-'))
   await writeFile(path.join(root, 'index.md'), '# Public API\n')
   try {

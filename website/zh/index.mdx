@@ -17,7 +17,7 @@ import {
   ServerCogIcon,
   UsersIcon,
 } from 'lucide-react'
-import { CodeBlock } from 'silen/theme'
+import { CodeBlock } from '@aicode-nexus/silen/theme'
 import wechatQr from '../assets/wechat-ai-dev-hub.png'
 
 <section
@@ -37,7 +37,10 @@ import wechatQr from '../assets/wechat-ai-dev-hub.png'
     </a>
   </div>
   <div className="silen-home-code-panel">
-    <CodeBlock language="sh" code={'pnpm add -D silen\npnpm silen dev docs'} />
+    <CodeBlock
+      language="sh"
+      code={'pnpm add -D @aicode-nexus/silen\npnpm silen dev docs'}
+    />
   </div>
 </section>
 

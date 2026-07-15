@@ -57,7 +57,7 @@ describe('packed package declarations', () => {
         dependencies: {
           react: '19.2.7',
           'react-dom': '19.2.7',
-          silen: `file:${archivePath}`,
+          '@aicode-nexus/silen': `file:${archivePath}`,
         },
         devDependencies: { '@types/react': '19.2.17' },
       }),
@@ -78,9 +78,9 @@ describe('packed package declarations', () => {
     await writeFile(
       join(consumerDirectory, 'index.ts'),
       `import type { ComponentType } from 'react'
-import { defineConfig, type UserConfig } from 'silen'
-import { createMcpServer, createWorkspace, WorkspaceError, type Workspace } from 'silen/ai'
-import { Link, RouterProvider, useRoute, useRouter, type Router } from 'silen/client'
+import { defineConfig, type UserConfig } from '@aicode-nexus/silen'
+import { createMcpServer, createWorkspace, WorkspaceError, type Workspace } from '@aicode-nexus/silen/ai'
+import { Link, RouterProvider, useRoute, useRouter, type Router } from '@aicode-nexus/silen/client'
 import type { VirtualConfig } from 'virtual:silen/config'
 import type { PageModule } from 'virtual:silen/routes'
 import type { Theme } from 'virtual:silen/theme'
@@ -142,7 +142,7 @@ void aiExports
       join(consumerDirectory, 'verify-ai.mjs'),
       `import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { createMcpServer, createWorkspace, WorkspaceError } from 'silen/ai'
+import { createMcpServer, createWorkspace, WorkspaceError } from '@aicode-nexus/silen/ai'
 
 const root = join(process.cwd(), 'ai-workspace')
 await mkdir(root, { recursive: true })
@@ -168,7 +168,7 @@ console.log('packed-ai-ok')
     await Promise.all([
       writeFile(
         join(site, '.silen/config.ts'),
-        `import { defineConfig } from 'silen'
+        `import { defineConfig } from '@aicode-nexus/silen'
 export default defineConfig({ title: 'Packed CLI', base: '/packed/' })
 `,
       ),

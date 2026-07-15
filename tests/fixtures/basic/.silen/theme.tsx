@@ -1,4 +1,4 @@
-import DefaultTheme, { defineTheme } from 'silen/theme'
+import DefaultTheme, { defineTheme } from '@aicode-nexus/silen/theme'
 import { Demo } from './demo'
 
 export default defineTheme({

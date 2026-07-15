@@ -349,7 +349,7 @@ async function buildServerRenderer(
       oxc: { jsx: { development: false } },
       plugins: await productionPlugins(config),
       root: config.root,
-      ssr: { noExternal: ['silen'] },
+      ssr: { noExternal: ['@aicode-nexus/silen'] },
       build: {
         assetsInlineLimit: 0,
         emptyOutDir: true,

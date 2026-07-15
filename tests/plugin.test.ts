@@ -260,11 +260,15 @@ describe('virtual modules', () => {
     expect(load('\0virtual:silen/theme')).toMatch(
       /^import ".*theme-default\/styles\/index\.css"/,
     )
-    expect(resolveId('silen/theme', themeFile)).toMatch(
+    expect(resolveId('@aicode-nexus/silen/theme', themeFile)).toMatch(
       /src\/theme-default\/index\.tsx$/,
     )
-    expect(resolveId('silen/theme', '/ordinary-module.ts')).toBeUndefined()
-    expect(resolveId('silen/theme', '\0virtual:silen/theme')).toBeUndefined()
+    expect(
+      resolveId('@aicode-nexus/silen/theme', '/ordinary-module.ts'),
+    ).toBeUndefined()
+    expect(
+      resolveId('@aicode-nexus/silen/theme', '\0virtual:silen/theme'),
+    ).toBeUndefined()
     expect(resolveId('virtual:silen/unknown')).toBeUndefined()
     expect(load('\0virtual:silen/unknown')).toBeUndefined()
     expect(resolveId('\0virtual:silen/routes')).toBeUndefined()

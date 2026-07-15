@@ -14,7 +14,7 @@ pipeline, and MDX for content that can grow beyond plain Markdown.
 Use Node.js 20.19 or newer and add Silen to your project:
 
 ```sh
-pnpm add -D silen
+pnpm add -D @aicode-nexus/silen
 ```
 
 ## Create the site
@@ -22,7 +22,7 @@ pnpm add -D silen
 Add `docs/.silen/config.ts`:
 
 ```ts
-import { defineConfig } from 'silen'
+import { defineConfig } from '@aicode-nexus/silen'
 
 export default defineConfig({
   title: 'My documentation',

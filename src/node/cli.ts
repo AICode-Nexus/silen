@@ -10,7 +10,7 @@ import {
   type SilenServer,
 } from './server.js'
 
-const version = '0.1.0-alpha.0'
+const version = '0.1.0-alpha.1'
 
 type ServerFactory = (
   root: string,
