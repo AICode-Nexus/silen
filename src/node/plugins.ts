@@ -124,6 +124,7 @@ export class PluginRunner {
   readonly plugins: readonly ResolvedSilenPlugin[]
   readonly context: SilenPluginFactoryContext
   private mdxExtensionsResult?: Promise<Required<SilenMdxExtensions>>
+  private vitePluginsResult?: Promise<readonly Plugin[]>
   private clientModulesResult?: Promise<readonly string[]>
 
   constructor(
@@ -227,6 +228,11 @@ export class PluginRunner {
   }
 
   async collectVitePlugins(): Promise<Plugin[]> {
+    this.vitePluginsResult ??= this.resolveVitePlugins()
+    return (await this.vitePluginsResult).map((plugin) => ({ ...plugin }))
+  }
+
+  private async resolveVitePlugins(): Promise<readonly Plugin[]> {
     const plugins: Plugin[] = []
     for (const plugin of this.plugins) {
       if (!plugin.vite) continue

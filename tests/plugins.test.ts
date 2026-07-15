@@ -326,4 +326,44 @@ describe('Silen plugin runner', () => {
       'unsafe-head:default failed in transformHead: unsafe URL protocol',
     )
   })
+
+  it('collects build contributions once and returns stable snapshots', async () => {
+    const calls = { mdx: 0, vite: 0, client: 0 }
+    const plugins = await runner([
+      () => ({
+        name: 'collected-once',
+        extendMdx() {
+          calls.mdx += 1
+          return { remarkPlugins: [] }
+        },
+        vite() {
+          calls.vite += 1
+          return { name: 'collected-once:vite' }
+        },
+        clientModules() {
+          calls.client += 1
+          return './client.tsx'
+        },
+      }),
+    ])
+
+    const [firstMdx, firstVite, firstClient] = await Promise.all([
+      plugins.collectMdxExtensions(),
+      plugins.collectVitePlugins(),
+      plugins.collectClientModules(),
+    ])
+    const [secondMdx, secondVite, secondClient] = await Promise.all([
+      plugins.collectMdxExtensions(),
+      plugins.collectVitePlugins(),
+      plugins.collectClientModules(),
+    ])
+
+    expect(calls).toEqual({ mdx: 1, vite: 1, client: 1 })
+    expect(secondMdx).toEqual(firstMdx)
+    expect(secondVite).toEqual(firstVite)
+    expect(secondClient).toEqual(firstClient)
+    expect(secondMdx).not.toBe(firstMdx)
+    expect(secondVite).not.toBe(firstVite)
+    expect(secondClient).not.toBe(firstClient)
+  })
 })
