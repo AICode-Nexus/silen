@@ -52,14 +52,19 @@ function canonicalBase(value: string): string {
 
 const titleSchema = z
   .string()
+  .min(1)
+  .max(500)
   .default('Silen')
   .describe('Human-readable site title.')
 const descriptionSchema = z
   .string()
+  .max(2000)
   .default('')
   .describe('Short site description used by generated metadata.')
 const langSchema = z
   .string()
+  .min(1)
+  .max(100)
   .default('en-US')
   .describe('Default BCP 47 language tag for the site.')
 const baseSchema = z
@@ -195,8 +200,8 @@ const publicRelativePathSchema = z
   })
 
 const publicInstructionsSchema = publicRelativePathSchema
-  .refine((value) => /\.(?:md|mdx)$/i.test(value), {
-    message: 'Public Agent instructions must be a Markdown or MDX file',
+  .refine((value) => /\.md$/i.test(value), {
+    message: 'Public Agent instructions must be a Markdown file',
   })
   .optional()
   .describe('Relative path to an explicitly public Agent instruction file.')
@@ -293,7 +298,7 @@ export const configApiFieldSources: readonly ConfigApiFieldSource[] = [
     path: 'ai.contract.instructions',
     schema: aiContractShape.instructions,
     constraints: [
-      'non-empty relative Markdown or MDX path',
+      'non-empty relative Markdown path',
       'must remain inside the documentation root',
     ],
   },

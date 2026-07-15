@@ -646,7 +646,7 @@ Do not stage generated dist files if the repository continues to ignore dist.
   Markdown inside the content root.
 - generateSiteContract(options) writes .well-known/silen into the staged output.
 
-- [ ] **Step 1: Add failing site-output tests**
+- [x] **Step 1: Add failing site-output tests**
 
 Cover:
 
@@ -674,7 +674,7 @@ pnpm test tests/ai/site-contract.test.ts tests/ai/artifacts.test.ts
 
 Expected: failure because the site contract is not emitted.
 
-- [ ] **Step 2: Resolve packaged assets safely**
+- [x] **Step 2: Resolve packaged assets safely**
 
 Starting from import.meta.url, walk upward to the package.json whose name is
 @aicode-nexus/silen, then resolve dist/agent. Allow tests to inject an asset
@@ -685,7 +685,7 @@ Integration tests either inject a freshly generated temporary framework
 contract or run pnpm build first. They must never silently pass against a stale
 dist/agent from an earlier checkout.
 
-- [ ] **Step 3: Load explicit public custom content**
+- [x] **Step 3: Load explicit public custom content**
 
 Resolve real paths inside config.root. Reject:
 
@@ -698,7 +698,7 @@ Resolve real paths inside config.root. Reject:
 
 Do not execute MDX or import task files.
 
-- [ ] **Step 4: Assemble and write the site contract**
+- [x] **Step 4: Assemble and write the site contract**
 
 Specialize the framework manifest with title, description, base, lang, locales,
 capabilities, canonical resources, and local MCP permission metadata. Copy the
@@ -707,7 +707,7 @@ tasks.
 
 Use a temporary contract directory and atomic rename within the staged build.
 
-- [ ] **Step 5: Integrate discovery and reserved-path checks**
+- [x] **Step 5: Integrate discovery and reserved-path checks**
 
 Add a concise Agent Contract section to llms.txt that links to the manifest.
 Reserve .well-known/silen without blocking other .well-known public files.
@@ -723,7 +723,7 @@ pnpm typecheck
 Expected: site contract, existing artifacts, build installation, link handling,
 and preview safety all pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add src/ai/contract/package-assets.ts src/ai/contract/site.ts src/ai/contract/public-files.ts src/ai/artifacts.ts src/ai/index.ts src/node/build.ts src/node/links.ts tests/ai/artifacts.test.ts tests/ai/site-contract.test.ts tests/fixtures/ai-contract-site
