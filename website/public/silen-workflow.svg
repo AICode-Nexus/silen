@@ -1,0 +1,149 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 720 480"
+  role="img"
+  aria-labelledby="title desc"
+>
+  <title id="title">Silen documentation build workflow</title>
+  <desc id="desc">
+    MDX and React content flows through Silen into static HTML, search,
+    Markdown, llms.txt, and an optional MCP workspace.
+  </desc>
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c6cff" />
+      <stop offset="1" stop-color="#4f46e5" />
+    </linearGradient>
+  </defs>
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <rect x="24" y="30" width="672" height="420" rx="32" fill="#17172b" />
+    <rect
+      x="58"
+      y="76"
+      width="156"
+      height="104"
+      rx="18"
+      fill="#25253d"
+      stroke="#474766"
+    />
+    <text x="82" y="116" fill="#a9a4ff" font-size="14" font-weight="700">
+      TRUSTED SOURCE
+    </text>
+    <text x="82" y="151" fill="#ffffff" font-size="28" font-weight="700">
+      MDX + React
+    </text>
+    <path
+      d="M230 128h74"
+      stroke="#7c6cff"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+    <path
+      d="m292 114 18 14-18 14"
+      fill="none"
+      stroke="#7c6cff"
+      stroke-width="6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <rect x="324" y="76" width="156" height="104" rx="18" fill="url(#accent)" />
+    <text x="350" y="116" fill="#dedcff" font-size="14" font-weight="700">
+      ONE BUILD
+    </text>
+    <text x="350" y="151" fill="#ffffff" font-size="30" font-weight="750">
+      Silen
+    </text>
+    <path
+      d="M496 128h58"
+      stroke="#7c6cff"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+    <path
+      d="m542 114 18 14-18 14"
+      fill="none"
+      stroke="#7c6cff"
+      stroke-width="6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <rect
+      x="576"
+      y="76"
+      width="86"
+      height="104"
+      rx="18"
+      fill="#25253d"
+      stroke="#474766"
+    />
+    <text
+      x="619"
+      y="117"
+      text-anchor="middle"
+      fill="#ffffff"
+      font-size="18"
+      font-weight="700"
+    >
+      Fast
+    </text>
+    <text x="619" y="145" text-anchor="middle" fill="#aaaac0" font-size="13">
+      static output
+    </text>
+    <g transform="translate(58 226)">
+      <rect width="184" height="92" rx="16" fill="#25253d" stroke="#474766" />
+      <text x="22" y="38" fill="#ffffff" font-size="20" font-weight="700">
+        Static HTML
+      </text>
+      <text x="22" y="65" fill="#aaaac0" font-size="13">
+        Readable before hydration
+      </text>
+    </g>
+    <g transform="translate(268 226)">
+      <rect width="184" height="92" rx="16" fill="#25253d" stroke="#474766" />
+      <text x="22" y="38" fill="#ffffff" font-size="20" font-weight="700">
+        Local search
+      </text>
+      <text x="22" y="65" fill="#aaaac0" font-size="13">
+        Fast, deterministic index
+      </text>
+    </g>
+    <g transform="translate(478 226)">
+      <rect width="184" height="92" rx="16" fill="#25253d" stroke="#474766" />
+      <text x="22" y="38" fill="#ffffff" font-size="20" font-weight="700">
+        Markdown
+      </text>
+      <text x="22" y="65" fill="#aaaac0" font-size="13">
+        Clean route output
+      </text>
+    </g>
+    <g transform="translate(163 340)">
+      <rect width="184" height="72" rx="16" fill="#302d69" stroke="#625bd5" />
+      <text
+        x="92"
+        y="44"
+        text-anchor="middle"
+        fill="#ffffff"
+        font-size="20"
+        font-weight="700"
+      >
+        llms.txt
+      </text>
+    </g>
+    <g transform="translate(373 340)">
+      <rect width="184" height="72" rx="16" fill="#302d69" stroke="#625bd5" />
+      <text
+        x="92"
+        y="34"
+        text-anchor="middle"
+        fill="#ffffff"
+        font-size="19"
+        font-weight="700"
+      >
+        Optional MCP
+      </text>
+      <text x="92" y="54" text-anchor="middle" fill="#c9c6ff" font-size="12">
+        permission-gated
+      </text>
+    </g>
+  </g>
+</svg>

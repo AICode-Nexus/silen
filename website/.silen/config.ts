@@ -53,10 +53,13 @@ export default defineConfig({
         home: {
           hero: {
             name: 'Silen',
-            text: '去掉噪音的文档体验。',
+            text: '为人类与 AI 构建的 React 文档。',
             tagline:
-              '一个轻量的 React、Vite 与 MDX 文档站生成器，保留 VitePress 式的简洁体验，并内建 AI-ready 输出。',
-            image: { src: '/logo.svg', alt: 'Silen 标识' },
+              '使用 MDX 写作、用 React 扩展，再从同一个可信源输出静态 HTML、本地搜索、干净 Markdown 与可选 MCP 工作区。',
+            image: {
+              src: '/silen-workflow.svg',
+              alt: 'Silen 将 MDX 与 React 内容构建为静态 HTML、搜索、Markdown、llms.txt 和 MCP 工作区',
+            },
             actions: [
               { text: '快速开始', link: '/zh/guide/', theme: 'brand' },
               {
@@ -69,22 +72,26 @@ export default defineConfig({
           },
           features: [
             {
-              icon: '⚛',
+              icon: 'blocks',
               title: 'React 优先',
               details:
-                '使用 TypeScript、React 组件和可信的 MDX，同时保持专注的文档写作流程。',
+                '在可信 MDX 中组合 TypeScript 与 React 组件，保留轻量写作体验。',
+              link: '/zh/guide/',
+              linkText: '了解写作流程',
             },
             {
-              icon: '⚡',
+              icon: 'zap',
               title: 'Vite 驱动',
               details:
-                '快速启动、无整页刷新的导航，并为生产环境输出完整静态 HTML。',
+                '快速启动、无整页刷新的导航，并为生产环境生成完整静态 HTML。',
+              link: '/zh/guide/',
+              linkText: '查看快速开始',
             },
             {
-              icon: '✦',
+              icon: 'sparkles',
               title: 'AI-ready',
               details:
-                '生成 llms.txt、干净 Markdown 路由、搜索索引，以及有权限边界的 MCP 工作区。',
+                '生成 llms.txt、Markdown 路由、搜索索引与有权限边界的 MCP 工作区。',
               link: '/zh/ai/',
               linkText: '了解 AI 能力',
             },
@@ -95,10 +102,13 @@ export default defineConfig({
     home: {
       hero: {
         name: 'Silen',
-        text: 'Documentation without the noise.',
+        text: 'React documentation for people and AI.',
         tagline:
-          'A lightweight React, Vite, and MDX site generator with a VitePress-inspired experience and AI-ready output.',
-        image: { src: '/logo.svg', alt: 'Silen mark' },
+          'Write in MDX, extend with React, and ship static HTML, local search, clean Markdown, and an optional MCP workspace from one trusted source.',
+        image: {
+          src: '/silen-workflow.svg',
+          alt: 'Silen builds MDX and React content into static HTML, search, Markdown, llms.txt, and an MCP workspace',
+        },
         actions: [
           { text: 'Get started', link: '/guide/', theme: 'brand' },
           {
@@ -111,19 +121,23 @@ export default defineConfig({
       },
       features: [
         {
-          icon: '⚛',
+          icon: 'blocks',
           title: 'React-first',
           details:
-            'Use TypeScript, React components, and trusted MDX without giving up a focused documentation workflow.',
+            'Compose TypeScript and React components inside trusted MDX without losing a focused authoring loop.',
+          link: '/guide/',
+          linkText: 'Explore authoring',
         },
         {
-          icon: '⚡',
+          icon: 'zap',
           title: 'Vite-fast',
           details:
-            'Start quickly, navigate without full reloads, and emit complete static HTML for production hosting.',
+            'Start quickly, navigate without full reloads, and emit complete static HTML for production.',
+          link: '/guide/',
+          linkText: 'See the quick start',
         },
         {
-          icon: '✦',
+          icon: 'sparkles',
           title: 'AI-ready',
           details:
             'Generate llms.txt, clean Markdown routes, search indexes, and a permission-gated MCP workspace.',
