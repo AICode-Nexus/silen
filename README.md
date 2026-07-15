@@ -1,10 +1,13 @@
 # Silen
 
 Silen is a lightweight, documentation-first static site generator powered by
-React, TypeScript, Vite, and MDX. Core Alpha turns trusted MDX project files
-into complete static HTML with client-side navigation.
+React, TypeScript, Vite, and MDX. It turns trusted MDX project files into
+complete static HTML with client-side navigation, an extensible default theme,
+deterministic AI-readable artifacts, and an optional local MCP workspace.
 
 **Website:** https://aicode-nexus.github.io/silen/
+
+**Changelog:** https://github.com/AICode-Nexus/silen/blob/main/CHANGELOG.md
 
 ## Requirements and installation
 
@@ -12,6 +15,7 @@ Silen supports Node.js `^20.19.0 || >=22.12.0` and pnpm `10.34.0`. React
 `^19.2.7` and React DOM `^19.2.7` are peer dependencies.
 
 ```sh
+npm i -D @aicode-nexus/silen
 pnpm add -D @aicode-nexus/silen
 ```
 
@@ -28,13 +32,17 @@ export default defineConfig({ title: 'My documentation' })
 Add a `docs/index.mdx` file, then use the three primary commands:
 
 ```sh
-pnpm silen dev docs
-pnpm silen build docs
-pnpm silen preview docs
+npx silen dev docs
+npx silen build docs
+npx silen preview docs
 ```
 
 `dev` starts the development server, `build` writes the static site, and
 `preview` serves the built output for a local deployment check.
+
+When Silen is installed with pnpm, the equivalent commands are
+`pnpm silen dev docs`, `pnpm silen build docs`, and
+`pnpm silen preview docs`.
 
 ## Project structure
 
@@ -429,16 +437,18 @@ source; Silen is not a sandbox for untrusted submissions.
 
 ## Deployment
 
-Run `pnpm silen build docs`, then publish the contents of the configured
+Run `npx silen build docs`, then publish the contents of the configured
 `outDir` to any static host. When deploying below a subpath, set `base` to that
 mount path and configure the host to serve the generated `index.html` files and
 assets without rewriting their URLs.
 
-## Core Alpha scope
+## Current scope
 
-Core Alpha includes typed configuration, static file routing, MDX compilation,
+Silen 0.1 includes typed configuration, static file routing, MDX compilation,
 server-rendered HTML, hydration, client navigation, internal-link validation,
 the responsive extensible default theme, local documentation search, and the
 `dev`, `build`, and `preview` commands. It also includes deterministic AI
 artifacts, the permission-gated local MCP workspace, and optional endpoint-only
-Ask AI integration.
+Ask AI integration. The public API surface is still intentionally small:
+prefer documented exports, configuration fields, CLI commands, plugin hooks,
+and Agent Contract resources over importing internal files.

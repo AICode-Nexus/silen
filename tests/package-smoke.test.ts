@@ -27,6 +27,9 @@ afterAll(async () => {
 
 describe('published package smoke test', () => {
   it('installs the archive in a clean project and builds a complete site', async () => {
+    const expectedManifest = JSON.parse(
+      await readFile(path.resolve('package.json'), 'utf8'),
+    ) as { version: string }
     const temporaryDirectory = await mkdtemp(
       path.join(tmpdir(), 'silen-package-smoke-'),
     )
@@ -42,6 +45,7 @@ describe('published package smoke test', () => {
         recursive: true,
       }),
       ...[
+        'CHANGELOG.md',
         'LICENSE',
         'README.md',
         'package.json',
@@ -102,6 +106,7 @@ describe('published package smoke test', () => {
     ).stdout
 
     expect(files).toContain('package/README.md')
+    expect(files).toContain('package/CHANGELOG.md')
     expect(files).toContain('package/LICENSE')
     expect(files).toContain('package/dist/node/cli.js')
     expect(files).toContain('package/dist/index.d.ts')
@@ -120,7 +125,7 @@ describe('published package smoke test', () => {
     expect(
       files.filter(
         (file) =>
-          !/^(?:package\/(?:LICENSE|README\.md|package\.json)|package\/dist\/)/.test(
+          !/^(?:package\/(?:CHANGELOG\.md|LICENSE|README\.md|package\.json)|package\/dist\/)/.test(
             file,
           ),
       ),
@@ -152,7 +157,7 @@ describe('published package smoke test', () => {
         type: 'git',
         url: 'git+https://github.com/AICode-Nexus/silen.git',
       },
-      version: '0.1.0',
+      version: expectedManifest.version,
     })
     expect(pluginDeclaration).toContain(
       "import type { ProcessorOptions as MdxOptions } from '@mdx-js/mdx'",
@@ -313,7 +318,7 @@ console.log(JSON.stringify(values))`,
     ) as string[]
     expect(JSON.parse(frameworkManifest!)).toMatchObject({
       kind: 'silen-framework',
-      generator: { version: '0.1.0' },
+      generator: { version: expectedManifest.version },
     })
     expect(JSON.parse(frameworkApi!)).toMatchObject({ schemaVersion: 1 })
     expect(createSiteTask).toContain('id: create-site')
@@ -353,7 +358,7 @@ console.log(JSON.stringify(values))`,
     expect(help.exitCode, help.all).toBe(0)
     expect(help.all).toContain('build [root]')
     expect(version.exitCode, version.all).toBe(0)
-    expect(version.all).toContain('silen/0.1.0')
+    expect(version.all).toContain(`silen/${expectedManifest.version}`)
 
     const built = await execa(executable, ['build', 'docs'], {
       cwd: consumer,

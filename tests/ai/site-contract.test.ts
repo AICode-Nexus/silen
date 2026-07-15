@@ -6,6 +6,7 @@ import { generateAiArtifacts } from '../../src/ai/artifacts'
 import { generateSiteContract } from '../../src/ai/contract/site'
 import { build, type BuildResult } from '../../src/node/build'
 import { resolveConfig } from '../../src/node/config'
+import { SILEN_VERSION } from '../../src/shared/version'
 
 const root = path.resolve('tests/fixtures/ai-contract-site')
 const assetDir = path.resolve('dist/agent')
@@ -45,7 +46,7 @@ describe('Site Agent Contract', () => {
     }
 
     expect(manifest.kind).toBe('silen-site')
-    expect(manifest.generator.version).toBe('0.1.0')
+    expect(manifest.generator.version).toBe(SILEN_VERSION)
     expect(manifest.resources).toContainEqual(
       expect.objectContaining({
         id: 'silen-manifest',
