@@ -1,6 +1,11 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { ResolvedConfig, ThemeConfig } from '../shared/config.js'
+import type {
+  AnalyticsProvider,
+  AnalyticsScript,
+  ResolvedConfig,
+  ThemeConfig,
+} from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
 
 export const virtualModuleIds = {
@@ -8,6 +13,7 @@ export const virtualModuleIds = {
   config: 'virtual:silen/config',
   theme: 'virtual:silen/theme',
   askAi: 'virtual:silen/ask-ai',
+  clientExtensions: 'virtual:silen/client-extensions',
 } as const
 
 export interface VirtualModules {
@@ -15,6 +21,7 @@ export interface VirtualModules {
   config: string
   theme: string
   askAi: string
+  clientExtensions: string
 }
 
 export interface VirtualModuleOptions {
@@ -23,6 +30,7 @@ export interface VirtualModuleOptions {
   themeFile?: string
   publicConfigOnly?: boolean
   hmr?: boolean
+  clientModules?: readonly string[]
 }
 
 function clientHmrFile(): string {
@@ -66,6 +74,25 @@ function viteImportPath(file: string): string {
     return `/@fs/${normalized}`
   }
   return normalized
+}
+
+function clientExtensionSource(
+  root: string,
+  modules: readonly string[],
+): string {
+  const imports = modules.map((moduleId, index) => {
+    const resolved =
+      moduleId.startsWith('./') || moduleId.startsWith('../')
+        ? path.resolve(root, moduleId)
+        : moduleId
+    return `import * as extension${index} from ${quoteModuleString(viteImportPath(resolved))}`
+  })
+  return [
+    ...imports,
+    `const clientExtensions = [${modules.map((_, index) => `extension${index}`).join(', ')}]`,
+    'export { clientExtensions }',
+    'export default clientExtensions',
+  ].join('\n')
 }
 
 export function defaultThemeFile(): string {
@@ -224,6 +251,38 @@ function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
   }
 }
 
+function publicAnalyticsScript(script: AnalyticsScript): AnalyticsScript {
+  return {
+    ...(script.src === undefined ? {} : { src: script.src }),
+    ...(script.content === undefined ? {} : { content: script.content }),
+    ...(script.async === undefined ? {} : { async: script.async }),
+    ...(script.defer === undefined ? {} : { defer: script.defer }),
+    ...(script.attributes === undefined
+      ? {}
+      : { attributes: { ...script.attributes } }),
+  }
+}
+
+function publicAnalyticsConfig(
+  analytics: readonly AnalyticsProvider[],
+): AnalyticsProvider[] {
+  return analytics
+    .filter((provider) => provider.enabled !== false)
+    .map((provider) => {
+      switch (provider.provider) {
+        case 'google':
+        case 'baidu':
+          return { provider: provider.provider, id: provider.id }
+        case 'custom':
+          return {
+            provider: 'custom',
+            ...(provider.name === undefined ? {} : { name: provider.name }),
+            scripts: provider.scripts.map(publicAnalyticsScript),
+          }
+      }
+    })
+}
+
 function serializeConfig(
   config: ResolvedConfig,
   publicConfigOnly: boolean,
@@ -235,6 +294,10 @@ function serializeConfig(
         lang: config.lang,
         base: config.base,
         ai: config.ai,
+        analytics:
+          config.command === 'build'
+            ? publicAnalyticsConfig(config.analytics)
+            : [],
         themeConfig: publicThemeConfig(config.themeConfig),
       }
     : config
@@ -262,6 +325,7 @@ export function createVirtualModules({
   themeFile = defaultThemeFile(),
   publicConfigOnly = false,
   hmr = false,
+  clientModules = [],
 }: VirtualModuleOptions): VirtualModules {
   const sortedRoutes = [...routes].sort(
     (left, right) =>
@@ -310,5 +374,6 @@ export function createVirtualModules({
             `const loadAskAiDialog = () => import(${quoteModuleString(viteImportPath(askAiDialogFile()))}).then((module) => ({ default: module.EndpointAskAiDialog }))`,
             'export { loadAskAiDialog }',
           ].join('\n'),
+    clientExtensions: clientExtensionSource(config.root, clientModules),
   }
 }

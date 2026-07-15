@@ -17,12 +17,27 @@ declare module 'virtual:silen/routes' {
     frontmatter: JsonObject
     headings: readonly Heading[]
     links: readonly string[]
+    title: string
+    description: string
+    data: JsonObject
   }
 
   export type RouteLoader = () => Promise<PageModule>
   const routes: Readonly<Record<string, RouteLoader>>
   export { routes }
   export default routes
+}
+
+declare module 'virtual:silen/client-extensions' {
+  import type { ComponentType, PropsWithChildren } from 'react'
+
+  export interface ClientExtension {
+    readonly wrapRoot?: ComponentType<PropsWithChildren>
+    readonly setup?: (context: { readonly base: string }) => void | (() => void)
+  }
+
+  export const clientExtensions: readonly ClientExtension[]
+  export default clientExtensions
 }
 
 declare module 'virtual:silen/config' {
@@ -32,6 +47,33 @@ declare module 'virtual:silen/config' {
     readonly markdownRoutes: boolean
     readonly index: boolean
   }
+
+  interface AnalyticsScript {
+    readonly src?: string
+    readonly content?: string
+    readonly async?: boolean
+    readonly defer?: boolean
+    readonly attributes?: Readonly<Record<string, string | boolean>>
+  }
+
+  interface GoogleAnalyticsProvider {
+    readonly provider: 'google'
+    readonly id: string
+  }
+
+  interface BaiduAnalyticsProvider {
+    readonly provider: 'baidu'
+    readonly id: string
+  }
+
+  interface CustomAnalyticsProvider {
+    readonly provider: 'custom'
+    readonly name?: string
+    readonly scripts: readonly AnalyticsScript[]
+  }
+
+  type AnalyticsProvider =
+    GoogleAnalyticsProvider | BaiduAnalyticsProvider | CustomAnalyticsProvider
 
   interface ThemeNavItem {
     readonly text: string
@@ -129,6 +171,7 @@ declare module 'virtual:silen/config' {
     lang: string
     base: string
     ai: AiArtifactConfig
+    analytics: readonly AnalyticsProvider[]
     themeConfig: ThemeConfig
   }
 

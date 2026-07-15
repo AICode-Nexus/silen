@@ -21,12 +21,14 @@ import { generateAiArtifacts } from '../ai/artifacts.js'
 import type { AiPage } from '../shared/ai.js'
 import type { ResolvedConfig } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
+import type { SilenPageData } from '../shared/plugin.js'
 import { resolveConfig } from './config.js'
 import { ensureBuildFavicon, type ResolvedFavicon } from './favicon.js'
 import { validateInternalLinks } from './links.js'
 import { serializePageMarkdown } from './markdown-output.js'
 import { compilePage, createMdxPlugins, type CompiledPage } from './mdx.js'
 import { silenPlugin } from './plugin.js'
+import { pluginRunnerFor, type PluginRunner } from './plugins.js'
 import {
   renderDocument,
   type AssetPreload,
@@ -257,11 +259,12 @@ function planRouteOutputs(
 
 async function compilePages(
   routes: readonly RouteRecord[],
+  runner: PluginRunner,
 ): Promise<CompiledPage[]> {
   return Promise.all(
     routes.map(async (route) => {
       try {
-        return await compilePage(route)
+        return await compilePage(route, runner)
       } catch (error) {
         throw buildError('page metadata compilation', error, [route])
       }
@@ -272,10 +275,12 @@ async function compilePages(
 async function productionPlugins(
   config: ResolvedConfig,
 ): Promise<PluginOption[]> {
+  const runner = pluginRunnerFor(config)
   return [
     react(),
     ...(await silenPlugin(config, { publicConfigOnly: true })),
-    ...createMdxPlugins(),
+    ...(await runner.collectVitePlugins()),
+    ...(await createMdxPlugins({ config, runner })),
   ]
 }
 
@@ -507,11 +512,14 @@ async function loadRenderer(
 async function renderRoutes(
   config: ResolvedConfig,
   outputs: readonly PlannedRouteOutput[],
+  pages: readonly CompiledPage[],
+  runner: PluginRunner,
   renderer: RendererModule,
   manifest: Manifest,
   outDir: string,
   favicon: ResolvedFavicon,
 ): Promise<void> {
+  const pagesByRoute = new Map(pages.map((page) => [page.route, page]))
   for (const output of outputs) {
     const { route } = output
     try {
@@ -520,10 +528,19 @@ async function renderRoutes(
         throw new Error(`canonical route rendered status ${rendered.status}`)
       }
       const assets = await manifestAssets(manifest, config.root, route)
+      const page = pagesByRoute.get(route.path)
+      if (!page) throw new Error(`missing compiled page data for ${route.path}`)
+      const head = await runner.transformHead(publicPageData(page), {
+        command: 'build',
+        route: page.route,
+        file: page.file,
+        source: page.source,
+      })
       const document = renderDocument(rendered, {
         ...assets,
         base: config.base,
         favicon,
+        head,
       })
       const destination = path.resolve(outDir, output.relativeFile)
       await mkdir(path.dirname(destination), { recursive: true })
@@ -571,6 +588,17 @@ function createAiPages(pages: readonly CompiledPage[], base: string): AiPage[] {
   }))
 }
 
+function publicPageData(page: CompiledPage): SilenPageData {
+  return {
+    title: page.title,
+    description: page.description,
+    frontmatter: page.frontmatter,
+    headings: page.headings,
+    links: page.links,
+    data: page.data,
+  }
+}
+
 async function renameExisting(
   source: string,
   destination: string,
@@ -603,10 +631,11 @@ async function installOutput(
 
 async function buildSite(root: string): Promise<BuildResult> {
   const config = await resolveConfig(root, 'build')
+  const runner = pluginRunnerFor(config)
   const routes = await scanRoutes(config.root)
   await assertSafeOutDir(config, routes)
   const routeOutputs = planRouteOutputs(config.outDir, routes)
-  const pages = await compilePages(routes)
+  const pages = await compilePages(routes, runner)
 
   const buildId = `${process.pid}-${randomUUID()}`
   const outParent = path.dirname(config.outDir)
@@ -631,6 +660,8 @@ async function buildSite(root: string): Promise<BuildResult> {
     await renderRoutes(
       config,
       routeOutputs,
+      pages,
+      runner,
       renderer,
       manifest,
       stagedOutDir,
@@ -647,6 +678,19 @@ async function buildSite(root: string): Promise<BuildResult> {
     await rm(path.join(stagedOutDir, '.vite'), { force: true, recursive: true })
     await installOutput(stagedOutDir, config.outDir, backupDir)
     installed = true
+    try {
+      await runner.runBuildEnd({
+        config,
+        routes,
+        pages: pages.map(publicPageData),
+        outDir: config.outDir,
+      })
+    } catch (error) {
+      throw new Error(
+        `Silen installed the core output at ${config.outDir}, but ${errorDetail(error)}; plugin side effects were not rolled back`,
+        { cause: error },
+      )
+    }
   } finally {
     await rm(ssrOutDir, { force: true, recursive: true })
     if (!installed) {

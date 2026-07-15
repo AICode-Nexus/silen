@@ -2,6 +2,7 @@ import { act } from 'react'
 import { cleanup, fireEvent, screen } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { setClientExtensions } from './fixtures/virtual/client-extensions'
 
 interface RouteFixtureModule {
   default: () => React.JSX.Element
@@ -32,6 +33,13 @@ vi.mock('virtual:silen/config', () => ({
     command: 'build',
     root: '/',
     configFile: '/.silen/config.ts',
+    analytics: [
+      {
+        provider: 'custom',
+        name: 'fixture',
+        scripts: [{ content: 'void 0' }],
+      },
+    ],
   },
 }))
 
@@ -279,6 +287,7 @@ describe('hydration and browser navigation', () => {
   let scrollTo: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
+    setClientExtensions([])
     document.head.innerHTML =
       '<title>Server title</title><meta name="description" content="Server description">'
     document.body.innerHTML = ''
@@ -321,6 +330,7 @@ describe('hydration and browser navigation', () => {
   })
 
   afterEach(() => {
+    setClientExtensions([])
     cleanup()
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
@@ -354,6 +364,31 @@ describe('hydration and browser navigation', () => {
     ).toBe(false)
 
     act(() => root.unmount())
+  })
+
+  it('composes SSR-safe client wrappers and cleans up browser setup', async () => {
+    const setupCleanup = vi.fn()
+    const setup = vi.fn(() => setupCleanup)
+    function First({ children }: React.PropsWithChildren): React.JSX.Element {
+      return <div data-client-extension="first">{children}</div>
+    }
+    function Second({ children }: React.PropsWithChildren): React.JSX.Element {
+      return <section data-client-extension="second">{children}</section>
+    }
+    setClientExtensions([{ wrapRoot: First, setup }, { wrapRoot: Second }])
+
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const first = container.querySelector('[data-client-extension="first"]')
+    const second = container.querySelector('[data-client-extension="second"]')
+    expect(first?.firstElementChild).toBe(second)
+
+    const root = await act(async () => hydrate(container))
+    expect(setup).toHaveBeenCalledWith({ base: '/project/' })
+    act(() => root.unmount())
+    expect(setupCleanup).toHaveBeenCalledOnce()
   })
 
   it('selects home, default doc, and page layouts from frontmatter', async () => {
@@ -396,6 +431,31 @@ describe('hydration and browser navigation', () => {
     expect(metadataDescription().content).toBe('Guide description')
     expect(document.documentElement.lang).toBe('zh-CN')
 
+    act(() => root.unmount())
+  })
+
+  it('emits pageviews for hydrated route changes but not hash navigation', async () => {
+    const paths: string[] = []
+    const handlePageview = (event: Event): void => {
+      paths.push((event as CustomEvent<{ readonly path: string }>).detail.path)
+    }
+    window.addEventListener('silen:pageview', handlePageview)
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+
+    expect(paths).toEqual(['/project/'])
+    fireEvent.click(screen.getByRole('link', { name: 'Guide' }))
+    expect(await screen.findByRole('heading', { name: 'Guide' })).toBeTruthy()
+    expect(paths).toEqual(['/project/', '/project/guide'])
+
+    fireEvent.click(screen.getByRole('link', { name: 'Details' }))
+    expect(window.location.hash).toBe('#details')
+    expect(paths).toEqual(['/project/', '/project/guide'])
+
+    window.removeEventListener('silen:pageview', handlePageview)
     act(() => root.unmount())
   })
 

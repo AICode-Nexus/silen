@@ -49,6 +49,25 @@ pnpm silen preview docs
 生产输出默认写入 `docs/.silen/dist`。如果站点部署在子路径下，例如 GitHub
 Pages 项目站点，请配置 `base`。
 
+## 接入站点统计
+
+统计是站点级能力，因此默认主题和自定义主题都可以使用。可以同时配置 Google
+Analytics 与百度统计：
+
+```ts
+export default defineConfig({
+  analytics: [
+    { provider: 'google', id: 'G-XXXXXXXXXX' },
+    { provider: 'baidu', id: '你的百度统计站点 ID' },
+  ],
+})
+```
+
+统计脚本只会进入生产构建。Silen 会上报首次访问和客户端路由切换，页内锚点切换
+不会重复计算。使用 Google Analytics 时，需要在增强型衡量中关闭“根据浏览器
+历史记录事件进行网页更改”的自动网页浏览，避免重复上报。其他服务可以使用
+`custom` 配置外链或内联脚本，并监听统一的 `silen:pageview` 事件。
+
 ## 下一步
 
 继续阅读 [AI-ready 文档](/zh/ai/)，或者查看

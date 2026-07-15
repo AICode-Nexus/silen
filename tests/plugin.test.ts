@@ -14,6 +14,7 @@ function resolvedConfig(root: string): ResolvedConfig {
     outDir: path.join(root, '.silen/dist'),
     onBrokenLinks: 'error',
     themeConfig: {},
+    analytics: [],
     ai: {
       llmsTxt: true,
       llmsFullTxt: true,
@@ -92,6 +93,25 @@ describe('virtual modules', () => {
     expect(development.theme).toContain('import.meta.hot.accept(')
   })
 
+  it('emits deterministic client extension imports', () => {
+    const root = path.resolve('tests/fixtures/ssr')
+    const modules = createVirtualModules({
+      routes: [],
+      config: resolvedConfig(root),
+      clientModules: ['./.silen/client.tsx', '@scope/silen-plugin/client'],
+    })
+
+    expect(modules.clientExtensions).toContain(
+      path.join(root, '.silen/client.tsx').replaceAll('\\', '/'),
+    )
+    expect(modules.clientExtensions).toContain(
+      "from '@scope/silen-plugin/client'",
+    )
+    expect(modules.clientExtensions).toContain(
+      'export default clientExtensions',
+    )
+  })
+
   it('serializes config as data without executing prototype-named fields', async () => {
     const root = path.resolve('tests/fixtures/ssr')
     const config = resolvedConfig(root) as ResolvedConfig &
@@ -117,6 +137,24 @@ describe('virtual modules', () => {
     const config = resolvedConfig(root) as ResolvedConfig &
       Record<string, unknown>
     config.privateToken = 'do-not-bundle'
+    config.analytics = [
+      Object.assign(
+        { provider: 'google' as const, id: 'G-PUBLIC' },
+        { privateAnalyticsToken: 'do-not-bundle-analytics' },
+      ),
+      {
+        provider: 'custom',
+        name: 'self-hosted',
+        scripts: [
+          {
+            src: 'https://analytics.example.com/script.js',
+            defer: true,
+            attributes: { 'data-site': 'docs' },
+          },
+        ],
+      },
+      { provider: 'baidu', id: 'disabled', enabled: false },
+    ]
     config.themeConfig = Object.assign(
       {
         ai: Object.assign(
@@ -180,6 +218,20 @@ describe('virtual modules', () => {
       description: 'Project documentation',
       lang: 'en-US',
       base: '/project/',
+      analytics: [
+        { provider: 'google', id: 'G-PUBLIC' },
+        {
+          provider: 'custom',
+          name: 'self-hosted',
+          scripts: [
+            {
+              src: 'https://analytics.example.com/script.js',
+              defer: true,
+              attributes: { 'data-site': 'docs' },
+            },
+          ],
+        },
+      ],
       ai: {
         llmsTxt: true,
         llmsFullTxt: true,
@@ -215,9 +267,29 @@ describe('virtual modules', () => {
     expect(source).not.toContain('do-not-bundle-ai-key')
     expect(source).not.toContain('do-not-bundle-ai-header')
     expect(source).not.toContain('do-not-bundle-ai-provider')
+    expect(source).not.toContain('do-not-bundle-analytics')
     expect(source).not.toContain(root)
     expect(source).not.toContain('configFile')
     expect(source).not.toContain('outDir')
+  })
+
+  it('omits analytics providers from the development browser config', async () => {
+    const root = path.resolve('tests/fixtures/ssr')
+    const config = resolvedConfig(root)
+    config.command = 'serve'
+    config.analytics = [{ provider: 'google', id: 'G-DEVELOPMENT' }]
+
+    const source = createVirtualModules({
+      routes: [],
+      config,
+      publicConfigOnly: true,
+    }).config
+    const loaded = (await importGeneratedModule(source)) as {
+      default: { analytics: unknown[] }
+    }
+
+    expect(loaded.default.analytics).toEqual([])
+    expect(source).not.toContain('G-DEVELOPMENT')
   })
 
   it('discovers the project theme without recursively aliasing public theme imports', async () => {

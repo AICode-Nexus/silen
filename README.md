@@ -78,6 +78,35 @@ export default defineConfig({
 resolved from the documentation root and defaults to `.silen/dist`.
 `onBrokenLinks` accepts `error`, `warn`, or `ignore`.
 
+## Plugins
+
+Use local functions or imported npm packages to extend Silen without relying on
+internal modules:
+
+```ts
+import { defineConfig, definePlugin } from '@aicode-nexus/silen'
+
+const metadata = definePlugin((_context, options: { team: string }) => ({
+  name: 'team-metadata',
+  transformPageData(page) {
+    return { data: { ...page.data, team: options.team } }
+  },
+}))
+
+export default defineConfig({
+  plugins: [[metadata, { team: 'Docs' }]],
+})
+```
+
+Plugins run in configuration order. The public lifecycle includes `config`,
+`configResolved`, `extendMdx`, `vite`, `clientModules`, `transformPageData`,
+`transformHead`, and `buildEnd`. Client modules may export an SSR-safe
+`wrapRoot` and a browser-only `setup` function. Every plugin needs a unique
+`name:id` identity; errors report that identity and the failed hook.
+
+See the complete [plugin guide](https://aicode-nexus.github.io/silen/guide/plugins)
+and the npm-ready examples under `examples/plugins`.
+
 ## AI-readable build output
 
 Every build produces deterministic AI-readable files without calling a model
@@ -226,6 +255,61 @@ switches back to `/ai/`. Locale entries can also override `nav`, `sidebar`, and
 `home` so translated roots render localized chrome and home-page content. Pages
 can set `lang` in frontmatter when a route uses a different language from the
 site default.
+
+## Site analytics
+
+Configure one or more analytics providers at the site level. Analytics is
+theme-independent and is emitted only by `silen build`, so local development
+does not pollute production reports:
+
+```ts
+export default defineConfig({
+  analytics: [
+    { provider: 'google', id: 'G-XXXXXXXXXX' },
+    { provider: 'baidu', id: 'your-baidu-site-id' },
+  ],
+})
+```
+
+Silen injects the provider scripts into every generated page and reports the
+initial page plus later client-side route changes. Hash-only navigation is not
+counted as a new page. Both presets use manual pageviews to avoid counting
+Silen's internal History API updates. For Google Analytics, also turn off
+**Enhanced measurement > Page views > Page changes based on browser history
+events** in the web data stream to prevent Google from sending an additional
+automatic pageview.
+
+Use `custom` for self-hosted analytics or another provider:
+
+```ts
+export default defineConfig({
+  analytics: [
+    {
+      provider: 'custom',
+      name: 'self-hosted',
+      scripts: [
+        {
+          src: 'https://analytics.example.com/script.js',
+          defer: true,
+          attributes: { 'data-site-id': 'docs' },
+        },
+        {
+          content: `
+            window.addEventListener('silen:pageview', (event) => {
+              window.myAnalytics?.pageview(event.detail)
+            })
+          `,
+        },
+      ],
+    },
+  ],
+})
+```
+
+The `silen:pageview` custom event detail contains `path`, `title`, `location`,
+and an optional `referrer`. Custom script content is trusted executable code
+and is public in the generated HTML; never place secrets in analytics config.
+Set `enabled: false` on any provider to omit it from the build.
 
 ## Theme tokens
 

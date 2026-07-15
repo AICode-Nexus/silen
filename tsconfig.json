@@ -19,6 +19,8 @@
   },
   "include": [
     "src",
+    "examples/**/*.ts",
+    "examples/**/*.tsx",
     "tests",
     "tests/fixtures/**/.silen/*.ts",
     "tests/fixtures/**/.silen/*.tsx",

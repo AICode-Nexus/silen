@@ -1,24 +1,25 @@
 import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import mdx from '@mdx-js/rollup'
+import type { ProcessorOptions as MdxOptions } from '@mdx-js/mdx'
 import matter from 'gray-matter'
 import GithubSlugger from 'github-slugger'
 import type { Plugin } from 'vite'
 import type { Heading, JsonObject, RouteRecord } from '../shared/page.js'
+import type { SilenPageData } from '../shared/plugin.js'
+import type { ResolvedConfig } from '../shared/config.js'
+import type { PluginRunner } from './plugins.js'
 import { remarkPageData } from './remark-page-data.js'
+import { fileToRoute } from './routes.js'
 import { highlightCodeToHast, type HighlightedNode } from './highlight.js'
 
-export interface CompiledPage {
+export interface CompiledPage extends SilenPageData {
   file: string
   route: string
   source: string
-  frontmatter: JsonObject
-  headings: Heading[]
-  links: string[]
-  title: string
-  description: string
 }
 
-interface AnalyzedPage {
+interface AnalyzedPage extends SilenPageData {
   frontmatter: JsonObject
   headings: Heading[]
   links: string[]
@@ -88,7 +89,16 @@ function analyzePageSource(
     if (url) links.push(url)
   }
 
-  return { frontmatter: normalizedFrontmatter, headings, links }
+  return {
+    frontmatter: normalizedFrontmatter,
+    headings,
+    links,
+    title:
+      stringField(normalizedFrontmatter, 'title') ??
+      fallbackTitle(content, headings),
+    description: stringField(normalizedFrontmatter, 'description') ?? '',
+    data: {},
+  }
 }
 
 function fallbackTitle(content: string, headings: Heading[]): string {
@@ -101,40 +111,66 @@ function serializeJsonForModule(value: JsonObject): string {
   return `JSON.parse(${JSON.stringify(serialized)})`
 }
 
-export async function compilePage(route: RouteRecord): Promise<CompiledPage> {
+export async function compilePage(
+  route: RouteRecord,
+  runner?: PluginRunner,
+): Promise<CompiledPage> {
   const source = await readFile(route.file, 'utf8')
   const parsed = matter(source)
   const analyzed = analyzePageSource(parsed.content, parsed.data)
+  const page =
+    runner === undefined
+      ? analyzed
+      : await runner.transformPageData(analyzed, {
+          command: 'build',
+          route: route.path,
+          file: route.file,
+          source,
+        })
 
   return {
     file: route.file,
     route: route.path,
     source,
-    ...analyzed,
-    title:
-      stringField(analyzed.frontmatter, 'title') ??
-      fallbackTitle(parsed.content, analyzed.headings),
-    description: stringField(analyzed.frontmatter, 'description') ?? '',
+    ...page,
   }
 }
 
-const pageDataPlugin: Plugin = {
-  name: 'silen:page-data',
-  enforce: 'pre',
-  transform(source, id) {
-    const cleanId = id.split('?', 1)[0]
-    if (!cleanId || !/\.mdx?$/.test(cleanId)) return undefined
+function pageDataPlugin(options: MdxPluginOptions): Plugin {
+  return {
+    name: 'silen:page-data',
+    enforce: 'pre',
+    async transform(source, id) {
+      const cleanId = id.split('?', 1)[0]
+      if (!cleanId || !/\.mdx?$/.test(cleanId)) return undefined
 
-    const parsed = matter(source)
-    const analyzed = analyzePageSource(parsed.content, parsed.data)
+      const parsed = matter(source)
+      const analyzed = analyzePageSource(parsed.content, parsed.data)
+      const route =
+        options.config === undefined
+          ? fileToRoute(path.basename(cleanId))
+          : fileToRoute(path.relative(options.config.root, cleanId))
+      const page =
+        options.runner === undefined
+          ? analyzed
+          : await options.runner.transformPageData(analyzed, {
+              command: options.config?.command ?? 'serve',
+              route,
+              file: cleanId,
+              source,
+            })
 
-    return [
-      parsed.content,
-      `export const frontmatter = ${serializeJsonForModule(analyzed.frontmatter)}`,
-      `export const headings = ${JSON.stringify(analyzed.headings)}`,
-      `export const links = ${JSON.stringify(analyzed.links)}`,
-    ].join('\n')
-  },
+      return [
+        parsed.content,
+        `export const frontmatter = ${serializeJsonForModule(page.frontmatter)}`,
+        `export const headings = ${JSON.stringify(page.headings)}`,
+        `export const links = ${JSON.stringify(page.links)}`,
+        `export const title = ${JSON.stringify(page.title)}`,
+        `export const description = ${JSON.stringify(page.description)}`,
+        `export const data = ${serializeJsonForModule(page.data)}`,
+      ].join('\n')
+    },
+  }
 }
 
 function textContent(node: HighlightedNode): string {
@@ -223,7 +259,19 @@ function rehypeHighlightCode() {
   }
 }
 
-export function createMdxPlugins(): Plugin[] {
+export interface MdxPluginOptions {
+  readonly config?: ResolvedConfig
+  readonly runner?: PluginRunner
+  readonly pages?: readonly CompiledPage[]
+}
+
+export async function createMdxPlugins(
+  options: MdxPluginOptions = {},
+): Promise<Plugin[]> {
+  const extensions =
+    options.runner === undefined
+      ? { remarkPlugins: [], rehypePlugins: [] }
+      : await options.runner.collectMdxExtensions()
   // Vite 8's public Plugin type is based on Rolldown while the official MDX
   // adapter exposes the Rollup Plugin type. Vite accepts that adapter at
   // runtime; bridge only the incompatible declaration families here.
@@ -231,10 +279,16 @@ export function createMdxPlugins(): Plugin[] {
     development: false,
     format: 'mdx',
     mdxExtensions: ['.md', '.mdx'],
-    remarkPlugins: [remarkPageData],
-    rehypePlugins: [rehypeHighlightCode],
+    remarkPlugins: [
+      remarkPageData,
+      ...(extensions.remarkPlugins ?? []),
+    ] as NonNullable<MdxOptions['remarkPlugins']>,
+    rehypePlugins: [
+      rehypeHighlightCode,
+      ...(extensions.rehypePlugins ?? []),
+    ] as NonNullable<MdxOptions['rehypePlugins']>,
   }) as unknown as Plugin
-  return [pageDataPlugin, mdxPlugin]
+  return [pageDataPlugin(options), mdxPlugin]
 }
 
 export type {

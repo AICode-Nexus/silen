@@ -49,6 +49,26 @@ The production output is written to `docs/.silen/dist` by default. Configure a
 `base` when the site is hosted below a subpath, such as GitHub Pages project
 sites.
 
+## Add site analytics
+
+Analytics is a site-level feature, so it works with the default theme and custom
+themes. Add Google Analytics, Baidu Analytics, or both:
+
+```ts
+export default defineConfig({
+  analytics: [
+    { provider: 'google', id: 'G-XXXXXXXXXX' },
+    { provider: 'baidu', id: 'your-baidu-site-id' },
+  ],
+})
+```
+
+Scripts are included only in production builds. Silen reports the initial page
+and client-side route changes, while ignoring hash-only navigation. Google
+Analytics users should disable automatic history-change pageviews in Enhanced
+Measurement to avoid duplicates. For another service, use a `custom` provider
+with external or inline scripts and listen for the `silen:pageview` event.
+
 ## Next step
 
 Continue with [AI-ready documentation](/ai/) or inspect the

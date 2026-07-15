@@ -1,5 +1,9 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import type { AiArtifactConfig, ThemeConfig } from '../shared/config.js'
+import type {
+  AiArtifactConfig,
+  AnalyticsProvider,
+  ThemeConfig,
+} from '../shared/config.js'
 import type { Heading, JsonObject } from '../shared/page.js'
 
 export interface PagePublicData {
@@ -8,8 +12,11 @@ export interface PagePublicData {
   readonly base: string
   readonly route: string
   readonly ai?: AiArtifactConfig
+  readonly analytics?: readonly AnalyticsProvider[]
   readonly frontmatter?: JsonObject
   readonly headings?: readonly Heading[]
+  readonly links?: readonly string[]
+  readonly data?: JsonObject
   readonly themeConfig?: ThemeConfig
 }
 

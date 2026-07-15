@@ -23,6 +23,7 @@ export default defineConfig({
     'virtual:silen/routes',
     'virtual:silen/theme',
     'virtual:silen/ask-ai',
+    'virtual:silen/client-extensions',
   ],
   onSuccess: 'tsc -p tsconfig.build.json',
 })

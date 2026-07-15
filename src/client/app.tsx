@@ -1,17 +1,21 @@
 import {
+  createElement,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ComponentType,
+  type ReactNode,
 } from 'react'
 import { flushSync } from 'react-dom'
 import config from 'virtual:silen/config'
 import routes, { type PageModule } from 'virtual:silen/routes'
 import InitialTheme, { type Theme } from 'virtual:silen/theme'
+import clientExtensions from 'virtual:silen/client-extensions'
 import type { JsonObject } from '../shared/page.js'
 import type { ThemeMdxComponents } from '../theme-default/index.js'
+import { analyticsPagePath, trackAnalyticsPageview } from './analytics.js'
 import { DataProvider, type PagePublicData } from './data.js'
 import {
   subscribeToHotRouteUpdates,
@@ -19,6 +23,22 @@ import {
 } from './hmr.js'
 import { navigateDocument } from './navigation.js'
 import { resolveInternalUrl, RouterProvider, type Router } from './router.js'
+
+const analyticsProviders = config.analytics ?? []
+
+function pluginRoot(children: ReactNode): ReactNode {
+  return [...clientExtensions]
+    .reverse()
+    .reduce<ReactNode>((content, extension) => {
+      if (extension.wrapRoot === undefined) return content
+      if (typeof extension.wrapRoot !== 'function') {
+        throw new TypeError(
+          'Silen client extension wrapRoot must be a component',
+        )
+      }
+      return createElement(extension.wrapRoot, undefined, content)
+    }, children)
+}
 
 export interface ResolvedPage {
   title: string
@@ -132,6 +152,7 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
           base: config.base,
           route: request.route ?? request.pathname,
           ai: config.ai,
+          analytics: analyticsProviders,
           themeConfig: config.themeConfig,
         },
         Component: (InitialTheme.NotFound ??
@@ -146,20 +167,22 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
 
 function resolvedPage(route: string, module: PageModule): ResolvedPage {
   return {
-    title: stringField(module.frontmatter, 'title', config.title),
-    description: stringField(
-      module.frontmatter,
-      'description',
-      config.description,
-    ),
+    title:
+      module.title || stringField(module.frontmatter, 'title', config.title),
+    description:
+      module.description ||
+      stringField(module.frontmatter, 'description', config.description),
     publicData: {
       siteTitle: config.title,
       lang: stringField(module.frontmatter, 'lang', config.lang),
       base: config.base,
       route,
       ai: config.ai,
+      analytics: analyticsProviders,
       frontmatter: module.frontmatter,
       headings: module.headings,
+      links: module.links,
+      data: module.data ?? {},
       themeConfig: config.themeConfig,
     },
     Component: module.default as ComponentType<MdxContentProps>,
@@ -278,6 +301,12 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
   const restorationFrame = useRef<number | undefined>(undefined)
   const scrollFrame = useRef<number | undefined>(undefined)
   const suspendedScrollSequence = useRef<number | undefined>(undefined)
+  const analyticsReferrer = useRef<string | undefined>(
+    typeof document === 'undefined' || !document.referrer
+      ? undefined
+      : document.referrer,
+  )
+  const pageviewPath = analyticsPagePath(state.path)
 
   const loadRoute = useCallback((url: URL): Promise<RouteMatch> => {
     const key = url.pathname
@@ -523,6 +552,32 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
   useEffect(() => subscribeToHotThemeUpdates(setTheme), [])
 
   useEffect(() => {
+    const cleanups: Array<() => void> = []
+    for (const extension of clientExtensions) {
+      if (extension.setup === undefined) continue
+      if (typeof extension.setup !== 'function') {
+        throw new TypeError('Silen client extension setup must be a function')
+      }
+      const cleanup = extension.setup({ base: config.base })
+      if (typeof cleanup === 'function') cleanups.push(cleanup)
+    }
+    return () => {
+      for (const cleanup of cleanups.reverse()) cleanup()
+    }
+  }, [])
+
+  useEffect(() => {
+    const tracked = trackAnalyticsPageview(analyticsProviders, {
+      path: pageviewPath,
+      title: state.page.title,
+      ...(analyticsReferrer.current === undefined
+        ? {}
+        : { referrer: analyticsReferrer.current }),
+    })
+    if (tracked) analyticsReferrer.current = tracked.location
+  }, [pageviewPath, state.page.title])
+
+  useEffect(() => {
     setMetadata(stateRef.current.page)
     const initialRestoration = window.history.scrollRestoration
     window.history.scrollRestoration = 'manual'
@@ -612,11 +667,11 @@ export function App({ initialUrl, initialPage }: AppProps): React.JSX.Element {
     </theme.Layout>
   )
   const Root = theme.wrapRoot
+  const themedPage = Root ? <Root>{page}</Root> : page
+  const extendedPage = pluginRoot(themedPage)
   return (
     <DataProvider value={state.page.publicData}>
-      <RouterProvider value={router}>
-        {Root ? <Root>{page}</Root> : page}
-      </RouterProvider>
+      <RouterProvider value={router}>{extendedPage}</RouterProvider>
     </DataProvider>
   )
 }

@@ -1,5 +1,7 @@
 import type { RenderedPage } from '../client/app.js'
 import { appearanceScript } from '../theme-default/appearance-script.js'
+import { renderAnalyticsHead } from './analytics.js'
+import type { SilenHeadEntry } from '../shared/plugin.js'
 
 export interface AssetPreload {
   as: 'audio' | 'font' | 'image' | 'video'
@@ -16,6 +18,7 @@ export interface RenderAssets {
   stylesheets?: readonly string[]
   modulePreloads?: readonly string[]
   assetPreloads?: readonly AssetPreload[]
+  head?: readonly SilenHeadEntry[]
 }
 
 const htmlEscapes: Readonly<Record<string, string>> = {
@@ -58,6 +61,34 @@ function unique<T>(values: readonly T[]): T[] {
   return [...new Set(values)]
 }
 
+function inlineRawText(tag: string, value: string): string {
+  return tag === 'script'
+    ? value
+        .replace(/<\/script/giu, '<\\/script')
+        .replaceAll('\u2028', '\\u2028')
+        .replaceAll('\u2029', '\\u2029')
+    : value.replace(/<\/style/giu, '<\\/style')
+}
+
+function renderHeadEntry(entry: SilenHeadEntry): string {
+  const attributes = Object.entries(entry.attributes ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
+    .flatMap(([name, value]) => {
+      if (value === false) return []
+      return [value === true ? name : `${name}="${escapeHtml(value)}"`]
+    })
+  const opening = attributes.length
+    ? `<${entry.tag} ${attributes.join(' ')}>`
+    : `<${entry.tag}>`
+  if (entry.tag === 'link' || entry.tag === 'meta') return opening
+  const children = entry.children ?? ''
+  const content =
+    entry.tag === 'script' || entry.tag === 'style'
+      ? inlineRawText(entry.tag, children)
+      : escapeHtml(children)
+  return `${opening}${content}</${entry.tag}>`
+}
+
 export function renderDocument(
   page: RenderedPage,
   assets: RenderAssets,
@@ -83,6 +114,8 @@ export function renderDocument(
         `<link rel="icon" type="${escapeHtml(assets.favicon.type)}" href="${escapeHtml(assetUrl(assets.base, assets.favicon.file))}">`,
       ]
     : []
+  const analytics = renderAnalyticsHead(page.publicData.analytics ?? [])
+  const pluginHead = (assets.head ?? []).map(renderHeadEntry)
 
   return [
     '<!doctype html>',
@@ -98,6 +131,8 @@ export function renderDocument(
     ...stylesheets,
     ...modulePreloads,
     ...assetPreloads,
+    ...analytics,
+    ...pluginHead,
     '</head>',
     `<body><div id="app">${page.appHtml}</div>`,
     `<script>window.__SILEN__=JSON.parse(${inlineJson(page.publicData)})</script>`,

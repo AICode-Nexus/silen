@@ -141,6 +141,22 @@ Before <STYLE>private inline style <Nested>private nested inline style</Nested><
     expect(querySearchIndex(index, 'configurtion')[0]?.route).toBe('/config')
   })
 
+  it('uses page descriptions as cleaner snippets for title matches', () => {
+    const index = createSearchIndex([
+      {
+        id: '/silen',
+        title: 'Silen',
+        description: 'React documentation for people and AI.',
+        text: 'Two commands, one calm workflow Start in seconds Read the guide.',
+        route: '/silen',
+      },
+    ])
+
+    expect(querySearchIndex(index, 'silen')[0]?.snippet).toBe(
+      'React documentation for people and AI.',
+    )
+  })
+
   it('escapes untrusted text before adding query highlights', () => {
     const index = createSearchIndex([
       {

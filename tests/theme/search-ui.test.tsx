@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -132,6 +133,8 @@ describe('SearchDialog', () => {
     const option = await screen.findByRole('option', {
       name: /Configuration guide/,
     })
+    expect(within(option).getByText('guide')).not.toBeNull()
+    expect(within(option).getByText('Site options')).not.toBeNull()
     expect(option.innerHTML).toContain('<mark>site options</mark>')
     await user.keyboard('{Enter}')
 

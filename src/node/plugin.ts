@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import type { Plugin, ViteDevServer } from 'vite'
 import type { ResolvedConfig } from '../shared/config.js'
+import { pluginRunnerFor } from './plugins.js'
 import { scanRoutes } from './routes.js'
 import {
   createVirtualModules,
@@ -96,6 +97,7 @@ export async function silenPlugin(
   options: SilenPluginOptions = {},
 ): Promise<Plugin[]> {
   const routes = await scanRoutes(config.root)
+  const clientModules = await pluginRunnerFor(config).collectClientModules()
   const themeFile = await projectThemeFile(config.root)
   const modules = createVirtualModules({
     routes,
@@ -103,6 +105,7 @@ export async function silenPlugin(
     ...(themeFile === undefined ? {} : { themeFile }),
     publicConfigOnly: options.publicConfigOnly ?? false,
     hmr: options.hmr ?? false,
+    clientModules,
   })
   modules.theme = [
     `import ${JSON.stringify(viteImportPath(defaultThemeStylesheet()))}`,
@@ -122,6 +125,7 @@ export async function silenPlugin(
       ...(themeFile === undefined ? {} : { themeFile }),
       publicConfigOnly: options.publicConfigOnly ?? false,
       hmr: options.hmr ?? false,
+      clientModules,
     }).routes
     await server.restart()
     server.ws.send({

@@ -4,6 +4,9 @@ import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
 import { z } from 'zod'
 import type { ResolvedConfig, UserConfig } from '../shared/config.js'
+import type { SilenPluginEntry } from '../shared/plugin.js'
+import { hasExecutableUrlScheme } from '../shared/url.js'
+import { attachPluginRunner, createPluginRunner } from './plugins.js'
 
 let configLoadId = 0
 
@@ -70,6 +73,68 @@ const baseSchema = z
     }
   })
 
+const analyticsAttributeName = /^[A-Za-z_:][A-Za-z0-9:._-]*$/
+const reservedAnalyticsAttributes = new Set(['src', 'async', 'defer'])
+
+function safeScriptSource(value: string): boolean {
+  return !hasExecutableUrlScheme(value)
+}
+
+const analyticsAttributesSchema = z
+  .record(z.string(), z.union([z.string(), z.boolean()]))
+  .superRefine((attributes, context) => {
+    for (const name of Object.keys(attributes)) {
+      if (!analyticsAttributeName.test(name)) {
+        context.addIssue({
+          code: 'custom',
+          message: `invalid analytics script attribute name: ${name}`,
+        })
+      }
+      if (reservedAnalyticsAttributes.has(name.toLowerCase())) {
+        context.addIssue({
+          code: 'custom',
+          message: `analytics script attribute ${name} must use its typed field`,
+        })
+      }
+    }
+  })
+
+const analyticsScriptSchema = z
+  .object({
+    src: z
+      .string()
+      .min(1)
+      .refine(safeScriptSource, { message: 'unsafe analytics script URL' })
+      .optional(),
+    content: z.string().min(1).optional(),
+    async: z.boolean().optional(),
+    defer: z.boolean().optional(),
+    attributes: analyticsAttributesSchema.optional(),
+  })
+  .refine(
+    (script) => (script.src === undefined) !== (script.content === undefined),
+    { message: 'analytics scripts require exactly one of src or content' },
+  )
+
+const analyticsProviderSchema = z.discriminatedUnion('provider', [
+  z.object({
+    provider: z.literal('google'),
+    id: z.string().min(1),
+    enabled: z.boolean().optional(),
+  }),
+  z.object({
+    provider: z.literal('baidu'),
+    id: z.string().min(1),
+    enabled: z.boolean().optional(),
+  }),
+  z.object({
+    provider: z.literal('custom'),
+    name: z.string().min(1).optional(),
+    scripts: z.array(analyticsScriptSchema).min(1),
+    enabled: z.boolean().optional(),
+  }),
+])
+
 const schema = z
   .object({
     title: z.string().default('Silen'),
@@ -79,6 +144,7 @@ const schema = z
     outDir: z.string().optional(),
     onBrokenLinks: z.enum(['error', 'warn', 'ignore']).default('error'),
     themeConfig: z.record(z.string(), z.json()).default({}),
+    analytics: z.array(analyticsProviderSchema).default([]),
     ai: z
       .object({
         llmsTxt: z.boolean().default(true),
@@ -108,6 +174,7 @@ export async function resolveConfig(
       entryPoints: [configFile],
       outfile: bundled,
       bundle: true,
+      packages: 'external',
       platform: 'node',
       format: 'esm',
     })
@@ -116,15 +183,33 @@ export async function resolveConfig(
   } finally {
     await rm(bundled, { force: true })
   }
-  const loaded = (loadedModule as { default: UserConfig }).default
-  const parsed = schema.parse(loaded)
+  const loaded = (loadedModule as { default: unknown }).default
+  if (typeof loaded !== 'object' || loaded === null || Array.isArray(loaded)) {
+    throw new TypeError('Silen config must default export an object')
+  }
+  const rawConfig = loaded as UserConfig
+  if (rawConfig.plugins !== undefined && !Array.isArray(rawConfig.plugins)) {
+    throw new TypeError('Silen config plugins must be an array')
+  }
+  const runner = await createPluginRunner(
+    (rawConfig.plugins ?? []) as readonly SilenPluginEntry[],
+    { command, root: absoluteRoot, configFile },
+  )
+  const configured = await runner.runConfig(rawConfig)
+  const configWithoutPlugins: UserConfig = { ...configured }
+  delete configWithoutPlugins.plugins
+  const parsed = schema.parse(configWithoutPlugins)
 
-  return {
+  const resolved: ResolvedConfig = {
     ...parsed,
+    plugins: runner.plugins,
     command,
     root: absoluteRoot,
     configFile,
     base: parsed.base,
     outDir: path.resolve(absoluteRoot, parsed.outDir ?? '.silen/dist'),
   }
+  attachPluginRunner(resolved, runner)
+  await runner.runConfigResolved(resolved)
+  return resolved
 }

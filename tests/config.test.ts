@@ -1,8 +1,9 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveConfig } from '../src/node/config'
+import { pluginRunnerFor } from '../src/node/plugins'
 
 describe('resolveConfig', () => {
   const temporaryRoots = new Set<string>()
@@ -28,16 +29,20 @@ describe('resolveConfig', () => {
     temporaryRoots.clear()
   })
 
-  async function resolveInlineBase(base: string) {
+  async function resolveInlineConfig(config: unknown) {
     const root = await mkdtemp(path.join(os.tmpdir(), 'silen-base-'))
     temporaryRoots.add(root)
     await mkdir(path.join(root, '.silen'), { recursive: true })
     await writeFile(
       path.join(root, '.silen/config.ts'),
-      `export default ${JSON.stringify({ base })}`,
+      `export default ${JSON.stringify(config)}`,
       'utf8',
     )
     return resolveConfig(root, 'build')
+  }
+
+  async function resolveInlineBase(base: string) {
+    return resolveInlineConfig({ base })
   }
 
   it('loads .silen/config.ts and normalizes base', async () => {
@@ -54,6 +59,8 @@ describe('resolveConfig', () => {
       outDir: path.join(root, '.silen/dist'),
       onBrokenLinks: 'error',
       themeConfig: {},
+      analytics: [],
+      plugins: [],
       ai: {
         llmsTxt: true,
         llmsFullTxt: true,
@@ -66,10 +73,135 @@ describe('resolveConfig', () => {
     })
   })
 
+  it('preserves npm plugin module locations while loading TypeScript config', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'silen-package-plugin-'))
+    temporaryRoots.add(root)
+    const pluginDirectory = path.join(root, 'node_modules', 'fixture-plugin')
+    await mkdir(path.join(root, '.silen'), { recursive: true })
+    await mkdir(pluginDirectory, { recursive: true })
+    await Promise.all([
+      writeFile(
+        path.join(pluginDirectory, 'package.json'),
+        JSON.stringify({
+          name: 'fixture-plugin',
+          type: 'module',
+          exports: './index.js',
+        }),
+        'utf8',
+      ),
+      writeFile(
+        path.join(pluginDirectory, 'index.js'),
+        `import { fileURLToPath } from 'node:url'
+export default () => ({
+  name: 'fixture-package',
+  clientModules() {
+    return fileURLToPath(new URL('./client.js', import.meta.url))
+  },
+})
+`,
+        'utf8',
+      ),
+      writeFile(
+        path.join(pluginDirectory, 'client.js'),
+        'export const setup = () => {}\n',
+        'utf8',
+      ),
+      writeFile(
+        path.join(root, '.silen/config.ts'),
+        `import fixturePlugin from 'fixture-plugin'
+export default { plugins: [fixturePlugin] }
+`,
+        'utf8',
+      ),
+    ])
+
+    const config = await resolveConfig(root, 'build')
+    await expect(
+      pluginRunnerFor(config).collectClientModules(),
+    ).resolves.toEqual([
+      await realpath(path.join(pluginDirectory, 'client.js')),
+    ])
+  })
+
   it('rejects base values without a leading slash', async () => {
     await expect(
       resolveConfig(path.resolve('tests/fixtures/invalid-base'), 'build'),
     ).rejects.toThrow('base must start with /')
+  })
+
+  it('validates preset and custom analytics providers', async () => {
+    await expect(
+      resolveInlineConfig({
+        analytics: [
+          { provider: 'google', id: 'G-EXAMPLE' },
+          { provider: 'baidu', id: 'baidu-example' },
+          {
+            provider: 'custom',
+            name: 'self-hosted',
+            scripts: [
+              {
+                src: 'https://analytics.example.com/script.js',
+                defer: true,
+                attributes: { 'data-site': 'docs' },
+              },
+            ],
+          },
+        ],
+      }),
+    ).resolves.toMatchObject({
+      analytics: [
+        { provider: 'google', id: 'G-EXAMPLE' },
+        { provider: 'baidu', id: 'baidu-example' },
+        {
+          provider: 'custom',
+          name: 'self-hosted',
+          scripts: [
+            {
+              src: 'https://analytics.example.com/script.js',
+              defer: true,
+              attributes: { 'data-site': 'docs' },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('rejects ambiguous custom analytics scripts and reserved attributes', async () => {
+    await expect(
+      resolveInlineConfig({
+        analytics: [
+          {
+            provider: 'custom',
+            scripts: [{ src: '/analytics.js', content: 'void 0' }],
+          },
+        ],
+      }),
+    ).rejects.toThrow('exactly one of src or content')
+
+    await expect(
+      resolveInlineConfig({
+        analytics: [
+          {
+            provider: 'custom',
+            scripts: [
+              { src: '/analytics.js', attributes: { src: '/other.js' } },
+            ],
+          },
+        ],
+      }),
+    ).rejects.toThrow('must use its typed field')
+
+    await expect(
+      resolveInlineConfig({
+        analytics: [
+          {
+            provider: 'custom',
+            scripts: [{ src: 'java\nscript:alert(1)' }],
+          },
+        ],
+      }),
+    ).rejects.toThrow('unsafe analytics script URL')
   })
 
   it('rejects base values with URL or traversal ambiguity', async () => {

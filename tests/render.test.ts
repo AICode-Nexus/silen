@@ -115,4 +115,62 @@ describe('renderDocument', () => {
     )
     expect(document).not.toContain('/project/@fs/')
   })
+
+  it('injects production analytics providers into head with safe custom scripts', () => {
+    const document = renderDocument(
+      {
+        appHtml: '<main>Analytics page</main>',
+        status: 200,
+        title: 'Analytics',
+        description: '',
+        publicData: {
+          siteTitle: 'Fixture Docs',
+          lang: 'en-US',
+          base: '/project/',
+          route: '/',
+          analytics: [
+            { provider: 'google', id: 'G-EXAMPLE' },
+            { provider: 'baidu', id: 'baidu-example' },
+            {
+              provider: 'custom',
+              name: 'self-hosted',
+              scripts: [
+                {
+                  src: 'https://analytics.example.com/script.js?site=docs&v=1',
+                  defer: true,
+                  attributes: {
+                    crossorigin: 'anonymous',
+                    'data-site-id': 'docs',
+                  },
+                },
+                {
+                  content:
+                    'window.analyticsPayload="</script><script>unsafe()</script>"',
+                },
+              ],
+            },
+            { provider: 'google', id: 'disabled', enabled: false },
+          ],
+        },
+      },
+      { base: '/project/', clientEntry: 'assets/client.js' },
+    )
+
+    expect(document).toContain(
+      `window.gtag('config',"G-EXAMPLE",{send_page_view:false})`,
+    )
+    expect(document).toContain(
+      'src="https://www.googletagmanager.com/gtag/js?id=G-EXAMPLE" async',
+    )
+    expect(document).toContain("['_setAutoPageview',false]")
+    expect(document).toContain(
+      'src="https://hm.baidu.com/hm.js?baidu-example" async',
+    )
+    expect(document).toContain(
+      'src="https://analytics.example.com/script.js?site=docs&amp;v=1" defer crossorigin="anonymous" data-site-id="docs"',
+    )
+    expect(document).toContain('<\\/script><script>unsafe()<\\/script>')
+    expect(document).not.toContain('id=disabled')
+    expect(document).not.toContain('</script><script>unsafe()')
+  })
 })

@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs'
-import { realpath, stat } from 'node:fs/promises'
+import { readFile, realpath, stat } from 'node:fs/promises'
 import {
   createServer as createHttpServer,
   type IncomingMessage,
@@ -13,9 +13,13 @@ import { pipeline } from 'node:stream/promises'
 import react from '@vitejs/plugin-react'
 import { createServer as createViteServer, type ViteDevServer } from 'vite'
 import type { RenderedPage } from '../client/app.js'
+import type { ResolvedConfig } from '../shared/config.js'
+import type { SilenPageData } from '../shared/plugin.js'
 import { resolveConfig } from './config.js'
 import { createMdxPlugins } from './mdx.js'
 import { silenPlugin } from './plugin.js'
+import { pluginRunnerFor, type PluginRunner } from './plugins.js'
+import { scanRoutes } from './routes.js'
 import { renderDocument } from './render.js'
 import {
   defaultFavicon,
@@ -234,6 +238,7 @@ async function transformDevelopmentDocument(
   vite: ViteDevServer,
   requestUrl: string,
   favicon: ResolvedFavicon,
+  head: readonly import('../shared/plugin.js').SilenHeadEntry[] = [],
 ): Promise<string> {
   const shell = renderDocument(
     { ...page, appHtml: developmentSsrOutlet },
@@ -241,6 +246,7 @@ async function transformDevelopmentDocument(
       base: '/',
       clientEntry: viteFileUrl(clientEntrySource()),
       favicon,
+      head,
     },
   )
   const transformed = await vite.transformIndexHtml(requestUrl, shell)
@@ -251,7 +257,8 @@ async function renderDevelopmentRequest(
   request: IncomingMessage,
   response: ServerResponse,
   vite: ViteDevServer,
-  base: string,
+  config: ResolvedConfig,
+  runner: PluginRunner,
   requestUrl: string,
   favicon: ResolvedFavicon,
 ): Promise<void> {
@@ -264,11 +271,35 @@ async function renderDevelopmentRequest(
       throw new TypeError('the SSR entry does not export render(url)')
     }
     const page = await render(requestUrl)
+    let head: readonly import('../shared/plugin.js').SilenHeadEntry[] = []
+    if (runner.hasHook('transformHead')) {
+      const route = (await scanRoutes(config.root)).find(
+        (candidate) => candidate.path === page.publicData.route,
+      )
+      if (route) {
+        const source = await readFile(route.file, 'utf8')
+        const pageData: SilenPageData = {
+          title: page.title,
+          description: page.description,
+          frontmatter: page.publicData.frontmatter ?? {},
+          headings: page.publicData.headings ?? [],
+          links: page.publicData.links ?? [],
+          data: page.publicData.data ?? {},
+        }
+        head = await runner.transformHead(pageData, {
+          command: 'serve',
+          route: route.path,
+          file: route.file,
+          source,
+        })
+      }
+    }
     const document = await transformDevelopmentDocument(
       page,
       vite,
       requestUrl,
       favicon,
+      head,
     )
     sendText(
       request,
@@ -318,7 +349,8 @@ function sendDefaultFavicon(
 
 function createDevRequestHandler(
   vite: ViteDevServer,
-  base: string,
+  config: ResolvedConfig,
+  runner: PluginRunner,
   favicon: ResolvedFavicon,
 ): (request: IncomingMessage, response: ServerResponse) => void {
   return (request, response) => {
@@ -328,20 +360,20 @@ function createDevRequestHandler(
       sendText(request, response, 404, 'Not found\n')
       return
     }
-    if (baseRedirect(parsed.pathname, base)) {
-      sendRedirect(request, response, base)
+    if (baseRedirect(parsed.pathname, config.base)) {
+      sendRedirect(request, response, config.base)
       return
     }
-    if (!pathWithinBase(parsed.pathname, base)) {
+    if (!pathWithinBase(parsed.pathname, config.base)) {
       sendText(request, response, 404, 'Not found\n')
       return
     }
-    if (isDefaultFaviconRequest(parsed.pathname, base, favicon)) {
+    if (isDefaultFaviconRequest(parsed.pathname, config.base, favicon)) {
       sendDefaultFavicon(request, response)
       return
     }
 
-    const requestUrl = request.url ?? base
+    const requestUrl = request.url ?? config.base
     vite.middlewares(request, response, (error: unknown) => {
       if (error) {
         sendText(
@@ -356,7 +388,8 @@ function createDevRequestHandler(
         request,
         response,
         vite,
-        base,
+        config,
+        runner,
         requestUrl,
         favicon,
       )
@@ -570,6 +603,7 @@ export async function createDevServer(
 ): Promise<SilenServer> {
   const resolvedListen = listenOptions(options, 5173)
   const config = await resolveConfig(root, 'serve')
+  const runner = pluginRunnerFor(config)
   const favicon = await resolveSourceFavicon(config.root)
   const server = createHttpServer()
   let vite: ViteDevServer | undefined
@@ -596,7 +630,8 @@ export async function createDevServer(
       plugins: [
         react(),
         ...(await silenPlugin(config, { publicConfigOnly: true, hmr: true })),
-        ...createMdxPlugins(),
+        ...(await runner.collectVitePlugins()),
+        ...(await createMdxPlugins({ config, runner })),
       ],
       oxc: { jsx: { development: false } },
       resolve: { dedupe: ['react', 'react-dom'] },
@@ -610,7 +645,7 @@ export async function createDevServer(
     vite = viteServer
     server.on(
       'request',
-      createDevRequestHandler(viteServer, config.base, favicon),
+      createDevRequestHandler(viteServer, config, runner, favicon),
     )
     const address = await listen(server, resolvedListen)
     return serverLifecycle(

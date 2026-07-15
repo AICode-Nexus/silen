@@ -134,7 +134,7 @@ describe('published package smoke test', () => {
         type: 'git',
         url: 'git+https://github.com/AICode-Nexus/silen.git',
       },
-      version: '0.1.0-alpha.1',
+      version: '0.1.0-alpha.2',
     })
     expect(
       (await execa('tar', ['-xOzf', archivePath, 'package/dist/node/cli.js']))
@@ -182,13 +182,27 @@ describe('published package smoke test', () => {
       ),
       writeFile(
         path.join(consumer, 'docs', '.silen', 'config.ts'),
-        `import { defineConfig } from '@aicode-nexus/silen'
+        `import { defineConfig, definePlugin } from '@aicode-nexus/silen'
+
+const packedPlugin = definePlugin((_context, options: { label: string }) => ({
+  name: 'packed-plugin',
+  transformPageData(page) {
+    return { data: { ...page.data, packedPlugin: options.label } }
+  },
+  transformHead() {
+    return [{
+      tag: 'meta',
+      attributes: { name: 'packed-plugin', content: options.label },
+    }]
+  },
+}))
 
 export default defineConfig({
   title: 'External package smoke',
   description: 'Built only from the installed tarball',
   base: '/handbook/',
   outDir: 'site',
+  plugins: [[packedPlugin, { label: 'installed-archive' }]],
 })
 `,
       ),
@@ -283,7 +297,7 @@ The nested route was generated.
     expect(help.exitCode, help.all).toBe(0)
     expect(help.all).toContain('build [root]')
     expect(version.exitCode, version.all).toBe(0)
-    expect(version.all).toContain('silen/0.1.0-alpha.1')
+    expect(version.all).toContain('silen/0.1.0-alpha.2')
 
     const built = await execa(executable, ['build', 'docs'], {
       cwd: consumer,
@@ -308,6 +322,10 @@ The nested route was generated.
     expect(home).toContain('data-packed-demo=""')
     expect(home).toContain('data-packed-base="/handbook/"')
     expect(home).toContain('Installed theme extension')
+    expect(home).toContain(
+      '<meta content="installed-archive" name="packed-plugin">',
+    )
+    expect(home).toContain('packedPlugin')
     expect(home).toMatch(/src="\/handbook\/assets\/.+\.js"/)
     expect(home).toContain(
       '<link rel="icon" type="image/svg+xml" href="/handbook/favicon.svg">',
@@ -403,6 +421,9 @@ The nested route was generated.
       expect(developmentHtml).toContain('data-packed-root=""')
       expect(developmentHtml).toContain('data-packed-demo=""')
       expect(developmentHtml).toContain('data-packed-base="/handbook/"')
+      expect(developmentHtml).toContain(
+        '<meta content="installed-archive" name="packed-plugin">',
+      )
       expect(developmentHtml).toContain(
         '<link rel="icon" type="image/svg+xml" href="/handbook/favicon.svg">',
       )

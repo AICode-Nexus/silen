@@ -1,0 +1,65 @@
+---
+title: Plugins
+description: Extend Silen through a stable, ordered lifecycle.
+---
+
+# Plugins
+
+Silen plugins extend the documentation lifecycle without importing internal
+files. A plugin is a local or npm factory configured directly in
+`.silen/config.ts`:
+
+```ts
+import { defineConfig, definePlugin } from '@aicode-nexus/silen'
+
+const readingTime = definePlugin(
+  (_context, options: { wordsPerMinute: number }) => ({
+    name: 'reading-time',
+    transformPageData(page, context) {
+      const words = context.source.trim().split(/\s+/).length
+      return {
+        data: {
+          ...page.data,
+          minutes: Math.max(1, Math.ceil(words / options.wordsPerMinute)),
+        },
+      }
+    },
+  }),
+)
+
+export default defineConfig({
+  plugins: [[readingTime, { wordsPerMinute: 250 }]],
+})
+```
+
+## Lifecycle
+
+Silen runs plugins in configuration order. The first release supports
+`config`, `configResolved`, `extendMdx`, `vite`, `clientModules`,
+`transformPageData`, `transformHead`, and `buildEnd`.
+
+- Use `extendMdx` for Remark and Rehype plugins.
+- Use `vite` for standard Vite integrations. `virtual:silen/*` modules remain
+  protected by core.
+- Use `transformPageData` for JSON-serializable metadata consumed by SSR,
+  hydration, search, and AI artifacts.
+- Use `transformHead` for typed `meta`, `link`, `script`, `style`, or
+  `noscript` entries.
+- Use `clientModules` for an SSR-safe `wrapRoot` and optional browser-only
+  `setup` function.
+- Use `buildEnd` to add files such as a sitemap after the output directory is
+  installed.
+
+Every plugin needs a `name`; add a distinct `id` when configuring multiple
+instances. Failures include the identity and hook, such as
+`Silen plugin analytics:docs failed in transformHead`.
+
+## SSR and compatibility
+
+Client modules are imported during SSR and hydration. Do not access `window` or
+`document` at module scope or inside `wrapRoot`; browser APIs belong in
+`setup`. Plugin packages should declare `@aicode-nexus/silen` as a peer
+dependency and import only documented public exports.
+
+See the npm-ready sitemap, reading-time, and analytics-client examples in
+[`examples/plugins`](https://github.com/AICode-Nexus/silen/tree/main/examples/plugins).

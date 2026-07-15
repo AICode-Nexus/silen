@@ -21,6 +21,7 @@ interface IndexedSearchDocument {
   id: string
   title: string
   route: string
+  description?: string
   text: string
   headings: string[]
   heading?: string
@@ -36,10 +37,10 @@ interface LoadedSearchIndex {
 }
 
 const SEARCH_OPTIONS: Options<IndexedSearchDocument> = {
-  fields: ['title', 'headings', 'text'],
-  storeFields: ['title', 'route', 'text', 'headings', 'heading'],
+  fields: ['title', 'description', 'headings', 'text'],
+  storeFields: ['title', 'route', 'description', 'text', 'headings', 'heading'],
   searchOptions: {
-    boost: { title: 4, headings: 2 },
+    boost: { title: 4, description: 3, headings: 2 },
     prefix: true,
     fuzzy: 0.2,
   },
@@ -204,6 +205,31 @@ function highlightedSnippet(text: string, terms: readonly string[]): string {
   return `${start > 0 ? '…' : ''}${pieces.join('')}${end < normalized.length ? '…' : ''}`
 }
 
+function includesTerm(value: string, terms: readonly string[]): boolean {
+  const normalized = value.toLocaleLowerCase()
+  return terms.some((term) => normalized.includes(term.toLocaleLowerCase()))
+}
+
+function snippetSource({
+  title,
+  description,
+  text,
+  terms,
+}: {
+  title: string
+  description: string
+  text: string
+  terms: readonly string[]
+}): string {
+  if (
+    description &&
+    (includesTerm(title, terms) || includesTerm(description, terms))
+  ) {
+    return description
+  }
+  return text || description || title
+}
+
 function resultHeading(
   result: MiniSearchResult,
   terms: readonly string[],
@@ -223,6 +249,8 @@ function resultHeading(
 function mapResult(result: MiniSearchResult): SearchResult {
   const title = typeof result.title === 'string' ? result.title : ''
   const route = typeof result.route === 'string' ? result.route : ''
+  const description =
+    typeof result.description === 'string' ? result.description : ''
   const text = typeof result.text === 'string' ? result.text : title
   const terms = [...result.terms, ...result.queryTerms]
   const heading = resultHeading(result, terms)
@@ -230,7 +258,10 @@ function mapResult(result: MiniSearchResult): SearchResult {
     id: String(result.id),
     title,
     route,
-    snippet: highlightedSnippet(text, terms),
+    snippet: highlightedSnippet(
+      snippetSource({ title, description, text, terms }),
+      terms,
+    ),
     ...(heading === undefined ? {} : { heading }),
   }
 }

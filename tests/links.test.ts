@@ -29,6 +29,7 @@ function page(links: string[]): CompiledPage {
     links,
     title: 'Guide',
     description: '',
+    data: {},
   }
 }
 

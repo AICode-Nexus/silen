@@ -24,7 +24,7 @@ async function loadMdxModule(file: string) {
     appType: 'custom',
     configFile: false,
     logLevel: 'silent',
-    plugins: createMdxPlugins(),
+    plugins: await createMdxPlugins(),
     root: process.cwd(),
     server: { middlewareMode: true },
   })
@@ -63,6 +63,7 @@ describe('MDX compilation', () => {
       links: ['/guide/configuration', 'https://example.com/packages'],
       title: 'Getting Started',
       description: 'Install Silen in a new project.',
+      data: {},
     })
   })
 
@@ -105,8 +106,8 @@ describe('MDX compilation', () => {
     ])
   })
 
-  it('composes a metadata pre-transform before the official MDX plugin', () => {
-    const plugins = createMdxPlugins()
+  it('composes a metadata pre-transform before the official MDX plugin', async () => {
+    const plugins = await createMdxPlugins()
 
     expect(plugins.map((plugin) => plugin.name)).toEqual([
       'silen:page-data',

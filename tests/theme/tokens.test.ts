@@ -129,4 +129,27 @@ export default defineConfig({
     expect(css).not.toContain(path.resolve('src/theme-default'))
     expect(css).not.toContain('src/theme-default/styles')
   })
+
+  it('keeps homepage action labels and icons on one row', async () => {
+    const documentStyles = await readFile(
+      'src/theme-default/styles/document.css',
+      'utf8',
+    )
+    const actionStart = documentStyles.indexOf('.silen-home-inline-link,')
+    const actionEnd = documentStyles.indexOf(
+      '.silen-home-panel-grid,',
+      actionStart,
+    )
+    const actionStyles = documentStyles.slice(actionStart, actionEnd)
+
+    expect(actionStart).toBeGreaterThanOrEqual(0)
+    expect(actionEnd).toBeGreaterThan(actionStart)
+    expect(actionStyles).toContain('display: inline-flex;')
+    expect(actionStyles).toContain('justify-self: start;')
+    expect(actionStyles).toContain('white-space: nowrap;')
+    expect(actionStyles).toContain('.silen-home-inline-link > p,')
+    expect(actionStyles).toContain('gap: inherit;')
+    expect(actionStyles).toContain('margin: 0;')
+    expect(actionStyles).toContain('flex: 0 0 auto;')
+  })
 })

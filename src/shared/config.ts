@@ -1,3 +1,5 @@
+import type { ResolvedSilenPlugin, SilenPluginEntry } from './plugin.js'
+
 export interface ThemeNavItem {
   readonly text: string
   readonly link: string
@@ -95,6 +97,37 @@ export interface AiArtifactConfig {
   readonly index: boolean
 }
 
+export interface AnalyticsScript {
+  readonly src?: string | undefined
+  readonly content?: string | undefined
+  readonly async?: boolean | undefined
+  readonly defer?: boolean | undefined
+  readonly attributes?: Readonly<Record<string, string | boolean>> | undefined
+}
+
+interface AnalyticsProviderBase {
+  readonly enabled?: boolean | undefined
+}
+
+export interface GoogleAnalyticsProvider extends AnalyticsProviderBase {
+  readonly provider: 'google'
+  readonly id: string
+}
+
+export interface BaiduAnalyticsProvider extends AnalyticsProviderBase {
+  readonly provider: 'baidu'
+  readonly id: string
+}
+
+export interface CustomAnalyticsProvider extends AnalyticsProviderBase {
+  readonly provider: 'custom'
+  readonly name?: string | undefined
+  readonly scripts: readonly AnalyticsScript[]
+}
+
+export type AnalyticsProvider =
+  GoogleAnalyticsProvider | BaiduAnalyticsProvider | CustomAnalyticsProvider
+
 export interface UserConfig {
   title?: string
   description?: string
@@ -103,11 +136,16 @@ export interface UserConfig {
   outDir?: string
   onBrokenLinks?: 'error' | 'warn' | 'ignore'
   themeConfig?: ThemeConfig
+  analytics?: readonly AnalyticsProvider[]
+  plugins?: readonly SilenPluginEntry[]
   ai?: Partial<AiArtifactConfig>
 }
 
-export interface ResolvedConfig extends Required<Omit<UserConfig, 'ai'>> {
+export interface ResolvedConfig extends Required<
+  Omit<UserConfig, 'ai' | 'plugins'>
+> {
   ai: AiArtifactConfig
+  plugins?: readonly ResolvedSilenPlugin[]
   command: 'serve' | 'build'
   root: string
   configFile: string

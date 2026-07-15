@@ -19,6 +19,7 @@ export default defineConfig({
         text: 'Start here',
         items: [
           { text: 'Introduction', link: '/guide/' },
+          { text: 'Plugins', link: '/guide/plugins' },
           { text: 'AI-ready docs', link: '/ai/' },
         ],
       },
@@ -46,6 +47,7 @@ export default defineConfig({
             text: '从这里开始',
             items: [
               { text: '快速开始', link: '/zh/guide/' },
+              { text: '插件', link: '/zh/guide/plugins' },
               { text: 'AI-ready 文档', link: '/zh/ai/' },
             ],
           },

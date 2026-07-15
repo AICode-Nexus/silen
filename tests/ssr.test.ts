@@ -15,6 +15,7 @@ const config: ResolvedConfig = {
   outDir: path.join(fixtureRoot, '.silen/dist'),
   onBrokenLinks: 'error',
   themeConfig: {},
+  analytics: [],
   ai: {
     llmsTxt: true,
     llmsFullTxt: true,
@@ -37,7 +38,7 @@ describe('SSR entry', () => {
       logLevel: 'silent',
       root: process.cwd(),
       server: { middlewareMode: true },
-      plugins: [...(await silenPlugin(config)), ...createMdxPlugins()],
+      plugins: [...(await silenPlugin(config)), ...(await createMdxPlugins())],
     })
 
     const entry = path.resolve('src/client/ssr-entry.tsx').replaceAll('\\', '/')

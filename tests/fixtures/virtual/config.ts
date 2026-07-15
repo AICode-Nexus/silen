@@ -5,6 +5,7 @@ const config: VirtualConfig = {
   description: '',
   lang: 'en-US',
   base: '/',
+  analytics: [],
   ai: {
     llmsTxt: true,
     llmsFullTxt: true,

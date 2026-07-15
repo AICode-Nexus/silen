@@ -1,0 +1,61 @@
+---
+title: 插件
+description: 通过稳定且有序的生命周期扩展 Silen。
+---
+
+# 插件
+
+Silen 插件无需导入内部文件，即可扩展文档生命周期。插件是直接配置在
+`.silen/config.ts` 中的本地或 npm 工厂函数：
+
+```ts
+import { defineConfig, definePlugin } from '@aicode-nexus/silen'
+
+const readingTime = definePlugin(
+  (_context, options: { wordsPerMinute: number }) => ({
+    name: 'reading-time',
+    transformPageData(page, context) {
+      const words = context.source.trim().split(/\s+/).length
+      return {
+        data: {
+          ...page.data,
+          minutes: Math.max(1, Math.ceil(words / options.wordsPerMinute)),
+        },
+      }
+    },
+  }),
+)
+
+export default defineConfig({
+  plugins: [[readingTime, { wordsPerMinute: 250 }]],
+})
+```
+
+## 生命周期
+
+Silen 按配置顺序执行插件。首个版本支持 `config`、`configResolved`、
+`extendMdx`、`vite`、`clientModules`、`transformPageData`、
+`transformHead` 和 `buildEnd`。
+
+- `extendMdx` 接入 Remark 与 Rehype 插件。
+- `vite` 接入标准 Vite 能力；`virtual:silen/*` 模块仍由核心保护。
+- `transformPageData` 生成可 JSON 序列化、可供 SSR、hydration、搜索和
+  AI 产物共同使用的页面数据。
+- `transformHead` 添加类型化的 `meta`、`link`、`script`、`style` 或
+  `noscript` 节点。
+- `clientModules` 提供 SSR-safe 的 `wrapRoot` 和可选的浏览器端 `setup`。
+- `buildEnd` 在产物目录安装完成后生成 sitemap 等附加文件。
+
+每个插件都必须提供 `name`；同一插件配置多个实例时应提供不同的 `id`。
+错误信息会包含插件标识和钩子，例如
+`Silen plugin analytics:docs failed in transformHead`。
+
+## SSR 与兼容性
+
+客户端模块会同时进入 SSR 与 hydration。不要在模块顶层或 `wrapRoot` 中
+访问 `window`、`document`；浏览器 API 应放在 `setup` 中。插件包应把
+`@aicode-nexus/silen` 声明为 peer dependency，并且只导入文档化的公开 API。
+
+仓库的
+[`examples/plugins`](https://github.com/AICode-Nexus/silen/tree/main/examples/plugins)
+提供了可直接整理成 npm 包的 sitemap、阅读时间和 analytics-client 示例。

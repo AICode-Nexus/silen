@@ -14,6 +14,9 @@ const virtualAliases = {
   'virtual:silen/ask-ai': fileURLToPath(
     new URL('./tests/fixtures/virtual/ask-ai.ts', import.meta.url),
   ),
+  'virtual:silen/client-extensions': fileURLToPath(
+    new URL('./tests/fixtures/virtual/client-extensions.ts', import.meta.url),
+  ),
 }
 
 export default defineConfig({
