@@ -746,7 +746,6 @@ unrelated plugin changes.
 - Modify: tests/ai/workspace.test.ts
 - Modify: tests/ai/mcp-read.test.ts
 - Create: tests/ai/contract-audit.test.ts
-- Modify: tests/ai/documentation.test.ts
 
 **Behavior:**
 
@@ -793,29 +792,21 @@ documentation root.
 Generate the guide from stable contract facts rather than duplicating tool
 lists. The response must still be safe when no build output exists.
 
-- [ ] **Step 4: Update human documentation tests**
-
-README and documentation contract tests must mention:
-
-- Package Agent paths.
-- Site manifest discovery.
-- Default read-only MCP and --allow-write.
-- Explicit public instructions.
-- Unsupported-schema fallback.
+- [ ] **Step 4: Run the audit and MCP regression set**
 
 Run:
 
 ~~~bash
-pnpm test tests/ai/contract-audit.test.ts tests/ai/workspace.test.ts tests/ai/mcp-read.test.ts tests/ai/documentation.test.ts
+pnpm test tests/ai/contract-audit.test.ts tests/ai/workspace.test.ts tests/ai/mcp-read.test.ts
 pnpm typecheck
 ~~~
 
-Expected: audit, guide, documentation, and types pass.
+Expected: audit, guide, and types pass.
 
 - [ ] **Step 5: Commit**
 
 ~~~bash
-git add src/ai/audit.ts src/ai/workspace.ts src/ai/mcp/server.ts src/ai/mcp/read-tools.ts tests/ai/contract-audit.test.ts tests/ai/workspace.test.ts tests/ai/mcp-read.test.ts tests/ai/documentation.test.ts
+git add src/ai/audit.ts src/ai/workspace.ts src/ai/mcp/server.ts src/ai/mcp/read-tools.ts tests/ai/contract-audit.test.ts tests/ai/workspace.test.ts tests/ai/mcp-read.test.ts
 git commit -m "feat(ai): audit Agent Contract integrity"
 ~~~
 
@@ -835,6 +826,7 @@ git commit -m "feat(ai): audit Agent Contract integrity"
 - Modify: README.md
 - Modify: tests/website.test.ts
 - Modify: tests/e2e/ai.spec.ts
+- Modify: tests/ai/documentation.test.ts
 - Create: tests/ai/agent-scenarios.test.ts
 
 - [ ] **Step 1: Add failing official-site assertions**
@@ -866,7 +858,17 @@ The human pages explain how a user points an AI client at:
 Add thin examples for Codex, Claude Code, and Cursor that all reference the same
 contract. Do not maintain client-specific API copies.
 
-- [ ] **Step 4: Add deterministic Agent scenarios**
+- [ ] **Step 4: Update documentation contract tests**
+
+README and the official site must mention:
+
+- Package Agent paths.
+- Site manifest discovery.
+- Default read-only MCP and --allow-write.
+- Explicit public instructions.
+- Unsupported-schema fallback.
+
+- [ ] **Step 5: Add deterministic Agent scenarios**
 
 Scenario A:
 
@@ -891,15 +893,16 @@ Run:
 ~~~bash
 pnpm build
 pnpm site:build
-pnpm test tests/website.test.ts tests/ai/agent-scenarios.test.ts tests/e2e/ai.spec.ts
+pnpm test tests/website.test.ts tests/ai/agent-scenarios.test.ts tests/ai/documentation.test.ts
+pnpm exec playwright test tests/e2e/ai.spec.ts
 ~~~
 
 Expected: official contract and both Agent scenarios pass.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ~~~bash
-git add website/.silen/config.ts website/.silen/ai-public.md website/.silen/ai-tasks website/ai/index.mdx website/zh/ai/index.mdx website/guide/index.mdx website/zh/guide/index.mdx README.md tests/website.test.ts tests/e2e/ai.spec.ts tests/ai/agent-scenarios.test.ts
+git add website/.silen/config.ts website/.silen/ai-public.md website/.silen/ai-tasks website/ai/index.mdx website/zh/ai/index.mdx website/guide/index.mdx website/zh/guide/index.mdx README.md tests/website.test.ts tests/e2e/ai.spec.ts tests/ai/documentation.test.ts tests/ai/agent-scenarios.test.ts
 git commit -m "docs(ai): publish the official Agent Contract"
 ~~~
 
