@@ -115,7 +115,7 @@ the ownership boundaries and public outputs in this plan must remain intact.
 - serializeContractJson(value) with stable key and array ordering and one final
   newline.
 
-- [ ] **Step 1: Add failing manifest and API schema tests**
+- [x] **Step 1: Add failing manifest and API schema tests**
 
 Cover:
 
@@ -135,7 +135,7 @@ pnpm test tests/ai/contract-schema.test.ts
 Expected: the new test fails because contract types and serializers do not
 exist.
 
-- [ ] **Step 2: Implement the smallest v1 schemas and serializer**
+- [x] **Step 2: Implement the smallest v1 schemas and serializer**
 
 Use strict Zod objects for public JSON. Preserve deterministic ordering by
 sorting resources by id and language, tasks by id and language, config fields by
@@ -144,7 +144,7 @@ symbol.
 
 Do not add site file loading or output writes in this task.
 
-- [ ] **Step 3: Centralize the package version**
+- [x] **Step 3: Centralize the package version**
 
 Move the duplicated CLI and MCP version string into src/shared/version.ts.
 Add a test that compares SILEN_VERSION with package.json. This keeps the value
@@ -159,7 +159,7 @@ pnpm typecheck
 
 Expected: all selected tests and typecheck pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ~~~bash
 git add src/shared/ai-contract.ts src/shared/version.ts src/ai/contract/schema.ts src/ai/contract/serialize.ts src/node/cli.ts src/ai/mcp/server.ts tests/ai/contract-schema.test.ts tests/cli.test.ts tests/ai/mcp-stdio.test.ts

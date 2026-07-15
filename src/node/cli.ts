@@ -2,6 +2,7 @@
 import cac from 'cac'
 import { serveMcp } from '../ai/mcp/stdio.js'
 import { createWorkspace } from '../ai/workspace.js'
+import { SILEN_VERSION } from '../shared/version.js'
 import { build } from './build.js'
 import {
   createDevServer,
@@ -9,8 +10,6 @@ import {
   type ServerOptions,
   type SilenServer,
 } from './server.js'
-
-const version = '0.1.0-alpha.3'
 
 type ServerFactory = (
   root: string,
@@ -166,7 +165,7 @@ async function runCli(): Promise<void> {
       })
     })
   cli.help()
-  cli.version(version)
+  cli.version(SILEN_VERSION)
   cli.parse(process.argv, { run: false })
 
   if (cli.matchedCommand) {
