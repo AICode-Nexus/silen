@@ -132,6 +132,40 @@ export default defineConfig({
 })
 ```
 
+## Agent Contract for AI clients
+
+Silen publishes one versioned contract for AI clients that create or maintain
+documentation. For an installed package, start at
+`@aicode-nexus/silen/agent/manifest.json`; its resources include
+`@aicode-nexus/silen/agent/api.json`, the default guide, and task playbooks such
+as `@aicode-nexus/silen/agent/tasks/create-site.md`. The package contract is
+authoritative for that installed version.
+
+Every enabled site build also publishes a site-specific discovery document at
+`/.well-known/silen/manifest.json`. With `base: '/handbook/'`, discover it at
+`/handbook/.well-known/silen/manifest.json`. The site manifest is authoritative
+for deployed routes, locales, enabled artifacts, and public project guidance.
+
+Public project-specific instructions and tasks must be opted in explicitly:
+
+```ts
+export default defineConfig({
+  ai: {
+    contract: {
+      enabled: true,
+      instructions: '.silen/ai-public.md',
+      tasksDir: '.silen/ai-tasks',
+    },
+  },
+})
+```
+
+Treat those files as public build input: do not include secrets, private paths,
+or internal endpoints. Codex, Claude Code, Cursor, and other clients should all
+consume this same contract and the MCP command below instead of maintaining
+client-specific API copies. If a client does not support the manifest's schema
+version, it must fall back to linked public Markdown and remain read-only.
+
 ## Local AI workspace and MCP
 
 The workspace commands are deterministic and model-free:

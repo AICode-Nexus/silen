@@ -7,6 +7,12 @@ export default defineConfig({
   lang: 'en-US',
   base: '/silen/',
   onBrokenLinks: 'error',
+  ai: {
+    contract: {
+      enabled: true,
+      instructions: '.silen/ai-public.md',
+    },
+  },
   themeConfig: {
     logo: { src: '/logo.svg', alt: 'Silen' },
     nav: [

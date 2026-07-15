@@ -829,7 +829,7 @@ git commit -m "feat(ai): audit Agent Contract integrity"
 - Modify: tests/ai/documentation.test.ts
 - Create: tests/ai/agent-scenarios.test.ts
 
-- [ ] **Step 1: Add failing official-site assertions**
+- [x] **Step 1: Add failing official-site assertions**
 
 After site build, verify:
 
@@ -841,13 +841,13 @@ After site build, verify:
   settle.
 - No official public contract contains the checkout path.
 
-- [ ] **Step 2: Add explicit official instructions**
+- [x] **Step 2: Add explicit official instructions**
 
 Explain that the official package contract is authoritative for an installed
 version, and that the website contract is authoritative for the deployed
 official site. Keep tutorials task-oriented and avoid copying API tables.
 
-- [ ] **Step 3: Update human-facing AI documentation**
+- [x] **Step 3: Update human-facing AI documentation**
 
 The human pages explain how a user points an AI client at:
 
@@ -858,7 +858,7 @@ The human pages explain how a user points an AI client at:
 Add thin examples for Codex, Claude Code, and Cursor that all reference the same
 contract. Do not maintain client-specific API copies.
 
-- [ ] **Step 4: Update documentation contract tests**
+- [x] **Step 4: Update documentation contract tests**
 
 README and the official site must mention:
 
@@ -868,7 +868,7 @@ README and the official site must mention:
 - Explicit public instructions.
 - Unsupported-schema fallback.
 
-- [ ] **Step 5: Add deterministic Agent scenarios**
+- [x] **Step 5: Add deterministic Agent scenarios**
 
 Scenario A:
 
@@ -899,7 +899,7 @@ pnpm exec playwright test tests/e2e/ai.spec.ts
 
 Expected: official contract and both Agent scenarios pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add website/.silen/config.ts website/.silen/ai-public.md website/.silen/ai-tasks website/ai/index.mdx website/zh/ai/index.mdx website/guide/index.mdx website/zh/guide/index.mdx README.md tests/website.test.ts tests/e2e/ai.spec.ts tests/ai/documentation.test.ts tests/ai/agent-scenarios.test.ts
