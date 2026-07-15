@@ -45,7 +45,7 @@ describe('Site Agent Contract', () => {
     }
 
     expect(manifest.kind).toBe('silen-site')
-    expect(manifest.generator.version).toBe('0.1.0-alpha.3')
+    expect(manifest.generator.version).toBe('0.1.0')
     expect(manifest.resources).toContainEqual(
       expect.objectContaining({
         id: 'silen-manifest',

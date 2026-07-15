@@ -152,7 +152,7 @@ describe('published package smoke test', () => {
         type: 'git',
         url: 'git+https://github.com/AICode-Nexus/silen.git',
       },
-      version: '0.1.0-alpha.3',
+      version: '0.1.0',
     })
     expect(pluginDeclaration).toContain(
       "import type { ProcessorOptions as MdxOptions } from '@mdx-js/mdx'",
@@ -313,7 +313,7 @@ console.log(JSON.stringify(values))`,
     ) as string[]
     expect(JSON.parse(frameworkManifest!)).toMatchObject({
       kind: 'silen-framework',
-      generator: { version: '0.1.0-alpha.3' },
+      generator: { version: '0.1.0' },
     })
     expect(JSON.parse(frameworkApi!)).toMatchObject({ schemaVersion: 1 })
     expect(createSiteTask).toContain('id: create-site')
@@ -353,7 +353,7 @@ console.log(JSON.stringify(values))`,
     expect(help.exitCode, help.all).toBe(0)
     expect(help.all).toContain('build [root]')
     expect(version.exitCode, version.all).toBe(0)
-    expect(version.all).toContain('silen/0.1.0-alpha.3')
+    expect(version.all).toContain('silen/0.1.0')
 
     const built = await execa(executable, ['build', 'docs'], {
       cwd: consumer,

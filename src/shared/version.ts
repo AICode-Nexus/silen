@@ -1,1 +1,1 @@
-export const SILEN_VERSION = '0.1.0-alpha.3' as const
+export const SILEN_VERSION = '0.1.0' as const

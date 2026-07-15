@@ -77,7 +77,6 @@ describe('packed package declarations', () => {
           strict: true,
           target: 'ES2023',
           lib: ['ESNext', 'DOM'],
-          skipLibCheck: true,
         },
         include: ['index.ts', 'page.mdx'],
       }),
