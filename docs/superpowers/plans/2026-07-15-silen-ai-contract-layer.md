@@ -377,7 +377,7 @@ git commit -m "feat(ai): derive config docs from runtime schema"
 - createCliApiContract(descriptors) omits handlers and serializes only public
   metadata.
 
-- [ ] **Step 1: Add failing parity tests**
+- [x] **Step 1: Add failing parity tests**
 
 For dev, build, preview, ai, and mcp assert:
 
@@ -396,13 +396,13 @@ pnpm test tests/ai/cli-contract.test.ts tests/cli.test.ts
 
 Expected: failure because CLI metadata is embedded inside cli.ts.
 
-- [ ] **Step 2: Extract descriptors without changing behavior**
+- [x] **Step 2: Extract descriptors without changing behavior**
 
 Move handlers behind dependency injection so tests can exercise descriptors
 without starting long-lived servers. CAC registration must iterate the same
 descriptors exported to the API contract.
 
-- [ ] **Step 3: Generate the CLI API section**
+- [x] **Step 3: Generate the CLI API section**
 
 Strip handler functions and serialize:
 
@@ -421,7 +421,7 @@ pnpm typecheck
 
 Expected: CLI behavior and help remain unchanged and contract parity passes.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ~~~bash
 git add src/node/commands.ts src/ai/contract/cli-api.ts src/node/cli.ts tests/cli.test.ts tests/ai/cli-contract.test.ts
