@@ -331,6 +331,60 @@ describe('default content layouts', () => {
     expect(screen.getByText('Configured feature')).not.toBeNull()
   })
 
+  it('uses active locale home content before global home defaults', () => {
+    const themeConfig: ThemeConfig = {
+      home: {
+        hero: {
+          name: 'English home',
+          text: 'Documentation without the noise.',
+        },
+        features: [{ title: 'React-first', details: 'English feature copy.' }],
+      },
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        {
+          lang: 'zh-CN',
+          label: '中文',
+          root: '/zh/',
+          home: {
+            hero: {
+              name: 'Silen',
+              text: '去掉噪音的文档体验。',
+              actions: [
+                { text: '快速开始', link: '/zh/guide/', theme: 'brand' },
+              ],
+            },
+            features: [
+              {
+                title: 'React 优先',
+                details: '使用 TypeScript、React 组件和可信的 MDX。',
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    render(
+      <TestSiteProvider
+        base="/project/"
+        path="/project/zh/"
+        themeConfig={themeConfig}
+      >
+        <HomeLayout>中文正文</HomeLayout>
+      </TestSiteProvider>,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Silen' })).not.toBeNull()
+    expect(screen.getByText('去掉噪音的文档体验。')).not.toBeNull()
+    expect(
+      screen.getByRole('link', { name: '快速开始' }).getAttribute('href'),
+    ).toBe('/project/zh/guide/')
+    expect(screen.getByText('React 优先')).not.toBeNull()
+    expect(screen.queryByText('Documentation without the noise.')).toBeNull()
+    expect(screen.queryByText('React-first')).toBeNull()
+  })
+
   it('renders document typography and base-aware previous/next pager cards', () => {
     const themeConfig: ThemeConfig = {
       sidebar: [

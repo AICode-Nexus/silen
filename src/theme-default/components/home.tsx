@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react'
 import { ArrowRightIcon } from 'lucide-react'
-import { Link, useData } from '../../client/index.js'
+import { Link, useData, useRoute } from '../../client/index.js'
 import type {
   ThemeHomeAction,
   ThemeHomeFeature,
@@ -10,6 +10,7 @@ import type {
 } from '../../shared/config.js'
 import type { JsonObject, JsonValue } from '../../shared/page.js'
 import { resolveThemeLink } from '../lib/navigation.js'
+import { resolveThemeConfig } from '../lib/theme-config.js'
 import { Button } from './ui/button.js'
 import {
   Card,
@@ -357,7 +358,9 @@ export function HomeLayout({
   features: featureProps,
   hero: heroProps,
 }: HomeLayoutProps): React.JSX.Element {
-  const { base, frontmatter, themeConfig } = useData()
+  const { base, frontmatter, themeConfig: rawThemeConfig } = useData()
+  const currentRoute = useRoute()
+  const themeConfig = resolveThemeConfig(rawThemeConfig, currentRoute, base)
   const hero = heroProps ?? homeHero(frontmatter) ?? themeConfig?.home?.hero
   const features =
     featureProps ??

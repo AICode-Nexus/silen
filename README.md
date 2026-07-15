@@ -219,8 +219,10 @@ export default defineConfig({
 ```
 
 With that configuration, `/guide/` switches to `/zh/guide/`, and `/zh/ai/`
-switches back to `/ai/`. Pages can set `lang` in frontmatter when a route uses a
-different language from the site default.
+switches back to `/ai/`. Locale entries can also override `nav`, `sidebar`, and
+`home` so translated roots render localized chrome and home-page content. Pages
+can set `lang` in frontmatter when a route uses a different language from the
+site default.
 
 ## Theme tokens
 

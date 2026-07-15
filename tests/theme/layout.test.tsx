@@ -166,6 +166,71 @@ describe('default documentation layout', () => {
     ).toBe('/project/ai/?view=full#copy')
   })
 
+  it('uses active locale navigation and sidebar labels', () => {
+    const themeConfig: ThemeConfig = {
+      search: false,
+      nav: [{ text: 'Guide', link: '/guide/' }],
+      sidebar: [
+        {
+          text: 'Docs',
+          items: [{ text: 'Getting Started', link: '/guide/' }],
+        },
+      ],
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        {
+          lang: 'zh-CN',
+          label: '中文',
+          root: '/zh/',
+          nav: [{ text: '指南', link: '/zh/guide/' }],
+          sidebar: [
+            {
+              text: '中文文档',
+              items: [{ text: '快速开始', link: '/zh/guide/' }],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <TestSiteProvider
+        base="/project/"
+        path="/project/zh/guide/"
+        themeConfig={themeConfig}
+      >
+        <Layout>快速开始</Layout>
+      </TestSiteProvider>,
+    )
+
+    const mainNavigation = screen.getByRole('navigation', {
+      name: 'Main navigation',
+    })
+    const sidebar = screen.getByRole('navigation', {
+      name: 'Documentation sidebar',
+    })
+
+    expect(
+      within(mainNavigation)
+        .getByRole('link', { name: '指南' })
+        .getAttribute('href'),
+    ).toBe('/project/zh/guide/')
+    expect(
+      within(mainNavigation).queryByRole('link', { name: 'Guide' }),
+    ).toBeNull()
+    expect(
+      within(sidebar).getByRole('button', { name: '中文文档' }),
+    ).not.toBeNull()
+    expect(
+      within(sidebar)
+        .getByRole('link', { name: '快速开始' })
+        .getAttribute('aria-current'),
+    ).toBe('page')
+    expect(
+      within(sidebar).queryByRole('link', { name: 'Getting Started' }),
+    ).toBeNull()
+  })
+
   it.each([
     ['root-relative', '/logo.svg', '/project/logo.svg'],
     ['local-relative', 'images/logo.svg', '/project/images/logo.svg'],

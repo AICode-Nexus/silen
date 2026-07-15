@@ -88,6 +88,76 @@ function askAiDialogFile(): string {
   )
 }
 
+function publicNav(
+  nav: NonNullable<ThemeConfig['nav']>,
+): NonNullable<ThemeConfig['nav']> {
+  return nav.map(({ text, link }) => ({ text, link }))
+}
+
+function publicSidebar(
+  sidebar: NonNullable<ThemeConfig['sidebar']>,
+): NonNullable<ThemeConfig['sidebar']> {
+  return sidebar.map(({ text, collapsed, items }) => ({
+    text,
+    ...(collapsed === undefined ? {} : { collapsed }),
+    items: items.map(({ text: itemText, link }) => ({
+      text: itemText,
+      link,
+    })),
+  }))
+}
+
+function publicHome(
+  home: NonNullable<ThemeConfig['home']>,
+): NonNullable<ThemeConfig['home']> {
+  return {
+    hero: {
+      name: home.hero.name,
+      ...(home.hero.text === undefined ? {} : { text: home.hero.text }),
+      ...(home.hero.tagline === undefined
+        ? {}
+        : { tagline: home.hero.tagline }),
+      ...(home.hero.image === undefined
+        ? {}
+        : {
+            image:
+              typeof home.hero.image === 'string'
+                ? home.hero.image
+                : {
+                    src: home.hero.image.src,
+                    alt: home.hero.image.alt,
+                  },
+          }),
+      ...(home.hero.actions === undefined
+        ? {}
+        : {
+            actions: home.hero.actions.map((action) => ({
+              text: action.text,
+              link: action.link,
+              ...(action.theme === undefined ? {} : { theme: action.theme }),
+              ...(action.target === undefined ? {} : { target: action.target }),
+              ...(action.rel === undefined ? {} : { rel: action.rel }),
+            })),
+          }),
+    },
+    ...(home.features === undefined
+      ? {}
+      : {
+          features: home.features.map((feature) => ({
+            ...(feature.icon === undefined ? {} : { icon: feature.icon }),
+            title: feature.title,
+            details: feature.details,
+            ...(feature.link === undefined ? {} : { link: feature.link }),
+            ...(feature.linkText === undefined
+              ? {}
+              : { linkText: feature.linkText }),
+            ...(feature.target === undefined ? {} : { target: feature.target }),
+            ...(feature.rel === undefined ? {} : { rel: feature.rel }),
+          })),
+        }),
+  }
+}
+
 function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
   const askAiEndpoint = themeConfig.ai?.endpoint
   return {
@@ -107,19 +177,12 @@ function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
     ...(themeConfig.nav === undefined
       ? {}
       : {
-          nav: themeConfig.nav.map(({ text, link }) => ({ text, link })),
+          nav: publicNav(themeConfig.nav),
         }),
     ...(themeConfig.sidebar === undefined
       ? {}
       : {
-          sidebar: themeConfig.sidebar.map(({ text, collapsed, items }) => ({
-            text,
-            ...(collapsed === undefined ? {} : { collapsed }),
-            items: items.map(({ text: itemText, link }) => ({
-              text: itemText,
-              link,
-            })),
-          })),
+          sidebar: publicSidebar(themeConfig.sidebar),
         }),
     ...(themeConfig.socialLinks === undefined
       ? {}
@@ -135,12 +198,19 @@ function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
     ...(themeConfig.locales === undefined
       ? {}
       : {
-          locales: themeConfig.locales.map(({ lang, label, root, link }) => ({
-            lang,
-            label,
-            ...(root === undefined ? {} : { root }),
-            ...(link === undefined ? {} : { link }),
-          })),
+          locales: themeConfig.locales.map(
+            ({ lang, label, root, link, nav, sidebar, home }) => ({
+              lang,
+              label,
+              ...(root === undefined ? {} : { root }),
+              ...(link === undefined ? {} : { link }),
+              ...(nav === undefined ? {} : { nav: publicNav(nav) }),
+              ...(sidebar === undefined
+                ? {}
+                : { sidebar: publicSidebar(sidebar) }),
+              ...(home === undefined ? {} : { home: publicHome(home) }),
+            }),
+          ),
         }),
     ...(themeConfig.search === undefined ? {} : { search: themeConfig.search }),
     ...(typeof askAiEndpoint === 'string' && askAiEndpoint.length > 0
@@ -149,64 +219,7 @@ function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
     ...(themeConfig.home === undefined
       ? {}
       : {
-          home: {
-            hero: {
-              name: themeConfig.home.hero.name,
-              ...(themeConfig.home.hero.text === undefined
-                ? {}
-                : { text: themeConfig.home.hero.text }),
-              ...(themeConfig.home.hero.tagline === undefined
-                ? {}
-                : { tagline: themeConfig.home.hero.tagline }),
-              ...(themeConfig.home.hero.image === undefined
-                ? {}
-                : {
-                    image:
-                      typeof themeConfig.home.hero.image === 'string'
-                        ? themeConfig.home.hero.image
-                        : {
-                            src: themeConfig.home.hero.image.src,
-                            alt: themeConfig.home.hero.image.alt,
-                          },
-                  }),
-              ...(themeConfig.home.hero.actions === undefined
-                ? {}
-                : {
-                    actions: themeConfig.home.hero.actions.map((action) => ({
-                      text: action.text,
-                      link: action.link,
-                      ...(action.theme === undefined
-                        ? {}
-                        : { theme: action.theme }),
-                      ...(action.target === undefined
-                        ? {}
-                        : { target: action.target }),
-                      ...(action.rel === undefined ? {} : { rel: action.rel }),
-                    })),
-                  }),
-            },
-            ...(themeConfig.home.features === undefined
-              ? {}
-              : {
-                  features: themeConfig.home.features.map((feature) => ({
-                    ...(feature.icon === undefined
-                      ? {}
-                      : { icon: feature.icon }),
-                    title: feature.title,
-                    details: feature.details,
-                    ...(feature.link === undefined
-                      ? {}
-                      : { link: feature.link }),
-                    ...(feature.linkText === undefined
-                      ? {}
-                      : { linkText: feature.linkText }),
-                    ...(feature.target === undefined
-                      ? {}
-                      : { target: feature.target }),
-                    ...(feature.rel === undefined ? {} : { rel: feature.rel }),
-                  })),
-                }),
-          },
+          home: publicHome(themeConfig.home),
         }),
   }
 }

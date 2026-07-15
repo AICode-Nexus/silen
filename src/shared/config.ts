@@ -25,13 +25,6 @@ export interface ThemeSocialLink {
   readonly ariaLabel?: string
 }
 
-export interface ThemeLocaleItem {
-  readonly lang: string
-  readonly label: string
-  readonly root?: string
-  readonly link?: string
-}
-
 export type ThemeLinkTarget = '_blank' | '_parent' | '_self' | '_top'
 
 export interface ThemeHomeAction {
@@ -68,6 +61,16 @@ export interface ThemeHomeFeature {
 export interface ThemeHomeConfig {
   readonly hero: ThemeHomeHero
   readonly features?: readonly ThemeHomeFeature[]
+}
+
+export interface ThemeLocaleItem {
+  readonly lang: string
+  readonly label: string
+  readonly root?: string
+  readonly link?: string
+  readonly nav?: readonly ThemeNavItem[]
+  readonly sidebar?: readonly ThemeSidebarGroup[]
+  readonly home?: ThemeHomeConfig
 }
 
 export interface ThemeAiConfig {

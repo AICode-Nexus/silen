@@ -28,6 +28,19 @@ describe('public package contract', () => {
       lang: 'zh-CN',
       label: '中文',
       root: '/zh/',
+      nav: [{ text: '指南', link: '/zh/guide/' }],
+      sidebar: [
+        {
+          text: '中文文档',
+          items: [{ text: '快速开始', link: '/zh/guide/' }],
+        },
+      ],
+      home: {
+        hero: {
+          name: 'Silen',
+          text: '去掉噪音的文档体验。',
+        },
+      },
     }
     const themeConfig: ThemeConfig = {
       locales: [{ lang: 'en-US', label: 'English', root: '/' }, locale],

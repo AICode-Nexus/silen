@@ -4,6 +4,7 @@ import { Link, useData, useRoute } from '../../client/index.js'
 import type { ThemeSidebarItem } from '../../shared/config.js'
 import { joinBaseRoute } from '../../shared/url.js'
 import { isActiveThemeLink, resolveThemeLink } from '../lib/navigation.js'
+import { resolveThemeConfig } from '../lib/theme-config.js'
 import { AiPageActions } from './ai-actions.js'
 import {
   Card,
@@ -51,8 +52,16 @@ export function DocLayout({
 }: {
   readonly children: ReactNode
 }): React.JSX.Element {
-  const { ai, base, frontmatter, route, siteTitle, themeConfig } = useData()
+  const {
+    ai,
+    base,
+    frontmatter,
+    route,
+    siteTitle,
+    themeConfig: rawThemeConfig,
+  } = useData()
   const currentRoute = useRoute()
+  const themeConfig = resolveThemeConfig(rawThemeConfig, currentRoute, base)
   const pages = (themeConfig?.sidebar ?? []).flatMap((group) => group.items)
   const currentIndex = pages.findIndex((item) =>
     isActiveThemeLink(currentRoute, item.link, base),

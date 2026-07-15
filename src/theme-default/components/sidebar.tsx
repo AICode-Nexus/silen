@@ -8,6 +8,7 @@ import type {
 } from '../../shared/config.js'
 import { cn } from '../lib/cn.js'
 import { isActiveThemeLink, resolveThemeLink } from '../lib/navigation.js'
+import { resolveThemeConfig } from '../lib/theme-config.js'
 import { Button } from './ui/button.js'
 import {
   Collapsible,
@@ -113,8 +114,9 @@ function SidebarNavigation({
   readonly includeMainNavigation?: boolean
   readonly onNavigate?: (() => void) | undefined
 }): React.JSX.Element {
-  const { base, themeConfig } = useData()
+  const { base, themeConfig: rawThemeConfig } = useData()
   const currentRoute = useRoute()
+  const themeConfig = resolveThemeConfig(rawThemeConfig, currentRoute, base)
   const nav = themeConfig?.nav ?? []
   const groups = themeConfig?.sidebar ?? []
 

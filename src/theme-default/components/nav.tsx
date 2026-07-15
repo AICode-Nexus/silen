@@ -14,6 +14,7 @@ import {
   resolveThemeLink,
   resolveThemeLocaleLinks,
 } from '../lib/navigation.js'
+import { resolveThemeConfig } from '../lib/theme-config.js'
 import { AppearanceSwitch } from './appearance.js'
 import { Button } from './ui/button.js'
 import {
@@ -235,8 +236,9 @@ function LanguageSwitch({
 }
 
 export function Nav(): React.JSX.Element {
-  const { base, siteTitle, themeConfig } = useData()
+  const { base, siteTitle, themeConfig: rawThemeConfig } = useData()
   const currentRoute = useRoute()
+  const themeConfig = resolveThemeConfig(rawThemeConfig, currentRoute, base)
   const logo = themeConfig?.logo
   const askAiEndpoint = themeConfig?.ai?.endpoint
   const logoSource = typeof logo === 'string' ? logo : logo?.src
