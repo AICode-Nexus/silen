@@ -2,21 +2,163 @@
 layout: home
 lang: zh-CN
 title: Silen
-description: 去掉噪音的文档体验。
+description: 为人类与 AI 构建的 React 文档。
 ---
 
-## 为安静的文档而生
+import {
+  ArrowRightIcon,
+  BotIcon,
+  BracesIcon,
+  FileCode2Icon,
+  FileTextIcon,
+  GitForkIcon,
+  Globe2Icon,
+  SearchIcon,
+  ServerCogIcon,
+  UsersIcon,
+} from 'lucide-react'
+import { CodeBlock } from 'silen/theme'
+import wechatQr from '../assets/wechat-ai-dev-hub.png'
 
-Silen 让作者工作流保持轻量：写 Markdown 或 MDX，只在真正需要时加入
-React，然后用稳妥的默认配置发布快速的静态站点。
+<section
+  className="silen-home-section silen-home-section--split"
+  aria-labelledby="quick-start-title"
+>
+  <div className="silen-home-section-copy">
+    <p className="silen-home-eyebrow">两条命令，一个安静的工作流</p>
+    <h2 id="quick-start-title">几秒内开始</h2>
+    <p className="silen-home-lede">
+      将 Silen 加入项目并指向文档目录，即可获得 React 驱动的 MDX、
+      快速本地导航和可直接部署的静态输出。
+    </p>
+    <a className="silen-home-inline-link" href="guide/">
+      阅读指南 <ArrowRightIcon aria-hidden="true" />
+    </a>
+  </div>
+  <div className="silen-home-code-panel">
+    <CodeBlock language="sh" code={'pnpm add -D silen\npnpm silen dev docs'} />
+  </div>
+</section>
 
-```sh
-pnpm add -D silen
-pnpm silen dev docs
-```
+<section className="silen-home-section" aria-labelledby="audiences-title">
+  <div className="silen-home-section-copy">
+    <p className="silen-home-eyebrow">一个可信源</p>
+    <h2 id="audiences-title">一份内容，两类读者</h2>
+    <p className="silen-home-lede">
+      每条路由都从普通 MDX 出发，同时成为面向人类的可靠阅读体验， 以及面向 AI
+      客户端的确定性接口。
+    </p>
+  </div>
+  <div className="silen-home-panel-grid">
+    <article className="silen-home-panel">
+      <span className="silen-home-panel-icon">
+        <UsersIcon aria-hidden="true" />
+      </span>
+      <h3>人类读者</h3>
+      <p>快速、可访问，并且在 hydration 之前就能完整阅读。</p>
+      <ul>
+        <li>响应式导航与本地搜索</li>
+        <li>清晰的代码高亮与复制控件</li>
+        <li>每条路由都输出完整静态 HTML</li>
+      </ul>
+    </article>
+    <article className="silen-home-panel">
+      <span className="silen-home-panel-icon">
+        <BotIcon aria-hidden="true" />
+      </span>
+      <h3>AI 客户端</h3>
+      <p>提供边界明确的干净产物，而不是抓取浏览器界面。</p>
+      <ul>
+        <li>确定性的 Markdown 路由与清单</li>
+        <li>llms.txt 与本地搜索索引</li>
+        <li>可选且有权限边界的 MCP 工作区</li>
+      </ul>
+    </article>
+  </div>
+</section>
 
-## 一次构建，服务两类读者
+<section className="silen-home-section" aria-labelledby="outputs-title">
+  <div className="silen-home-section-copy">
+    <p className="silen-home-eyebrow">默认就有用</p>
+    <h2 id="outputs-title">每次构建都会产出</h2>
+    <p className="silen-home-lede">
+      Silen 将同一棵内容树转换成不同读者真正需要的格式。
+    </p>
+  </div>
+  <div className="silen-home-output-grid">
+    <article className="silen-home-output">
+      <span className="silen-home-output-icon">
+        <Globe2Icon aria-hidden="true" />
+      </span>
+      <h3>静态 HTML</h3>
+      <p>主要内容已经渲染，可直接部署到任意静态托管。</p>
+    </article>
+    <article className="silen-home-output">
+      <span className="silen-home-output-icon">
+        <SearchIcon aria-hidden="true" />
+      </span>
+      <h3>本地搜索</h3>
+      <p>快速、私有，不依赖托管搜索服务。</p>
+    </article>
+    <article className="silen-home-output">
+      <span className="silen-home-output-icon">
+        <FileTextIcon aria-hidden="true" />
+      </span>
+      <h3>Markdown 路由</h3>
+      <p>为工具与智能体提供接近源文件的干净输出。</p>
+    </article>
+    <article className="silen-home-output">
+      <span className="silen-home-output-icon">
+        <FileCode2Icon aria-hidden="true" />
+      </span>
+      <h3>llms.txt</h3>
+      <p>为整套文档提供稳定、可预测的入口。</p>
+    </article>
+    <article className="silen-home-output">
+      <span className="silen-home-output-icon">
+        <ServerCogIcon aria-hidden="true" />
+      </span>
+      <h3>可选 MCP</h3>
+      <p>拥有明确读写权限的本地文档工作区。</p>
+    </article>
+    <article className="silen-home-output">
+      <span className="silen-home-output-icon">
+        <BracesIcon aria-hidden="true" />
+      </span>
+      <h3>React MDX</h3>
+      <p>只在文档真正受益时加入类型化组件。</p>
+    </article>
+  </div>
+</section>
 
-每次 Silen 构建都从同一个可信源服务人类读者和 AI 系统。读者得到可访问的
-导航、搜索、代码高亮和响应式主题；AI 客户端得到确定性的 Markdown、清单和
-可选的本地 MCP 工作区，而不会把服务端密钥暴露到浏览器。
+<section
+  className="silen-home-section silen-home-contact"
+  aria-labelledby="contact-title"
+>
+  <div className="silen-home-section-copy">
+    <p className="silen-home-eyebrow">一起构建</p>
+    <h2 id="contact-title">联系与关注</h2>
+    <p className="silen-home-lede">
+      通过 GitHub 关注开发、提交问题或参与贡献；也可以扫码关注 AI Dev Hub，获取
+      AI 开发内容与 Silen 更新。
+    </p>
+    <a
+      className="silen-home-action"
+      href="https://github.com/AICode-Nexus/silen"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <GitForkIcon aria-hidden="true" /> 打开 GitHub
+    </a>
+  </div>
+  <figure className="silen-home-qr">
+    <img
+      src={wechatQr}
+      alt="微信公众号 AI Dev Hub 的二维码"
+      width={344}
+      height={344}
+      loading="lazy"
+    />
+    <figcaption>微信公众号：AI Dev Hub</figcaption>
+  </figure>
+</section>
