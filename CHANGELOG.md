@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-15
+
+### Changed
+
+- Reworked the default theme appearance control into an accessible three-option
+  radio group for explicit dark, system, and light selection.
+- Reduced generated page head weight by avoiding non-critical image, font,
+  audio, and video preloads while preserving modulepreload coverage for the
+  client entry.
+- Replaced the docs workflow illustration with a compressed JPEG asset.
+
 ## [0.1.1] - 2026-07-15
 
 ### Documentation
@@ -86,7 +97,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Published Silen under the `@aicode-nexus` organization scope.
 
-[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.1.1...HEAD
+[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/AICode-Nexus/silen/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/AICode-Nexus/silen/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/AICode-Nexus/silen/compare/v0.1.0-alpha.3...v0.1.0
 [0.1.0-alpha.3]: https://github.com/AICode-Nexus/silen/compare/v0.1.0-alpha.2...v0.1.0-alpha.3

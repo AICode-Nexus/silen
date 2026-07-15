@@ -1,6 +1,6 @@
 {
   "name": "@aicode-nexus/silen",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A lightweight documentation-first static site generator powered by React, TypeScript, Vite, and MDX.",
   "keywords": [
     "documentation",

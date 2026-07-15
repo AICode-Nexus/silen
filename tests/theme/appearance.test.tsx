@@ -1,6 +1,12 @@
 import { act } from 'react'
 import { runInNewContext } from 'node:vm'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { hydrateRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
@@ -65,7 +71,7 @@ afterEach(() => {
 })
 
 describe('appearance preference', () => {
-  it('cycles through system, light, and dark while saving and applying each preference', async () => {
+  it('selects system, light, and dark while saving and applying each preference', async () => {
     const user = userEvent.setup()
     const media = installMatchMedia(true)
     render(<AppearanceSwitch />)
@@ -73,26 +79,31 @@ describe('appearance preference', () => {
     await waitFor(() => {
       expect(document.documentElement.classList.contains('dark')).toBe(true)
     })
-    const system = screen.getByRole('button', { name: 'Appearance: System' })
+    const appearance = screen.getByRole('radiogroup', { name: 'Appearance' })
+    const system = within(appearance).getByRole('radio', {
+      name: 'Appearance: System',
+    })
+    const light = within(appearance).getByRole('radio', {
+      name: 'Appearance: Light',
+    })
+    const dark = within(appearance).getByRole('radio', {
+      name: 'Appearance: Dark',
+    })
 
-    await user.click(system)
-    expect(
-      screen.getByRole('button', { name: 'Appearance: Light' }),
-    ).not.toBeNull()
+    expect(system.getAttribute('aria-checked')).toBe('true')
+
+    await user.click(light)
+    expect(light.getAttribute('aria-checked')).toBe('true')
     expect(localStorage.getItem('silen-theme')).toBe('light')
     expect(document.documentElement.classList.contains('dark')).toBe(false)
 
-    await user.click(screen.getByRole('button', { name: 'Appearance: Light' }))
-    expect(
-      screen.getByRole('button', { name: 'Appearance: Dark' }),
-    ).not.toBeNull()
+    await user.click(dark)
+    expect(dark.getAttribute('aria-checked')).toBe('true')
     expect(localStorage.getItem('silen-theme')).toBe('dark')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
 
-    await user.click(screen.getByRole('button', { name: 'Appearance: Dark' }))
-    expect(
-      screen.getByRole('button', { name: 'Appearance: System' }),
-    ).not.toBeNull()
+    await user.click(system)
+    expect(system.getAttribute('aria-checked')).toBe('true')
     expect(localStorage.getItem('silen-theme')).toBe('system')
 
     act(() => media.emit(false))
@@ -103,10 +114,9 @@ describe('appearance preference', () => {
     localStorage.setItem('silen-theme', 'dark')
     const media = installMatchMedia(false)
     const { unmount } = render(<AppearanceSwitch />)
+    const dark = screen.getByRole('radio', { name: 'Appearance: Dark' })
 
-    expect(
-      await screen.findByRole('button', { name: 'Appearance: Dark' }),
-    ).not.toBeNull()
+    await waitFor(() => expect(dark.getAttribute('aria-checked')).toBe('true'))
     expect(document.documentElement.classList.contains('dark')).toBe(true)
 
     act(() => {
@@ -118,8 +128,10 @@ describe('appearance preference', () => {
       )
     })
     expect(
-      screen.getByRole('button', { name: 'Appearance: System' }),
-    ).not.toBeNull()
+      screen
+        .getByRole('radio', { name: 'Appearance: System' })
+        .getAttribute('aria-checked'),
+    ).toBe('true')
     expect(document.documentElement.classList.contains('dark')).toBe(false)
 
     unmount()
@@ -143,11 +155,13 @@ describe('appearance preference', () => {
     await waitFor(() =>
       expect(document.documentElement.classList.contains('dark')).toBe(true),
     )
-    await user.click(screen.getByRole('button', { name: 'Appearance: System' }))
+    await user.click(screen.getByRole('radio', { name: 'Appearance: Light' }))
 
     expect(
-      screen.getByRole('button', { name: 'Appearance: Light' }),
-    ).not.toBeNull()
+      screen
+        .getByRole('radio', { name: 'Appearance: Light' })
+        .getAttribute('aria-checked'),
+    ).toBe('true')
     expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
 
@@ -168,9 +182,13 @@ describe('appearance preference', () => {
       await new Promise((resolve) => window.setTimeout(resolve, 0))
     })
     expect(recoverableError).not.toHaveBeenCalled()
-    expect(
-      await screen.findByRole('button', { name: 'Appearance: Dark' }),
-    ).not.toBeNull()
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('radio', { name: 'Appearance: Dark' })
+          .getAttribute('aria-checked'),
+      ).toBe('true'),
+    )
 
     act(() => root.unmount())
     container.remove()

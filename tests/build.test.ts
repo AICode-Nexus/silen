@@ -78,19 +78,22 @@ describe('static production build', () => {
     expect(about).toContain('Custom theme component')
   })
 
-  it('uses manifest-resolved filenames for base-aware hashed JS, CSS, and assets', () => {
+  it('uses manifest-resolved filenames without preloading non-critical assets', () => {
     expect(home).toContain(
       '<link rel="icon" type="image/svg+xml" href="/project/favicon.svg">',
     )
-    expect(home).toMatch(
-      /<script type="module" src="\/project\/assets\/.+-[\w-]+\.js"><\/script>/,
-    )
+    const clientScript =
+      /<script type="module" src="(\/project\/assets\/.+-[\w-]+\.js)"><\/script>/.exec(
+        home,
+      )?.[1]
+    expect(clientScript).toBeDefined()
+    expect(home).toContain(`<link rel="modulepreload" href="${clientScript}">`)
     expect(home).toMatch(
       /<link rel="stylesheet" href="\/project\/assets\/.+-[\w-]+\.css">/,
     )
-    expect(home).toMatch(
-      /<link rel="preload" as="image" href="\/project\/assets\/.+-[\w-]+\.[a-z]+">/,
-    )
+    const head = home.slice(0, home.indexOf('</head>'))
+    expect(head).not.toContain('<link rel="preload" as="image"')
+    expect(head).not.toContain('<link rel="preload" as="font"')
     expect(home).not.toContain('/project/assets/entry.js')
   })
 

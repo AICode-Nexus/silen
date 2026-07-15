@@ -31,11 +31,7 @@ import { serializePageMarkdown } from './markdown-output.js'
 import { compilePage, createMdxPlugins, type CompiledPage } from './mdx.js'
 import { silenPlugin } from './plugin.js'
 import { pluginRunnerFor, type PluginRunner } from './plugins.js'
-import {
-  renderDocument,
-  type AssetPreload,
-  type RenderAssets,
-} from './render.js'
+import { renderDocument, type RenderAssets } from './render.js'
 import { scanRoutes } from './routes.js'
 import {
   createPageSearchDocuments,
@@ -453,14 +449,6 @@ async function findRouteChunk(
   return undefined
 }
 
-function preloadType(file: string): AssetPreload['as'] | undefined {
-  if (/\.(?:avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i.test(file)) return 'image'
-  if (/\.(?:eot|otf|ttf|woff2?)$/i.test(file)) return 'font'
-  if (/\.(?:mp3|ogg|wav)$/i.test(file)) return 'audio'
-  if (/\.(?:mp4|webm)$/i.test(file)) return 'video'
-  return undefined
-}
-
 async function manifestAssets(
   manifest: Manifest,
   root: string,
@@ -484,7 +472,6 @@ async function manifestAssets(
 
   const stylesheets = new Set<string>()
   const modulePreloads = new Set<string>()
-  const emittedAssets = new Set<string>()
   const visited = new Set<string>()
 
   const collect = (key: string, preloadChunk: boolean): void => {
@@ -498,22 +485,18 @@ async function manifestAssets(
     }
     if (preloadChunk) modulePreloads.add(chunk.file)
     for (const file of chunk.css ?? []) stylesheets.add(file)
-    for (const file of chunk.assets ?? []) emittedAssets.add(file)
     for (const imported of chunk.imports ?? []) collect(imported, true)
   }
 
   collect(entryKey, false)
   collect(routeEntry[0], true)
+  modulePreloads.add(entry.file)
 
   return {
     base: '/',
     clientEntry: entry.file,
     stylesheets: [...stylesheets].sort(),
     modulePreloads: [...modulePreloads].sort(),
-    assetPreloads: [...emittedAssets].sort().flatMap((file): AssetPreload[] => {
-      const as = preloadType(file)
-      return as === undefined ? [] : [{ as, file }]
-    }),
   }
 }
 

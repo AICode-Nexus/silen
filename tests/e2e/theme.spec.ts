@@ -152,11 +152,14 @@ test('supports mobile Sheet focus, lazy keyboard search, and no-flash appearance
   await expect(navigation).toBeHidden()
   await expect(navigationTrigger).toBeFocused()
 
-  const appearance = page.getByRole('button', { name: /^Appearance:/ })
-  await expect(appearance).toHaveAttribute('aria-label', 'Appearance: System')
-  await appearance.click()
-  await appearance.click()
-  await expect(appearance).toHaveAttribute('aria-label', 'Appearance: Dark')
+  const appearance = page.getByRole('radiogroup', { name: 'Appearance' })
+  const systemTheme = appearance.getByRole('radio', {
+    name: 'Appearance: System',
+  })
+  const darkTheme = appearance.getByRole('radio', { name: 'Appearance: Dark' })
+  await expect(systemTheme).toHaveAttribute('aria-checked', 'true')
+  await darkTheme.click()
+  await expect(darkTheme).toHaveAttribute('aria-checked', 'true')
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem('silen-theme')))
     .toBe('dark')
@@ -177,7 +180,7 @@ test('supports mobile Sheet focus, lazy keyboard search, and no-flash appearance
     'data-appearance-at-ready',
     'dark',
   )
-  await expect(appearance).toHaveAttribute('aria-label', 'Appearance: Dark')
+  await expect(darkTheme).toHaveAttribute('aria-checked', 'true')
 
   await page.keyboard.press('Control+k')
   const search = page.getByRole('dialog', { name: 'Search documentation' })

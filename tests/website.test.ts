@@ -17,15 +17,12 @@ afterAll(async () => {
 })
 
 describe('example website homepage', () => {
-  it('ships the generated workflow illustration as a web-sized PNG', async () => {
+  it('ships the generated workflow illustration as a compressed JPEG', async () => {
     const source = await readFile(
-      path.resolve('website/public/silen-workflow.png'),
+      path.resolve('website/public/silen-workflow.jpg'),
     )
-    expect([...source.subarray(0, 8)]).toEqual([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    ])
-    expect(source.readUInt32BE(16)).toBe(1200)
-    expect(source.readUInt32BE(20)).toBe(800)
+    expect([...source.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
+    expect(source.byteLength).toBeLessThan(150_000)
   })
 
   it('ships the AI Dev Hub QR code as a PNG', async () => {

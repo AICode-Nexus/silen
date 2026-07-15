@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react'
-import { Button } from './ui/button'
+import { cn } from '../lib/cn'
 
 export { appearanceScript } from '../appearance-script.js'
 
@@ -14,6 +14,8 @@ const preferenceLabels: Readonly<Record<AppearancePreference, string>> = {
   light: 'Light',
   dark: 'Dark',
 }
+
+const preferenceOptions = ['dark', 'system', 'light'] as const
 
 function isAppearancePreference(value: unknown): value is AppearancePreference {
   return value === 'light' || value === 'dark' || value === 'system'
@@ -55,14 +57,6 @@ function applyPreference(
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
 }
 
-function nextPreference(
-  preference: AppearancePreference,
-): AppearancePreference {
-  if (preference === 'system') return 'light'
-  if (preference === 'light') return 'dark'
-  return 'system'
-}
-
 function PreferenceIcon({
   preference,
 }: {
@@ -76,6 +70,7 @@ function PreferenceIcon({
 export function AppearanceSwitch(): React.JSX.Element {
   const [preference, setPreference] = useState<AppearancePreference>('system')
   const preferenceRef = useRef<AppearancePreference>('system')
+  const buttonRefs = useRef(new Map<AppearancePreference, HTMLButtonElement>())
 
   useEffect(() => {
     const media = darkMediaQuery()
@@ -133,24 +128,80 @@ export function AppearanceSwitch(): React.JSX.Element {
     }
   }, [])
 
-  const selectNextPreference = (): void => {
-    const next = nextPreference(preferenceRef.current)
+  const selectPreference = (
+    next: AppearancePreference,
+    focusSelected = false,
+  ): void => {
     preferenceRef.current = next
     setPreference(next)
     writePreference(next)
     applyPreference(next)
+    if (focusSelected) {
+      window.setTimeout(() => buttonRefs.current.get(next)?.focus(), 0)
+    }
+  }
+
+  const selectRelativePreference = (step: -1 | 1): void => {
+    const index = preferenceOptions.indexOf(preferenceRef.current)
+    const nextIndex =
+      (index + step + preferenceOptions.length) % preferenceOptions.length
+    const next = preferenceOptions[nextIndex]
+    if (next) selectPreference(next, true)
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      selectRelativePreference(-1)
+    } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault()
+      selectRelativePreference(1)
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      selectPreference(preferenceOptions[0], true)
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      selectPreference('light', true)
+    }
   }
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      aria-label={`Appearance: ${preferenceLabels[preference]}`}
-      title={`Appearance: ${preferenceLabels[preference]}`}
-      onClick={selectNextPreference}
+    <div
+      role="radiogroup"
+      aria-label="Appearance"
+      className="inline-flex h-8 items-center rounded-full border border-border bg-muted/70 p-0.5 text-muted-foreground shadow-sm transition-colors dark:bg-muted/40"
     >
-      <PreferenceIcon preference={preference} />
-    </Button>
+      {preferenceOptions.map((option) => {
+        const selected = preference === option
+        return (
+          <button
+            key={option}
+            ref={(node) => {
+              if (node) {
+                buttonRefs.current.set(option, node)
+              } else {
+                buttonRefs.current.delete(option)
+              }
+            }}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-label={`Appearance: ${preferenceLabels[option]}`}
+            title={`Appearance: ${preferenceLabels[option]}`}
+            tabIndex={selected ? 0 : -1}
+            className={cn(
+              'inline-flex size-7 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-95 [&_svg]:size-3.5',
+              selected
+                ? 'bg-background text-foreground shadow-sm dark:bg-input/70'
+                : 'text-muted-foreground',
+            )}
+            onClick={() => selectPreference(option)}
+            onKeyDown={handleKeyDown}
+          >
+            <PreferenceIcon preference={option} />
+          </button>
+        )
+      })}
+    </div>
   )
 }
