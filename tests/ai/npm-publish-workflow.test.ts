@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
-describe('npm trusted publishing workflow', () => {
-  it('publishes tagged releases with GitHub OIDC and the alpha dist-tag', async () => {
+describe('npm publish workflow', () => {
+  it('publishes GitHub releases with npm auth and the alpha dist-tag', async () => {
     const workflow = await readFile('.github/workflows/publish.yml', 'utf8')
 
     expect(workflow).toContain('release:')
@@ -21,7 +21,6 @@ describe('npm trusted publishing workflow', () => {
     expect(workflow).toContain('pnpm build')
     expect(workflow).toContain('pnpm exec publint')
     expect(workflow).toContain('npm publish --access public --tag alpha')
-    expect(workflow).not.toContain('NODE_AUTH_TOKEN')
-    expect(workflow).not.toContain('NPM_TOKEN')
+    expect(workflow).toContain('NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}')
   })
 })
