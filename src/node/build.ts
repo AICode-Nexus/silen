@@ -274,13 +274,14 @@ async function compilePages(
 
 async function productionPlugins(
   config: ResolvedConfig,
+  pages: readonly CompiledPage[],
 ): Promise<PluginOption[]> {
   const runner = pluginRunnerFor(config)
   return [
     react(),
     ...(await silenPlugin(config, { publicConfigOnly: true })),
     ...(await runner.collectVitePlugins()),
-    ...(await createMdxPlugins({ config, runner })),
+    ...(await createMdxPlugins({ config, runner, pages })),
   ]
 }
 
@@ -308,6 +309,7 @@ async function buildClient(
   config: ResolvedConfig,
   outDir: string,
   routes: readonly RouteRecord[],
+  pages: readonly CompiledPage[],
 ): Promise<void> {
   try {
     await viteBuild({
@@ -319,7 +321,7 @@ async function buildClient(
       logLevel: 'silent',
       mode: 'production',
       oxc: { jsx: { development: false } },
-      plugins: await productionPlugins(config),
+      plugins: await productionPlugins(config, pages),
       root: config.root,
       build: {
         assetsInlineLimit: 0,
@@ -340,6 +342,7 @@ async function buildServerRenderer(
   config: ResolvedConfig,
   outDir: string,
   routes: readonly RouteRecord[],
+  pages: readonly CompiledPage[],
 ): Promise<string> {
   const output = path.join(outDir, 'ssr-entry.mjs')
   try {
@@ -352,7 +355,7 @@ async function buildServerRenderer(
       logLevel: 'silent',
       mode: 'production',
       oxc: { jsx: { development: false } },
-      plugins: await productionPlugins(config),
+      plugins: await productionPlugins(config, pages),
       root: config.root,
       ssr: { noExternal: ['@aicode-nexus/silen'] },
       build: {
@@ -650,8 +653,8 @@ async function buildSite(root: string): Promise<BuildResult> {
 
   await mkdir(outParent, { recursive: true })
   try {
-    await buildClient(config, stagedOutDir, routes)
-    const ssrEntry = await buildServerRenderer(config, ssrOutDir, routes)
+    await buildClient(config, stagedOutDir, routes, pages)
+    const ssrEntry = await buildServerRenderer(config, ssrOutDir, routes, pages)
     const favicon = await ensureBuildFavicon(stagedOutDir)
     const [manifest, renderer] = await Promise.all([
       readClientManifest(stagedOutDir, routes),

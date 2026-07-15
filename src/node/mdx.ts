@@ -136,7 +136,24 @@ export async function compilePage(
   }
 }
 
+function publicPageData(page: CompiledPage): SilenPageData {
+  return {
+    title: page.title,
+    description: page.description,
+    frontmatter: page.frontmatter,
+    headings: page.headings,
+    links: page.links,
+    data: page.data,
+  }
+}
+
 function pageDataPlugin(options: MdxPluginOptions): Plugin {
+  const compiledPages = new Map(
+    (options.pages ?? []).map((page) => [
+      path.normalize(path.resolve(page.file)),
+      publicPageData(page),
+    ]),
+  )
   return {
     name: 'silen:page-data',
     enforce: 'pre',
@@ -146,19 +163,21 @@ function pageDataPlugin(options: MdxPluginOptions): Plugin {
 
       const parsed = matter(source)
       const analyzed = analyzePageSource(parsed.content, parsed.data)
+      const compiled = compiledPages.get(path.normalize(path.resolve(cleanId)))
       const route =
         options.config === undefined
           ? fileToRoute(path.basename(cleanId))
           : fileToRoute(path.relative(options.config.root, cleanId))
       const page =
-        options.runner === undefined
+        compiled ??
+        (options.runner === undefined
           ? analyzed
           : await options.runner.transformPageData(analyzed, {
               command: options.config?.command ?? 'serve',
               route,
               file: cleanId,
               source,
-            })
+            }))
 
       return [
         parsed.content,

@@ -38,6 +38,7 @@ describe('plugin lifecycle build integration', () => {
     expect(JSON.parse(buildEnd)).toEqual({
       label: 'community-ready',
       routes: 1,
+      pageTransforms: 1,
       pageKeys: [
         'data',
         'description',
