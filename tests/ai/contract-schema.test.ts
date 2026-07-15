@@ -178,8 +178,9 @@ describe('Silen Agent Contract v1', () => {
   })
 
   it('serializes semantically identical unordered contracts byte-identically', () => {
+    const base = apiContract()
     const left: SilenApiContract = {
-      ...apiContract(),
+      ...base,
       config: {
         fields: [
           {
@@ -189,7 +190,10 @@ describe('Silen Agent Contract v1', () => {
             description: 'Last field.',
             introduced: 1,
           },
-          ...apiContract().config.fields,
+          ...base.config.fields.map((field) => ({
+            ...field,
+            default: { alpha: false, beta: true },
+          })),
         ],
       },
       cli: {
@@ -202,14 +206,50 @@ describe('Silen Agent Contract v1', () => {
             arguments: [],
             options: [],
           },
-          ...apiContract().cli.commands,
+          ...base.cli.commands,
+        ],
+      },
+      mcp: {
+        tools: [
+          {
+            ...base.mcp.tools[0]!,
+            inputSchema: {
+              properties: {
+                limit: { type: 'number' },
+                query: { type: 'string' },
+              },
+              type: 'object',
+            },
+          },
         ],
       },
     }
     const right: SilenApiContract = {
       ...left,
-      config: { fields: [...left.config.fields].reverse() },
+      config: {
+        fields: [...left.config.fields]
+          .reverse()
+          .map((field) =>
+            field.path === 'title'
+              ? { ...field, default: { beta: true, alpha: false } }
+              : field,
+          ),
+      },
       cli: { commands: [...left.cli.commands].reverse() },
+      mcp: {
+        tools: [
+          {
+            ...left.mcp.tools[0]!,
+            inputSchema: {
+              type: 'object',
+              properties: {
+                query: { type: 'string' },
+                limit: { type: 'number' },
+              },
+            },
+          },
+        ],
+      },
     }
 
     expect(serializeContractJson(left)).toBe(serializeContractJson(right))

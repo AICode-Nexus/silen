@@ -1,11 +1,29 @@
 import type {
   SilenApiContract,
   SilenContractManifest,
+  SilenJsonValue,
 } from '../../shared/ai-contract.js'
 import { parseApiContract, parseContractManifest } from './schema.js'
 
 function byText(left: string | undefined, right: string | undefined): number {
   return (left ?? '').localeCompare(right ?? '', 'en')
+}
+
+function normalizeJsonValue(value: SilenJsonValue): SilenJsonValue {
+  if (Array.isArray(value)) return value.map(normalizeJsonValue)
+  if (typeof value !== 'object' || value === null) return value
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) => byText(left, right))
+      .map(([key, entry]) => [key, normalizeJsonValue(entry)]),
+  )
+}
+
+function normalizeJsonRecord(
+  value: Readonly<Record<string, SilenJsonValue>>,
+): Readonly<Record<string, SilenJsonValue>> {
+  return normalizeJsonValue(value) as Readonly<Record<string, SilenJsonValue>>
 }
 
 function normalizeManifest(
@@ -40,19 +58,33 @@ function normalizeApi(input: SilenApiContract): SilenApiContract {
   return {
     ...api,
     config: {
-      fields: [...api.config.fields].sort((left, right) =>
-        byText(left.path, right.path),
-      ),
+      fields: [...api.config.fields]
+        .sort((left, right) => byText(left.path, right.path))
+        .map((field) =>
+          field.default === undefined
+            ? field
+            : { ...field, default: normalizeJsonValue(field.default) },
+        ),
     },
     cli: {
-      commands: [...api.cli.commands].sort((left, right) =>
-        byText(left.id, right.id),
-      ),
+      commands: [...api.cli.commands]
+        .sort((left, right) => byText(left.id, right.id))
+        .map((command) => ({
+          ...command,
+          options: command.options.map((option) =>
+            option.default === undefined
+              ? option
+              : { ...option, default: normalizeJsonValue(option.default) },
+          ),
+        })),
     },
     mcp: {
-      tools: [...api.mcp.tools].sort((left, right) =>
-        byText(left.name, right.name),
-      ),
+      tools: [...api.mcp.tools]
+        .sort((left, right) => byText(left.name, right.name))
+        .map((tool) => ({
+          ...tool,
+          inputSchema: normalizeJsonRecord(tool.inputSchema),
+        })),
     },
     exports: [...api.exports].sort(
       (left, right) =>
