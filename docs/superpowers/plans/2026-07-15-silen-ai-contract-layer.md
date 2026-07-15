@@ -450,7 +450,7 @@ git commit -m "refactor(cli): share command metadata with AI"
   description, Zod schema, annotations, and bounded execute handler.
 - createMcpApiContract reads the same descriptors used for registration.
 
-- [ ] **Step 1: Add failing registry parity tests**
+- [x] **Step 1: Add failing registry parity tests**
 
 Assert:
 
@@ -471,14 +471,14 @@ pnpm test tests/ai/mcp-contract.test.ts tests/ai/mcp-read.test.ts tests/ai/mcp-w
 Expected: failure because schemas and metadata are embedded in registration
 functions.
 
-- [ ] **Step 2: Extract read and write descriptors**
+- [x] **Step 2: Extract read and write descriptors**
 
 Preserve safeFailure behavior, structuredContent, path limits, and all existing
 tool names. Registration loops over the descriptor collections. Keep write
 descriptors in a separate export so default server construction cannot register
 them accidentally.
 
-- [ ] **Step 3: Generate the MCP API section**
+- [x] **Step 3: Generate the MCP API section**
 
 Use Zod 4 JSON Schema conversion. Serialize tool annotations and the explicit
 authorization requirement, never handler functions or Workspace objects.
@@ -492,7 +492,7 @@ pnpm typecheck
 
 Expected: all current MCP behavior stays green and contract parity passes.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ~~~bash
 git add src/ai/mcp/contracts.ts src/ai/contract/mcp-api.ts src/ai/mcp/read-tools.ts src/ai/mcp/write-tools.ts src/ai/mcp/server.ts tests/ai/mcp-contract.test.ts tests/ai/mcp-read.test.ts tests/ai/mcp-write.test.ts tests/ai/mcp-e2e.test.ts
