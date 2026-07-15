@@ -31,6 +31,11 @@ const hookFields = new Set(
   [...pluginFields].filter((field) => field !== 'name' && field !== 'id'),
 )
 
+type ResolvedMdxExtensions = {
+  readonly remarkPlugins: NonNullable<SilenMdxExtensions['remarkPlugins']>
+  readonly rehypePlugins: NonNullable<SilenMdxExtensions['rehypePlugins']>
+}
+
 const runners = new WeakMap<ResolvedConfig, PluginRunner>()
 
 function errorDetail(error: unknown): string {
@@ -41,9 +46,10 @@ export function pluginHookError(
   identity: string,
   hook: string,
   error: unknown,
+  route?: string,
 ): Error {
   return new Error(
-    `Silen plugin ${identity} failed in ${hook}: ${errorDetail(error)}`,
+    `Silen plugin ${identity} failed in ${hook}: ${errorDetail(error)}${route === undefined ? '' : ` (route ${route})`}`,
     { cause: error },
   )
 }
@@ -112,18 +118,19 @@ async function callHook<Value>(
   plugin: ResolvedSilenPlugin,
   hook: string,
   operation: () => Value | PromiseLike<Value>,
+  route?: string,
 ): Promise<Value> {
   try {
     return await operation()
   } catch (error) {
-    throw pluginHookError(plugin.identity, hook, error)
+    throw pluginHookError(plugin.identity, hook, error, route)
   }
 }
 
 export class PluginRunner {
   readonly plugins: readonly ResolvedSilenPlugin[]
   readonly context: SilenPluginFactoryContext
-  private mdxExtensionsResult?: Promise<Required<SilenMdxExtensions>>
+  private mdxExtensionsResult?: Promise<ResolvedMdxExtensions>
   private vitePluginsResult?: Promise<readonly Plugin[]>
   private clientModulesResult?: Promise<readonly string[]>
 
@@ -180,7 +187,7 @@ export class PluginRunner {
     }
   }
 
-  async collectMdxExtensions(): Promise<Required<SilenMdxExtensions>> {
+  async collectMdxExtensions(): Promise<ResolvedMdxExtensions> {
     this.mdxExtensionsResult ??= this.resolveMdxExtensions()
     const result = await this.mdxExtensionsResult
     return {
@@ -189,9 +196,11 @@ export class PluginRunner {
     }
   }
 
-  private async resolveMdxExtensions(): Promise<Required<SilenMdxExtensions>> {
-    const remarkPlugins: unknown[] = []
-    const rehypePlugins: unknown[] = []
+  private async resolveMdxExtensions(): Promise<ResolvedMdxExtensions> {
+    type RemarkPlugin = NonNullable<SilenMdxExtensions['remarkPlugins']>[number]
+    type RehypePlugin = NonNullable<SilenMdxExtensions['rehypePlugins']>[number]
+    const remarkPlugins: RemarkPlugin[] = []
+    const rehypePlugins: RehypePlugin[] = []
     for (const plugin of this.plugins) {
       if (!plugin.extendMdx) continue
       const extension = await callHook(plugin, 'extendMdx', () =>
@@ -206,9 +215,9 @@ export class PluginRunner {
         )
       }
       if (
-        (extension.remarkPlugins !== undefined &&
+        (extension.remarkPlugins != null &&
           !Array.isArray(extension.remarkPlugins)) ||
-        (extension.rehypePlugins !== undefined &&
+        (extension.rehypePlugins != null &&
           !Array.isArray(extension.rehypePlugins))
       ) {
         throw pluginHookError(
@@ -217,12 +226,10 @@ export class PluginRunner {
           new TypeError('extendMdx plugin lists must be arrays'),
         )
       }
-      remarkPlugins.push(
-        ...((extension.remarkPlugins ?? []) as readonly unknown[]),
-      )
-      rehypePlugins.push(
-        ...((extension.rehypePlugins ?? []) as readonly unknown[]),
-      )
+      const remarks = (extension.remarkPlugins ?? []) as readonly RemarkPlugin[]
+      const rehypes = (extension.rehypePlugins ?? []) as readonly RehypePlugin[]
+      remarkPlugins.push(...remarks)
+      rehypePlugins.push(...rehypes)
     }
     return { remarkPlugins, rehypePlugins }
   }
@@ -238,7 +245,9 @@ export class PluginRunner {
       if (!plugin.vite) continue
       const contribution = await callHook(plugin, 'vite', () => plugin.vite!())
       plugins.push(
-        ...(await normalizeVitePlugins(contribution, plugin.identity)),
+        ...(await callHook(plugin, 'vite', () =>
+          normalizeVitePlugins(contribution, plugin.identity),
+        )),
       )
     }
     return plugins
@@ -301,8 +310,11 @@ export class PluginRunner {
     const readonlyContext = deepFreeze({ ...context })
     for (const plugin of this.plugins) {
       if (!plugin.transformPageData) continue
-      const patch = await callHook(plugin, 'transformPageData', () =>
-        plugin.transformPageData!(deepFreeze(page), readonlyContext),
+      const patch = await callHook(
+        plugin,
+        'transformPageData',
+        () => plugin.transformPageData!(deepFreeze(page), readonlyContext),
+        context.route,
       )
       if (patch === undefined) continue
       if (typeof patch !== 'object' || patch === null || Array.isArray(patch)) {
@@ -310,14 +322,19 @@ export class PluginRunner {
           plugin.identity,
           'transformPageData',
           new TypeError('transformPageData must return an object or undefined'),
+          context.route,
         )
       }
-      page = await callHook(plugin, 'transformPageData', () =>
-        normalizePageData({
-          ...page,
-          ...patch,
-          data: { ...page.data, ...(patch.data ?? {}) },
-        }),
+      page = await callHook(
+        plugin,
+        'transformPageData',
+        () =>
+          normalizePageData({
+            ...page,
+            ...patch,
+            data: { ...page.data, ...(patch.data ?? {}) },
+          }),
+        context.route,
       )
     }
     return page
@@ -332,8 +349,11 @@ export class PluginRunner {
     const entries: SilenHeadEntry[] = []
     for (const plugin of this.plugins) {
       if (!plugin.transformHead) continue
-      const result = await callHook(plugin, 'transformHead', () =>
-        plugin.transformHead!(readonlyPage, readonlyContext),
+      const result = await callHook(
+        plugin,
+        'transformHead',
+        () => plugin.transformHead!(readonlyPage, readonlyContext),
+        context.route,
       )
       if (result === undefined) continue
       if (!Array.isArray(result)) {
@@ -341,11 +361,12 @@ export class PluginRunner {
           plugin.identity,
           'transformHead',
           new TypeError('transformHead must return an array or undefined'),
+          context.route,
         )
       }
       entries.push(
         ...(result as readonly SilenHeadEntry[]).map((entry) =>
-          normalizeHeadEntry(entry, plugin.identity),
+          normalizeHeadEntry(entry, plugin.identity, context.route),
         ),
       )
     }
@@ -451,11 +472,7 @@ async function normalizeVitePlugins(
     !('name' in resolved) ||
     typeof resolved.name !== 'string'
   ) {
-    throw pluginHookError(
-      identity,
-      'vite',
-      new TypeError('vite hook must return Vite plugins'),
-    )
+    throw new TypeError('vite hook must return Vite plugins')
   }
   return [protectVitePlugin(resolved as Plugin, identity)]
 }
@@ -607,12 +624,14 @@ function normalizePageData(value: SilenPageData): SilenPageData {
 function normalizeHeadEntry(
   value: SilenHeadEntry,
   identity: string,
+  route: string,
 ): SilenHeadEntry {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw pluginHookError(
       identity,
       'transformHead',
       new TypeError('head entries must be objects'),
+      route,
     )
   }
   if (typeof value.tag !== 'string' || !/^[a-z][a-z0-9-]*$/i.test(value.tag)) {
@@ -620,6 +639,7 @@ function normalizeHeadEntry(
       identity,
       'transformHead',
       new TypeError(`invalid head tag ${JSON.stringify(value.tag)}`),
+      route,
     )
   }
   const tag = value.tag.toLowerCase()
@@ -628,6 +648,7 @@ function normalizeHeadEntry(
       identity,
       'transformHead',
       new TypeError(`unsupported head tag ${JSON.stringify(value.tag)}`),
+      route,
     )
   }
   for (const [name, attribute] of Object.entries(value.attributes ?? {})) {
@@ -636,6 +657,7 @@ function normalizeHeadEntry(
         identity,
         'transformHead',
         new TypeError(`invalid head attribute ${name}`),
+        route,
       )
     }
     if (typeof attribute !== 'string' && typeof attribute !== 'boolean') {
@@ -643,6 +665,7 @@ function normalizeHeadEntry(
         identity,
         'transformHead',
         new TypeError(`invalid value for head attribute ${name}`),
+        route,
       )
     }
     if (
@@ -654,6 +677,7 @@ function normalizeHeadEntry(
         identity,
         'transformHead',
         new TypeError(`unsafe URL protocol for head attribute ${name}`),
+        route,
       )
     }
   }
@@ -662,6 +686,7 @@ function normalizeHeadEntry(
       identity,
       'transformHead',
       new TypeError('head entry children must be a string'),
+      route,
     )
   }
   if ((tag === 'link' || tag === 'meta') && value.children !== undefined) {
@@ -669,6 +694,7 @@ function normalizeHeadEntry(
       identity,
       'transformHead',
       new TypeError(`${tag} head entries cannot have children`),
+      route,
     )
   }
   return {

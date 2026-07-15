@@ -90,6 +90,13 @@ describe('published package smoke test', () => {
       repository?: { type?: string; url?: string }
       version?: string
     }
+    const pluginDeclaration = (
+      await execa('tar', [
+        '-xOzf',
+        archivePath,
+        'package/dist/shared/plugin.d.ts',
+      ])
+    ).stdout
 
     expect(files).toContain('package/README.md')
     expect(files).toContain('package/LICENSE')
@@ -136,6 +143,14 @@ describe('published package smoke test', () => {
       },
       version: '0.1.0-alpha.2',
     })
+    expect(pluginDeclaration).toContain(
+      "import type { ProcessorOptions as MdxOptions } from '@mdx-js/mdx'",
+    )
+    expect(pluginDeclaration).toContain(
+      "import type { PluginOption } from 'vite'",
+    )
+    expect(pluginDeclaration).toContain('SilenVitePluginOption = PluginOption')
+    expect(pluginDeclaration).not.toContain('SilenVitePluginOption = unknown')
     expect(
       (await execa('tar', ['-xOzf', archivePath, 'package/dist/node/cli.js']))
         .stdout,
@@ -276,6 +291,7 @@ The nested route was generated.
         'NodeNext',
         '--skipLibCheck',
         'docs/.silen/theme.tsx',
+        'docs/.silen/config.ts',
       ],
       { cwd: consumer, reject: false, all: true },
     )

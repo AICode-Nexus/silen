@@ -289,7 +289,7 @@ describe('Silen plugin runner', () => {
         },
       ),
     ).rejects.toThrow(
-      'strict-boundary:default failed in transformPageData: page data has unknown field route',
+      'strict-boundary:default failed in transformPageData: page data has unknown field route; extension values belong in data (route /)',
     )
   })
 
@@ -323,7 +323,7 @@ describe('Silen plugin runner', () => {
         },
       ),
     ).rejects.toThrow(
-      'unsafe-head:default failed in transformHead: unsafe URL protocol',
+      'unsafe-head:default failed in transformHead: unsafe URL protocol for head attribute src (route /)',
     )
   })
 

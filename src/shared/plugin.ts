@@ -1,4 +1,6 @@
 import type { ComponentType, PropsWithChildren } from 'react'
+import type { ProcessorOptions as MdxOptions } from '@mdx-js/mdx'
+import type { PluginOption } from 'vite'
 import type { ResolvedConfig, UserConfig } from './config.js'
 import type { Heading, JsonObject, RouteRecord } from './page.js'
 
@@ -15,11 +17,11 @@ export type SilenConfigPatch = Omit<Partial<UserConfig>, 'plugins'> & {
 }
 
 export interface SilenMdxExtensions {
-  readonly remarkPlugins?: readonly unknown[]
-  readonly rehypePlugins?: readonly unknown[]
+  readonly remarkPlugins?: MdxOptions['remarkPlugins']
+  readonly rehypePlugins?: MdxOptions['rehypePlugins']
 }
 
-export type SilenVitePluginOption = unknown
+export type SilenVitePluginOption = PluginOption
 
 export interface SilenPageData {
   readonly title: string
