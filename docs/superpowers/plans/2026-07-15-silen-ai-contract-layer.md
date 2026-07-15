@@ -524,7 +524,7 @@ git commit -m "refactor(ai): share MCP tool contracts"
 - dist/agent/locales/zh-CN/guide.md
 - dist/agent/locales/zh-CN/tasks/*.md
 
-- [ ] **Step 1: Add failing framework assembly tests**
+- [x] **Step 1: Add failing framework assembly tests**
 
 Assert:
 
@@ -544,7 +544,7 @@ pnpm test tests/ai/framework-contract.test.ts
 
 Expected: failure because no framework assembler exists.
 
-- [ ] **Step 2: Index emitted declaration files**
+- [x] **Step 2: Index emitted declaration files**
 
 Use the TypeScript compiler API from the existing dev dependency in the
 release-time tooling only. Record entry point, exported symbol, symbol kind,
@@ -552,12 +552,12 @@ declaration signature, and declaration-file reference.
 
 Do not ship the compiler or parse consumer TypeScript during site builds.
 
-- [ ] **Step 3: Assemble the framework contract**
+- [x] **Step 3: Assemble the framework contract**
 
 Merge config, CLI, MCP, declaration, guide, and task sources. Validate the final
 objects through the v1 schemas before writing.
 
-- [ ] **Step 4: Wire the release build**
+- [x] **Step 4: Wire the release build**
 
 After tsup and declaration generation succeed, run the TypeScript tooling
 through the existing jiti dependency and write dist/agent. The generator must
@@ -585,7 +585,7 @@ Add package exports:
 }
 ~~~
 
-- [ ] **Step 5: Extend package and tarball tests**
+- [x] **Step 5: Extend package and tarball tests**
 
 The real tarball must contain:
 
@@ -609,7 +609,7 @@ pnpm exec publint
 
 Expected: build, contract checks, real tarball smoke, and publint pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add src/ai/contract/framework.ts src/ai/contract/declarations.ts tooling/build-agent-contract.ts package.json tsup.config.ts tests/package.test.ts tests/package-smoke.test.ts tests/ai/framework-contract.test.ts tests/ai/public-api.test.ts

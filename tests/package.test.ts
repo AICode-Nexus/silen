@@ -9,8 +9,18 @@ import type {
 
 describe('public package contract', () => {
   it('returns typed configuration unchanged', () => {
-    const config = defineConfig({ title: 'Docs', base: '/project/' })
-    expect(config).toEqual({ title: 'Docs', base: '/project/' })
+    const config = defineConfig({
+      title: 'Docs',
+      base: '/project/',
+      ai: {
+        contract: {
+          enabled: true,
+          instructions: '.silen/ai-public.md',
+          tasksDir: '.silen/ai-tasks',
+        },
+      },
+    })
+    expect(config.ai?.contract?.enabled).toBe(true)
   })
 
   it('returns typed plugin factories unchanged', () => {

@@ -47,6 +47,7 @@
       "types": "./dist/ai/index.d.ts",
       "import": "./dist/ai/index.js"
     },
+    "./agent/*": "./dist/agent/*",
     "./package.json": "./package.json"
   },
   "files": [
@@ -55,7 +56,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && jiti tooling/build-agent-contract.ts",
     "site:build": "pnpm build && node dist/node/cli.js build website",
     "site:dev": "pnpm build && node dist/node/cli.js dev website",
     "test": "vitest run",

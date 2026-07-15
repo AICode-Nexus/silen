@@ -26,3 +26,10 @@ export type {
   WorkspaceWriteInput,
 } from './workspace.js'
 export type { AiChunk, AiPage } from '../shared/ai.js'
+export type {
+  SilenApiContract,
+  SilenContractManifest,
+  SilenFrameworkContractManifest,
+  SilenSiteContractManifest,
+  SilenTaskMetadata,
+} from '../shared/ai-contract.js'
