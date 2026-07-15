@@ -4,6 +4,13 @@ import type {
   SilenContractManifest,
 } from '../../shared/ai-contract.js'
 
+function containsControlCharacter(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const code = character.codePointAt(0) ?? 0
+    return code <= 0x1f || code === 0x7f
+  })
+}
+
 const identifierSchema = z
   .string()
   .min(1)
@@ -17,7 +24,7 @@ const publicUrlSchema = z
   .refine((value) => {
     if (
       value.includes('\\') ||
-      /[\u0000-\u001f\u007f]/.test(value) ||
+      containsControlCharacter(value) ||
       /^[A-Za-z]:[\\/]/.test(value) ||
       value.startsWith('\\\\')
     ) {
@@ -45,7 +52,7 @@ const siteRootSchema = z
     (value) =>
       !value.startsWith('//') &&
       !value.includes('\\') &&
-      !/[\u0000-\u001f\u007f]/.test(value),
+      !containsControlCharacter(value),
     'Expected a safe site root',
   )
 

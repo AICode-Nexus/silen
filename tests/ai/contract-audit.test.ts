@@ -113,12 +113,10 @@ describe('Agent Contract audit', () => {
     ])
     const files = contractFiles()
     files.set(manifestPath, '{"schemaVersion":2}\n')
-    expect(await audit(files)).toEqual([
-      expect.objectContaining({
-        code: 'contract-fallback',
-        message: expect.stringContaining('read-only Markdown fallback'),
-      }),
-    ])
+    const result = await audit(files)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ code: 'contract-fallback' })
+    expect(result[0]?.message).toContain('read-only Markdown fallback')
   })
 
   it('reports stale versions, missing resources, locales, and removed references safely', async () => {

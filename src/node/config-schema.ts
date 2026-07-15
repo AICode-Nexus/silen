@@ -6,6 +6,13 @@ function invalidBase(reason: string): Error {
   return new Error(`base must be a normalized absolute pathname: ${reason}`)
 }
 
+function containsControlCharacter(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const code = character.codePointAt(0) ?? 0
+    return code <= 0x1f || code === 0x7f
+  })
+}
+
 function canonicalBase(value: string): string {
   if (!value.startsWith('/')) throw new Error('base must start with /')
   if (value.includes('?') || value.includes('#')) {
@@ -169,7 +176,8 @@ function safePublicRelativePath(value: string): boolean {
     /^[A-Za-z]:[\\/]/.test(value) ||
     /^[A-Za-z][A-Za-z0-9+.-]*:/.test(value) ||
     value.includes('\\') ||
-    /[?#\u0000-\u001f\u007f]/.test(value) ||
+    /[?#]/.test(value) ||
+    containsControlCharacter(value) ||
     /%(?:2f|5c)/i.test(value)
   ) {
     return false

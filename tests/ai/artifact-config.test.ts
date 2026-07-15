@@ -14,6 +14,7 @@ describe('AI artifact config', () => {
       llmsFullTxt: true,
       markdownRoutes: true,
       index: true,
+      contract: { enabled: true },
     })
   })
 
@@ -28,6 +29,7 @@ describe('AI artifact config', () => {
       llmsFullTxt: false,
       markdownRoutes: true,
       index: true,
+      contract: { enabled: true },
     })
   })
 })

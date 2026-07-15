@@ -915,7 +915,7 @@ git commit -m "docs(ai): publish the official Agent Contract"
 - Modify only files required by failures attributable to this feature.
 - Update the plan checkboxes and final verification record.
 
-- [ ] **Step 1: Run static quality checks**
+- [x] **Step 1: Run static quality checks**
 
 ~~~bash
 pnpm format:check
@@ -925,7 +925,7 @@ pnpm typecheck
 
 Expected: all commands exit 0.
 
-- [ ] **Step 2: Run the complete unit and integration suite**
+- [x] **Step 2: Run the complete unit and integration suite**
 
 ~~~bash
 pnpm test --maxWorkers=1 --no-file-parallelism
@@ -934,7 +934,7 @@ pnpm test --maxWorkers=1 --no-file-parallelism
 Expected: all tests pass. Investigate a one-off CLI timeout by rerunning the
 specific test before changing production code.
 
-- [ ] **Step 3: Run build, package, and publication checks**
+- [x] **Step 3: Run build, package, and publication checks**
 
 ~~~bash
 pnpm build
@@ -950,7 +950,7 @@ Expected:
 - Package exports resolve.
 - The tarball contains no source, tests, caches, local Agent files, or secrets.
 
-- [ ] **Step 4: Run browser verification**
+- [x] **Step 4: Run browser verification**
 
 ~~~bash
 pnpm exec playwright test tests/e2e
@@ -959,7 +959,7 @@ pnpm exec playwright test tests/e2e
 Expected: all browser tests pass, including existing AI actions, navigation,
 search, and the official contract routes.
 
-- [ ] **Step 5: Perform explicit output inspection**
+- [x] **Step 5: Perform explicit output inspection**
 
 Check:
 
@@ -971,7 +971,7 @@ Check:
 - Unsupported schema test remains read-only.
 - Git diff contains only intended source, tests, docs, and plan checkbox changes.
 
-- [ ] **Step 6: Record the final checkpoint and commit fixes**
+- [x] **Step 6: Record the final checkpoint and commit fixes**
 
 If the gate required scoped fixes, commit them with:
 
@@ -983,15 +983,15 @@ Do not create an empty commit when no fix was required.
 
 ## Final definition of done
 
-- [ ] The installed npm package contains a readable versioned framework
+- [x] The installed npm package contains a readable versioned framework
   contract and exact public Agent paths.
-- [ ] Every default site build emits a base-aware manifest, guide, API, and
+- [x] Every default site build emits a base-aware manifest, guide, API, and
   bilingual built-in task resources.
-- [ ] llms.txt points AI clients to the manifest.
-- [ ] Config, CLI, and MCP facts come from the same registries used at runtime.
-- [ ] Public TypeScript exports are indexed from emitted declarations.
-- [ ] Custom public instructions and tasks are opt-in and path-bounded.
-- [ ] AGENTS.md, CLAUDE.md, secrets, and absolute paths never leak.
-- [ ] MCP remains read-only by default and write tools require --allow-write.
-- [ ] A deterministic client completes both create and maintain scenarios.
-- [ ] Audit, build, Git diff, package smoke, publint, and browser gates pass.
+- [x] llms.txt points AI clients to the manifest.
+- [x] Config, CLI, and MCP facts come from the same registries used at runtime.
+- [x] Public TypeScript exports are indexed from emitted declarations.
+- [x] Custom public instructions and tasks are opt-in and path-bounded.
+- [x] AGENTS.md, CLAUDE.md, secrets, and absolute paths never leak.
+- [x] MCP remains read-only by default and write tools require --allow-write.
+- [x] A deterministic client completes both create and maintain scenarios.
+- [x] Audit, build, Git diff, package smoke, publint, and browser gates pass.
