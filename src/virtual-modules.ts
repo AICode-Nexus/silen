@@ -60,6 +60,13 @@ declare module 'virtual:silen/config' {
     readonly ariaLabel?: string
   }
 
+  interface ThemeLocaleItem {
+    readonly lang: string
+    readonly label: string
+    readonly root?: string
+    readonly link?: string
+  }
+
   type ThemeLinkTarget = '_blank' | '_parent' | '_self' | '_top'
 
   interface ThemeHomeAction {
@@ -107,6 +114,7 @@ declare module 'virtual:silen/config' {
     readonly nav?: readonly ThemeNavItem[]
     readonly sidebar?: readonly ThemeSidebarGroup[]
     readonly socialLinks?: readonly ThemeSocialLink[]
+    readonly locales?: readonly ThemeLocaleItem[]
     readonly search?: boolean
     readonly ai?: ThemeAiConfig
     readonly home?: ThemeHomeConfig

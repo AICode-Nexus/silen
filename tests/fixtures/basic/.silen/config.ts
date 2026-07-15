@@ -28,6 +28,10 @@ export default defineConfig({
         ariaLabel: 'Silen on GitHub',
       },
     ],
+    locales: [
+      { lang: 'en-US', label: 'English', root: '/' },
+      { lang: 'zh-CN', label: '中文', root: '/zh/' },
+    ],
     privateThemeToken: 'do-not-serialize-theme',
   },
   privateToken: 'do-not-serialize',

@@ -132,6 +132,16 @@ function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
             }),
           ),
         }),
+    ...(themeConfig.locales === undefined
+      ? {}
+      : {
+          locales: themeConfig.locales.map(({ lang, label, root, link }) => ({
+            lang,
+            label,
+            ...(root === undefined ? {} : { root }),
+            ...(link === undefined ? {} : { link }),
+          })),
+        }),
     ...(themeConfig.search === undefined ? {} : { search: themeConfig.search }),
     ...(typeof askAiEndpoint === 'string' && askAiEndpoint.length > 0
       ? { ai: { endpoint: askAiEndpoint } }

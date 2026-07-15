@@ -1,0 +1,55 @@
+---
+lang: zh-CN
+title: 快速开始
+description: 创建并发布你的第一个 Silen 文档站点。
+---
+
+# 快速开始
+
+Silen 可以把 Markdown 和 MDX 文件夹转换成完整的静态网站。它用 React 提供
+组件模型，用 Vite 提供开发与构建流水线，用 MDX 让内容在需要时超越普通
+Markdown。
+
+## 安装
+
+使用 Node.js 20.19 或更新版本，然后把 Silen 加入项目：
+
+```sh
+pnpm add -D silen
+```
+
+## 创建站点
+
+添加 `docs/.silen/config.ts`：
+
+```ts
+import { defineConfig } from 'silen'
+
+export default defineConfig({
+  title: '我的文档',
+})
+```
+
+然后添加 `docs/index.mdx`：
+
+```mdx
+# Hello, Silen
+
+你的文档从这里开始。
+```
+
+## 开发与构建
+
+```sh
+pnpm silen dev docs
+pnpm silen build docs
+pnpm silen preview docs
+```
+
+生产输出默认写入 `docs/.silen/dist`。如果站点部署在子路径下，例如 GitHub
+Pages 项目站点，请配置 `base`。
+
+## 下一步
+
+继续阅读 [AI-ready 文档](/zh/ai/)，或者查看
+[源码仓库](https://github.com/AICode-Nexus/silen)。

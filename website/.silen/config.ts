@@ -30,6 +30,10 @@ export default defineConfig({
         ariaLabel: 'Silen on GitHub',
       },
     ],
+    locales: [
+      { lang: 'en-US', label: 'English', root: '/' },
+      { lang: 'zh-CN', label: '中文', root: '/zh/' },
+    ],
     home: {
       hero: {
         name: 'Silen',

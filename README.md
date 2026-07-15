@@ -204,6 +204,24 @@ At widths below `60rem` (960px), the desktop sidebar becomes a modal navigation
 Sheet. At 960px and above, the persistent documentation sidebar and outline are
 shown.
 
+Add locale roots to show a language switcher that preserves the current page:
+
+```ts
+export default defineConfig({
+  lang: 'en-US',
+  themeConfig: {
+    locales: [
+      { lang: 'en-US', label: 'English', root: '/' },
+      { lang: 'zh-CN', label: '中文', root: '/zh/' },
+    ],
+  },
+})
+```
+
+With that configuration, `/guide/` switches to `/zh/guide/`, and `/zh/ai/`
+switches back to `/ai/`. Pages can set `lang` in frontmatter when a route uses a
+different language from the site default.
+
 ## Theme tokens
 
 Override semantic CSS variables instead of internal utility classes. Import

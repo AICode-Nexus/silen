@@ -106,6 +106,66 @@ describe('default documentation layout', () => {
     ).toBe(false)
   })
 
+  it('switches languages to the matching current documentation route', async () => {
+    const user = userEvent.setup()
+    const themeConfig: ThemeConfig = {
+      search: false,
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        { lang: 'zh-CN', label: '中文', root: '/zh/' },
+      ],
+    }
+
+    const { unmount } = render(
+      <TestSiteProvider
+        base="/project/"
+        path="/project/guide/"
+        themeConfig={themeConfig}
+      >
+        <Layout>Guide</Layout>
+      </TestSiteProvider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Language: English' }))
+    const englishMenu = screen.getByRole('menu', { name: 'Language: English' })
+    expect(
+      within(englishMenu)
+        .getByRole('menuitem', { name: 'English' })
+        .getAttribute('aria-current'),
+    ).toBe('true')
+    expect(
+      within(englishMenu)
+        .getByRole('menuitem', { name: '中文' })
+        .getAttribute('href'),
+    ).toBe('/project/zh/guide/')
+
+    await user.keyboard('{Escape}')
+    unmount()
+
+    render(
+      <TestSiteProvider
+        base="/project/"
+        path="/project/zh/ai/?view=full#copy"
+        themeConfig={themeConfig}
+      >
+        <Layout>AI</Layout>
+      </TestSiteProvider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Language: 中文' }))
+    const chineseMenu = screen.getByRole('menu', { name: 'Language: 中文' })
+    expect(
+      within(chineseMenu)
+        .getByRole('menuitem', { name: '中文' })
+        .getAttribute('aria-current'),
+    ).toBe('true')
+    expect(
+      within(chineseMenu)
+        .getByRole('menuitem', { name: 'English' })
+        .getAttribute('href'),
+    ).toBe('/project/ai/?view=full#copy')
+  })
+
   it.each([
     ['root-relative', '/logo.svg', '/project/logo.svg'],
     ['local-relative', 'images/logo.svg', '/project/images/logo.svg'],

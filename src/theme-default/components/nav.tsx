@@ -1,11 +1,29 @@
-import { SearchIcon, SparklesIcon } from 'lucide-react'
+import {
+  CheckIcon,
+  LanguagesIcon,
+  SearchIcon,
+  SparklesIcon,
+} from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { loadAskAiDialog } from 'virtual:silen/ask-ai'
 import { Link, useData, useRoute } from '../../client/index.js'
+import type { ThemeLocaleItem } from '../../shared/config.js'
 import { cn } from '../lib/cn.js'
-import { isActiveThemeLink, resolveThemeLink } from '../lib/navigation.js'
+import {
+  isActiveThemeLink,
+  resolveThemeLink,
+  resolveThemeLocaleLinks,
+} from '../lib/navigation.js'
 import { AppearanceSwitch } from './appearance.js'
 import { Button } from './ui/button.js'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu.js'
 import { MobileSidebar } from './sidebar.js'
 
 type SearchDialogComponent = (typeof import('./search.js'))['SearchDialog']
@@ -164,6 +182,58 @@ function AskAiLauncher({ endpoint }: { readonly endpoint: string }) {
   )
 }
 
+function LanguageSwitch({
+  locales,
+}: {
+  readonly locales: readonly ThemeLocaleItem[]
+}): React.JSX.Element | null {
+  const { base } = useData()
+  const currentRoute = useRoute()
+  const fallbackLocale = locales[0]
+  if (fallbackLocale === undefined || locales.length < 2) return null
+
+  const links = resolveThemeLocaleLinks(locales, currentRoute, base)
+  const active = links.find((item) => item.active)?.locale ?? fallbackLocale
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label={`Language: ${active.label}`}
+          title={`Language: ${active.label}`}
+        >
+          <LanguagesIcon data-icon="inline-start" />
+          <span className="hidden lg:inline">{active.label}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" aria-label="Language">
+        <DropdownMenuLabel>Language</DropdownMenuLabel>
+        <DropdownMenuGroup>
+          {links.map(({ locale, href, active: activeLocale }) => (
+            <DropdownMenuItem key={`${locale.lang}:${locale.label}`} asChild>
+              <Link
+                href={href}
+                hrefLang={locale.lang}
+                lang={locale.lang}
+                aria-current={activeLocale ? 'true' : undefined}
+                className="justify-between"
+              >
+                <span>{locale.label}</span>
+                {activeLocale ? (
+                  <CheckIcon aria-hidden="true" className="ml-auto" />
+                ) : null}
+              </Link>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function Nav(): React.JSX.Element {
   const { base, siteTitle, themeConfig } = useData()
   const currentRoute = useRoute()
@@ -212,6 +282,9 @@ export function Nav(): React.JSX.Element {
         {themeConfig?.search === false ? null : <SearchLauncher />}
         {askAiEndpoint === undefined || LazyAskAiDialog === undefined ? null : (
           <AskAiLauncher endpoint={askAiEndpoint} />
+        )}
+        {themeConfig?.locales === undefined ? null : (
+          <LanguageSwitch locales={themeConfig.locales} />
         )}
         <AppearanceSwitch />
         <MobileSidebar />

@@ -1,0 +1,45 @@
+---
+lang: zh-CN
+title: AI-ready 文档
+description: 确定性的产物，以及有权限边界的本地 MCP 工作区。
+---
+
+# AI-ready 文档
+
+Silen 把 AI 访问视为文档构建的一部分，而不是事后补上的功能。默认输出是
+确定、可检查的，并且不会调用模型。
+
+## 面向 AI 的公开产物
+
+每次生产构建都可以输出：
+
+- `llms.txt`，用于精简页面地图
+- `llms-full.txt`，用于完整可读内容
+- `ai-index.json`，用于结构化发现
+- 每个公开页面对应的干净 Markdown 路由
+
+标记为 `draft: true` 或 `ai: false` 的页面会从这些产物中排除。
+
+## 复制给 AI
+
+默认主题允许读者复制干净的页面 Markdown，或复制带规范来源 URL 的
+prompt-ready 版本。复制内容来自同一套构建产物，因此会和渲染页面保持一致。
+
+## 本地 MCP 工作区
+
+```sh
+pnpm silen ai init docs
+pnpm silen ai index docs
+pnpm silen ai audit docs
+pnpm silen mcp docs
+```
+
+MCP 服务默认只读。只有显式使用 `--allow-write` 启动时，写入工具才会出现；
+所有写入仍被限制在 Markdown 工作区内。
+
+## Ask AI
+
+Ask AI 是可选的端点集成。Silen 不会把 provider key 放进生成站点：你的服务端
+负责鉴权，并把一套小型 NDJSON 协议流式返回给主题。
+
+返回 [快速开始指南](/zh/guide/)。

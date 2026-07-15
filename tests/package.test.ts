@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { defineConfig } from '../src/index'
-import type { ThemeConfig, ThemeSocialLink } from '../src/index'
+import type {
+  ThemeConfig,
+  ThemeLocaleItem,
+  ThemeSocialLink,
+} from '../src/index'
 
 describe('public package contract', () => {
   it('returns typed configuration unchanged', () => {
@@ -15,6 +19,19 @@ describe('public package contract', () => {
       ariaLabel: 'Silen on GitHub',
     }
     const themeConfig: ThemeConfig = { socialLinks: [socialLink] }
+
+    expect(defineConfig({ themeConfig })).toEqual({ themeConfig })
+  })
+
+  it('exposes typed locale switch entries through themeConfig', () => {
+    const locale: ThemeLocaleItem = {
+      lang: 'zh-CN',
+      label: '中文',
+      root: '/zh/',
+    }
+    const themeConfig: ThemeConfig = {
+      locales: [{ lang: 'en-US', label: 'English', root: '/' }, locale],
+    }
 
     expect(defineConfig({ themeConfig })).toEqual({ themeConfig })
   })

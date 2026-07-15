@@ -127,6 +127,10 @@ describe('static production build', () => {
           ariaLabel: 'Silen on GitHub',
         },
       ],
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        { lang: 'zh-CN', label: '中文', root: '/zh/' },
+      ],
     })
     expect(data.route).toBe('/')
   })

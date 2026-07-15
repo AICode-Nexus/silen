@@ -20,6 +20,7 @@ export type {
   ThemeHomeImage,
   ThemeLinkTarget,
   ThemeLogo,
+  ThemeLocaleItem,
   ThemeNavItem,
   ThemeSidebarGroup,
   ThemeSidebarItem,
