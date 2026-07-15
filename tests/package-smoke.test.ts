@@ -322,7 +322,7 @@ The nested route was generated.
     expect(themeCss).toContain('.sr-only')
     expect(themeCss).toContain('.size-7')
     expect(themeCss).toContain('.sticky')
-    expect(themeCss).toContain('.max-h-96')
+    expect(themeCss).toContain('.silen-home-hero-image')
     expect(themeCss).not.toContain(packageSource)
     expect(themeCss).not.toContain('src/theme-default/styles')
     expect((await stat(executable)).isFile()).toBe(true)

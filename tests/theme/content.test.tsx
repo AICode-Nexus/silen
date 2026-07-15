@@ -34,7 +34,7 @@ describe('default content layouts', () => {
   })
 
   it('renders a semantic, base-aware hero and complete feature cards', () => {
-    render(
+    const { container } = render(
       <TestSiteProvider base="/project/">
         <HomeLayout
           hero={{
@@ -53,21 +53,33 @@ describe('default content layouts', () => {
           }}
           features={[
             {
+              icon: 'blocks',
               title: 'Fast by default',
               details: 'Server-rendered pages with focused client behavior.',
               link: '/guide/performance',
               linkText: 'Performance guide',
             },
             {
+              icon: 'custom-mark',
               title: 'Typed configuration',
               details: 'Small, explicit contracts.',
             },
           ]}
         >
-          <p>Additional home content</p>
+          <section aria-label="Additional home content">
+            Additional home content
+          </section>
         </HomeLayout>
       </TestSiteProvider>,
     )
+
+    expect(container.querySelector('.silen-home')).not.toBeNull()
+    expect(container.querySelector('.silen-home-hero')).not.toBeNull()
+    expect(container.querySelector('.silen-home-visual')).not.toBeNull()
+    expect(container.querySelector('.silen-home-features')).not.toBeNull()
+    expect(container.querySelector('.silen-home-content')).not.toBeNull()
+    expect(container.querySelector('svg.lucide-blocks')).not.toBeNull()
+    expect(screen.getByText('custom-mark')).not.toBeNull()
 
     const hero = screen.getByRole('region', { name: 'Build calmer docs' })
     expect(within(hero).getByRole('heading', { level: 1 }).textContent).toBe(

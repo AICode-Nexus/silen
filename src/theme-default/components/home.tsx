@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { ArrowRightIcon } from 'lucide-react'
+import { ArrowRightIcon, BlocksIcon, SparklesIcon, ZapIcon } from 'lucide-react'
 import { Link, useData, useRoute } from '../../client/index.js'
 import type {
   ThemeHomeAction,
@@ -199,6 +199,21 @@ function HeroActions({
   )
 }
 
+const featureIcons = {
+  blocks: BlocksIcon,
+  sparkles: SparklesIcon,
+  zap: ZapIcon,
+} as const
+
+function FeatureIcon({ icon }: { readonly icon: string }): React.JSX.Element {
+  const Icon = featureIcons[icon as keyof typeof featureIcons]
+  return (
+    <span aria-hidden="true" className="silen-home-feature-icon">
+      {Icon ? <Icon /> : icon}
+    </span>
+  )
+}
+
 function FeatureCard({
   base,
   feature,
@@ -210,20 +225,16 @@ function FeatureCard({
     ? safeDestination(feature.link, base)
     : undefined
   return (
-    <Card>
-      <CardHeader>
-        {feature.icon ? (
-          <span aria-hidden="true" className="mb-2 text-2xl">
-            {feature.icon}
-          </span>
-        ) : null}
+    <Card className="silen-home-feature-card h-full">
+      <CardHeader className="flex-1">
+        {feature.icon ? <FeatureIcon icon={feature.icon} /> : null}
         <CardTitle>
           <h3>{feature.title}</h3>
         </CardTitle>
         <CardDescription>{feature.details}</CardDescription>
       </CardHeader>
       {destination ? (
-        <CardFooter>
+        <CardFooter className="mt-auto">
           <Button asChild variant="link" className="px-0">
             <HomeLink
               destination={destination}
@@ -376,13 +387,13 @@ export function HomeLayout({
     : undefined
 
   return (
-    <div className="mx-auto flex max-w-[var(--silen-layout-width)] flex-col gap-16 px-6 py-16 sm:py-20 lg:px-10">
+    <div className="silen-home mx-auto flex max-w-[var(--silen-layout-width)] flex-col gap-12 px-6 py-12 sm:py-16 lg:px-10">
       {hero ? (
         <section
           aria-labelledby={heroTitleId}
-          className="grid items-center gap-12 lg:grid-cols-2"
+          className="silen-home-hero grid items-center gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(28rem,1.08fr)] lg:gap-12"
         >
-          <div className="flex flex-col gap-6">
+          <div className="silen-home-hero-copy flex flex-col gap-5">
             <h1
               id={heroTitleId}
               className="text-balance text-5xl font-semibold tracking-tight sm:text-6xl"
@@ -390,26 +401,31 @@ export function HomeLayout({
               {hero.name}
             </h1>
             {hero.text ? (
-              <p className="text-2xl font-medium">{hero.text}</p>
+              <p className="text-balance text-2xl font-medium">{hero.text}</p>
             ) : null}
             {hero.tagline ? (
-              <p className="max-w-2xl text-xl text-muted-foreground">
+              <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
                 {hero.tagline}
               </p>
             ) : null}
             <HeroActions actions={hero.actions ?? []} base={base} />
           </div>
           {imageSource && imageData ? (
-            <img
-              src={imageSource}
-              alt={imageData.alt}
-              className="mx-auto max-h-96 w-full object-contain"
-            />
+            <div className="silen-home-visual">
+              <img
+                src={imageSource}
+                alt={imageData.alt}
+                className="silen-home-hero-image"
+              />
+            </div>
           ) : null}
         </section>
       ) : null}
       {features.length > 0 ? (
-        <section aria-labelledby={featuresTitleId}>
+        <section
+          aria-labelledby={featuresTitleId}
+          className="silen-home-features"
+        >
           <h2 id={featuresTitleId} className="sr-only">
             Features
           </h2>
@@ -424,7 +440,7 @@ export function HomeLayout({
           </div>
         </section>
       ) : null}
-      {children}
+      <div className="silen-home-content">{children}</div>
     </div>
   )
 }
