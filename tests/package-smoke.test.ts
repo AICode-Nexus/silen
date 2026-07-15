@@ -129,7 +129,7 @@ describe('published package smoke test', () => {
     expect(files.some((file) => file.includes('/.vite/'))).toBe(false)
     expect(files.some((file) => file.includes('/.silen/ai/'))).toBe(false)
     expect(packedManifest).toMatchObject({
-      bin: { silen: './dist/node/cli.js' },
+      bin: { silen: 'dist/node/cli.js' },
       engines: { node: '^20.19.0 || >=22.12.0' },
       license: 'MIT',
       name: '@aicode-nexus/silen',
