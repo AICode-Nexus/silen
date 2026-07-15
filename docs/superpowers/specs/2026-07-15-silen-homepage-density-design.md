@@ -1,6 +1,6 @@
 # Silen Homepage Density and Contact Design
 
-- Status: Design approved; written specification awaiting review
+- Status: Approved
 - Date: 2026-07-15
 - Scope: Default `HomeLayout`, English and Chinese example homepages, base-aware home imagery, and homepage contact section
 - Source QR image: `/Users/admin/Desktop/qrcode_for_gh_d6a14f8e7285_344.jpg`
@@ -16,7 +16,7 @@ The work will improve the reusable default `HomeLayout` without turning the Alph
 The implementation must:
 
 1. Make the homepage feel complete at desktop, tablet, and mobile sizes.
-2. Remove the large vertical gaps caused by the home container and document heading styles stacking together.
+2. Remove the large vertical gaps caused by individual MDX nodes becoming direct children of the home container's uniform layout gap.
 3. Communicate Silen's React, Vite, MDX, static-output, search, and AI-ready capabilities before the user reaches the guide.
 4. Keep the homepage quiet, legible, and documentation-oriented rather than marketing-heavy.
 5. Improve the reusable default theme, not only the example website.
@@ -46,7 +46,7 @@ The homepage currently contains one hero, three feature cards, a two-line quick-
 
 ### 4.2 Spacing and hierarchy
 
-`HomeLayout` uses a large uniform container gap while its MDX children inherit document-oriented `h2` margins, top padding, and borders. Those layers combine into oversized blank bands between cards, headings, paragraphs, and code blocks.
+`HomeLayout` places the MDX fragment directly inside a `gap-16` flex column. Each heading, paragraph, and code block therefore becomes a separate flex item with 64px between nodes, while the same content has no dedicated homepage typography context. The result is both oversized blank bands and under-styled headings.
 
 ### 4.3 Hero visual
 
@@ -99,9 +99,8 @@ The text column will contain:
 - A short supporting paragraph capped at a readable measure.
 - Primary `Get started` / `快速开始` action.
 - Secondary GitHub action.
-- A compact proof row: React, Vite, MDX, static-first, and AI-ready.
 
-The visual column will show a restrained pipeline illustration:
+The visual column will show a restrained pipeline illustration with a compact proof row for React, Vite, MDX, static-first, and AI-ready:
 
 ```text
 MDX source -> Silen build -> HTML / Search / Markdown / MCP
@@ -125,7 +124,7 @@ Icons will be decorative when the heading already names the concept. Existing ar
 
 The quick-start section will use a two-column layout on wide screens and a single column on narrow screens. The explanatory side will state what the two commands accomplish. The code side will use the existing accessible code block and copy action.
 
-The section must not duplicate a large heading margin from document pages. Its heading, paragraph, code block, and follow-up link will share a local spacing rhythm.
+The section must not allow its heading, paragraph, code block, and follow-up link to become separate items in the outer home layout gap. They will share a local spacing rhythm inside the dedicated home content wrapper.
 
 ### 7.4 One source, two audiences
 
@@ -273,6 +272,7 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm site:build
+pnpm format:check
 ```
 
 Browser verification will use the real Silen dev server and cover:
