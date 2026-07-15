@@ -21,6 +21,11 @@ const config: ResolvedConfig = {
     llmsFullTxt: true,
     markdownRoutes: true,
     index: true,
+    contract: {
+      enabled: true,
+      instructions: undefined,
+      tasksDir: undefined,
+    },
   },
   command: 'build',
   root: fixtureRoot,

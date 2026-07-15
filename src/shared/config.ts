@@ -97,6 +97,26 @@ export interface AiArtifactConfig {
   readonly index: boolean
 }
 
+export interface AiContractConfig {
+  readonly enabled?: boolean
+  readonly instructions?: string
+  readonly tasksDir?: string
+}
+
+export interface UserAiConfig extends Partial<AiArtifactConfig> {
+  readonly contract?: AiContractConfig
+}
+
+export interface ResolvedAiContractConfig {
+  readonly enabled: boolean
+  readonly instructions?: string | undefined
+  readonly tasksDir?: string | undefined
+}
+
+export interface ResolvedAiConfig extends AiArtifactConfig {
+  readonly contract: ResolvedAiContractConfig
+}
+
 export interface AnalyticsScript {
   readonly src?: string | undefined
   readonly content?: string | undefined
@@ -138,13 +158,13 @@ export interface UserConfig {
   themeConfig?: ThemeConfig
   analytics?: readonly AnalyticsProvider[]
   plugins?: readonly SilenPluginEntry[]
-  ai?: Partial<AiArtifactConfig>
+  ai?: UserAiConfig
 }
 
 export interface ResolvedConfig extends Required<
   Omit<UserConfig, 'ai' | 'plugins'>
 > {
-  ai: AiArtifactConfig
+  ai: ResolvedAiConfig
   plugins?: readonly ResolvedSilenPlugin[]
   command: 'serve' | 'build'
   root: string

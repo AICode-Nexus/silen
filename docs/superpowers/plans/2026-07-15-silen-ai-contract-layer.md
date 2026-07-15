@@ -284,7 +284,7 @@ git commit -m "feat(ai): add bilingual Agent task playbooks"
 - userConfigSchema is used by resolveConfig and API generation.
 - configApiEntries are generated from the schema metadata.
 
-- [ ] **Step 1: Reconcile the current config implementation**
+- [x] **Step 1: Reconcile the current config implementation**
 
 Before editing, inspect the final plugin and analytics changes and run:
 
@@ -296,7 +296,7 @@ pnpm test tests/config.test.ts tests/plugin.test.ts tests/analytics.test.tsx
 Expected: the active branch is isolated from unrelated edits and the current
 config regression set passes.
 
-- [ ] **Step 2: Add failing contract-config tests**
+- [x] **Step 2: Add failing contract-config tests**
 
 Cover:
 
@@ -316,7 +316,7 @@ pnpm test tests/ai/config-contract.test.ts tests/config.test.ts
 
 Expected: failure because contract config and API metadata are absent.
 
-- [ ] **Step 3: Extract and annotate the runtime schema**
+- [x] **Step 3: Extract and annotate the runtime schema**
 
 Move the settled Zod schema out of src/node/config.ts without changing existing
 validation semantics. Add descriptions, defaults, and introduced-version
@@ -330,12 +330,12 @@ public plugins field through explicit checked metadata so it still appears in
 the config API. The drift test compares that metadata with UserConfig instead
 of pretending plugin factories are JSON Schema.
 
-- [ ] **Step 4: Add public and resolved config types**
+- [x] **Step 4: Add public and resolved config types**
 
 Keep defineConfig inference stable. Update exported config types without
 exporting internal absolute paths or plugin runner state.
 
-- [ ] **Step 5: Generate the config API section**
+- [x] **Step 5: Generate the config API section**
 
 Convert Zod schemas to JSON-compatible type and constraint descriptions. Ensure
 the output contains safe literal defaults only.
@@ -350,7 +350,7 @@ pnpm typecheck
 Expected: config resolution and existing features remain green; generated API
 coverage matches public config.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add src/node/config-schema.ts src/ai/contract/config-api.ts src/shared/config.ts src/node/config.ts src/index.ts tests/config.test.ts tests/ai/config-contract.test.ts tests/plugin.test.ts tests/analytics.test.tsx

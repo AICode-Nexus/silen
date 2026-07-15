@@ -17,12 +17,16 @@ export function definePlugin<Options = undefined>(
 }
 
 export type {
+  AiContractConfig,
   AiArtifactConfig,
   AnalyticsProvider,
   AnalyticsScript,
   BaiduAnalyticsProvider,
   CustomAnalyticsProvider,
   GoogleAnalyticsProvider,
+  ResolvedAiConfig,
+  ResolvedAiContractConfig,
+  UserAiConfig,
   UserConfig,
 } from './shared/config.js'
 export type {

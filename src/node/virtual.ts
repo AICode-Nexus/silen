@@ -293,7 +293,12 @@ function serializeConfig(
         description: config.description,
         lang: config.lang,
         base: config.base,
-        ai: config.ai,
+        ai: {
+          llmsTxt: config.ai.llmsTxt,
+          llmsFullTxt: config.ai.llmsFullTxt,
+          markdownRoutes: config.ai.markdownRoutes,
+          index: config.ai.index,
+        },
         analytics:
           config.command === 'build'
             ? publicAnalyticsConfig(config.analytics)
