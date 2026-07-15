@@ -10,7 +10,7 @@ export interface CreateMcpServerOptions {
 
 export function createMcpServer(options: CreateMcpServerOptions): McpServer {
   const server = new McpServer(
-    { name: 'silen', version: '0.1.0-alpha.2' },
+    { name: 'silen', version: '0.1.0-alpha.3' },
     {
       instructions:
         'Use list or search before read. Paths are relative to the documentation root. Write tools are absent unless the server was started with explicit write permission.',

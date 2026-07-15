@@ -141,7 +141,7 @@ describe('published package smoke test', () => {
         type: 'git',
         url: 'git+https://github.com/AICode-Nexus/silen.git',
       },
-      version: '0.1.0-alpha.2',
+      version: '0.1.0-alpha.3',
     })
     expect(pluginDeclaration).toContain(
       "import type { ProcessorOptions as MdxOptions } from '@mdx-js/mdx'",
@@ -313,7 +313,7 @@ The nested route was generated.
     expect(help.exitCode, help.all).toBe(0)
     expect(help.all).toContain('build [root]')
     expect(version.exitCode, version.all).toBe(0)
-    expect(version.all).toContain('silen/0.1.0-alpha.2')
+    expect(version.all).toContain('silen/0.1.0-alpha.3')
 
     const built = await execa(executable, ['build', 'docs'], {
       cwd: consumer,

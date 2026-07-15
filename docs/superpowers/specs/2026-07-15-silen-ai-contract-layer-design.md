@@ -213,7 +213,7 @@ is:
   "kind": "silen-site",
   "generator": {
     "name": "Silen",
-    "version": "0.1.0-alpha.2"
+    "version": "0.1.0-alpha.3"
   },
   "site": {
     "title": "Product handbook",

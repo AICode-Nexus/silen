@@ -52,7 +52,7 @@ describe('CLI dispatch', () => {
     expect(help.stdout).toContain('mcp [root]')
 
     const version = await execa(cliRunner, [cli, '--version'])
-    expect(version.stdout).toContain('silen/0.1.0-alpha.2')
+    expect(version.stdout).toContain('silen/0.1.0-alpha.3')
   })
 
   it('awaits a successful build and writes static HTML', async () => {
