@@ -756,7 +756,7 @@ unrelated plugin changes.
   write enablement, and audit/build/diff verification.
 - MCP does not run the full executable MDX build.
 
-- [ ] **Step 1: Add failing audit and fallback tests**
+- [x] **Step 1: Add failing audit and fallback tests**
 
 Cover:
 
@@ -777,7 +777,7 @@ pnpm test tests/ai/contract-audit.test.ts tests/ai/workspace.test.ts tests/ai/mc
 Expected: failure because audit knows only the original three artifacts and
 index freshness.
 
-- [ ] **Step 2: Add contract audit issue types**
+- [x] **Step 2: Add contract audit issue types**
 
 Extend issue codes without changing existing broken-link, citation, artifact,
 and index behavior. Keep audit deterministic and model-free.
@@ -787,12 +787,12 @@ outDir cannot be established through bounded local build metadata, return a
 specific audit limitation instead of guessing or scanning outside the
 documentation root.
 
-- [ ] **Step 3: Align workspace and MCP guidance**
+- [x] **Step 3: Align workspace and MCP guidance**
 
 Generate the guide from stable contract facts rather than duplicating tool
 lists. The response must still be safe when no build output exists.
 
-- [ ] **Step 4: Run the audit and MCP regression set**
+- [x] **Step 4: Run the audit and MCP regression set**
 
 Run:
 
@@ -803,7 +803,7 @@ pnpm typecheck
 
 Expected: audit, guide, and types pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add src/ai/audit.ts src/ai/workspace.ts src/ai/mcp/server.ts src/ai/mcp/read-tools.ts tests/ai/contract-audit.test.ts tests/ai/workspace.test.ts tests/ai/mcp-read.test.ts

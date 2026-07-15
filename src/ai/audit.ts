@@ -1,4 +1,7 @@
 import path from 'node:path'
+import { SILEN_VERSION } from '../shared/version.js'
+import { parseApiContract, parseContractManifest } from './contract/schema.js'
+import { parseTaskDocument } from './contract/tasks.js'
 import type { WorkspaceSearchDocument } from './search.js'
 
 export interface WorkspaceCitation {
@@ -17,7 +20,18 @@ export interface WorkspaceBacklink {
 }
 
 export interface WorkspaceAuditIssue {
-  code: 'broken-link' | 'citation' | 'artifact' | 'index'
+  code:
+    | 'broken-link'
+    | 'citation'
+    | 'artifact'
+    | 'index'
+    | 'contract-missing'
+    | 'contract-schema'
+    | 'contract-version'
+    | 'contract-resource'
+    | 'contract-reference'
+    | 'contract-locale'
+    | 'contract-fallback'
   path: string
   message: string
 }
@@ -29,6 +43,245 @@ export interface WorkspaceAuditResult {
 }
 
 export type WorkspaceDocument = WorkspaceSearchDocument
+
+export interface AgentContractAuditInput {
+  readonly llmsTxt?: string
+  read(relativeOutputPath: string): Promise<string | undefined>
+}
+
+const manifestPath = '.silen/dist/.well-known/silen/manifest.json'
+const apiPath = '.silen/dist/.well-known/silen/api.json'
+
+function contractIssue(
+  code: WorkspaceAuditIssue['code'],
+  relativePath: string,
+  message: string,
+): WorkspaceAuditIssue {
+  return { code, path: relativePath, message }
+}
+
+function outputPathForUrl(base: string, url: string): string | undefined {
+  let pathname: string
+  try {
+    const parsed = new URL(url, 'https://silen.local')
+    if (parsed.origin !== 'https://silen.local') return undefined
+    pathname = decodeURIComponent(parsed.pathname)
+  } catch {
+    return undefined
+  }
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`
+  const relative =
+    normalizedBase === '/'
+      ? pathname.slice(1)
+      : pathname.startsWith(normalizedBase)
+        ? pathname.slice(normalizedBase.length)
+        : undefined
+  if (
+    relative === undefined ||
+    !relative ||
+    relative.includes('\\') ||
+    relative
+      .split('/')
+      .some((segment) => !segment || segment === '.' || segment === '..')
+  ) {
+    return undefined
+  }
+  return `.silen/dist/${relative}`
+}
+
+function knownContractReferences(
+  api: ReturnType<typeof parseApiContract>,
+): Set<string> {
+  const references = new Set([
+    'artifact:ai-index',
+    'artifact:llms',
+    'artifact:llms-full',
+    'artifact:markdown-routes',
+    'artifact:silen-manifest',
+  ])
+  for (const field of api.config.fields) {
+    const segments = field.path.split('.')
+    for (let length = segments.length; length > 0; length -= 1) {
+      references.add(`config:${segments.slice(0, length).join('.')}`)
+    }
+  }
+  for (const command of api.cli.commands) references.add(`cli:${command.id}`)
+  for (const tool of api.mcp.tools) references.add(`mcp:${tool.name}`)
+  return references
+}
+
+export async function auditAgentContract(
+  input: AgentContractAuditInput,
+): Promise<WorkspaceAuditIssue[]> {
+  if (!input.llmsTxt?.includes('.well-known/silen/manifest.json')) return []
+  const manifestSource = await input.read(manifestPath)
+  if (manifestSource === undefined) {
+    return [
+      contractIssue(
+        'contract-missing',
+        manifestPath,
+        'llms.txt advertises a missing Silen Agent Contract manifest',
+      ),
+    ]
+  }
+
+  let rawManifest: unknown
+  try {
+    rawManifest = JSON.parse(manifestSource)
+  } catch {
+    return [
+      contractIssue(
+        'contract-schema',
+        manifestPath,
+        'The Silen Agent Contract manifest is not valid JSON',
+      ),
+    ]
+  }
+  if (
+    typeof rawManifest === 'object' &&
+    rawManifest !== null &&
+    'schemaVersion' in rawManifest &&
+    (rawManifest as { schemaVersion?: unknown }).schemaVersion !== 1
+  ) {
+    return [
+      contractIssue(
+        'contract-fallback',
+        manifestPath,
+        'Unsupported Agent Contract schema; use read-only Markdown fallback',
+      ),
+    ]
+  }
+
+  let manifest
+  try {
+    manifest = parseContractManifest(rawManifest)
+  } catch {
+    return [
+      contractIssue(
+        'contract-schema',
+        manifestPath,
+        'The Silen Agent Contract manifest does not match schema v1',
+      ),
+    ]
+  }
+  if (manifest.kind !== 'silen-site') {
+    return [
+      contractIssue(
+        'contract-fallback',
+        manifestPath,
+        'Expected a site Agent Contract; use read-only Markdown fallback',
+      ),
+    ]
+  }
+
+  const issues: WorkspaceAuditIssue[] = []
+  if (manifest.generator.version !== SILEN_VERSION) {
+    issues.push(
+      contractIssue(
+        'contract-version',
+        manifestPath,
+        `Agent Contract version ${manifest.generator.version} does not match Silen ${SILEN_VERSION}`,
+      ),
+    )
+  }
+  const apiSource = await input.read(apiPath)
+  let api: ReturnType<typeof parseApiContract> | undefined
+  if (apiSource === undefined) {
+    issues.push(
+      contractIssue('contract-resource', apiPath, 'Missing Agent Contract API'),
+    )
+  } else {
+    try {
+      api = parseApiContract(JSON.parse(apiSource))
+      if (api.generator.version !== SILEN_VERSION) {
+        issues.push(
+          contractIssue(
+            'contract-version',
+            apiPath,
+            `Agent Contract API version ${api.generator.version} does not match Silen ${SILEN_VERSION}`,
+          ),
+        )
+      }
+    } catch {
+      issues.push(
+        contractIssue(
+          'contract-schema',
+          apiPath,
+          'The Agent Contract API does not match schema v1',
+        ),
+      )
+    }
+  }
+
+  const locales = new Set(manifest.site.locales.map((locale) => locale.lang))
+  const resources = [...manifest.resources, ...manifest.tasks]
+  const loadedTasks = new Map<string, string>()
+  for (const resource of resources) {
+    if (resource.lang !== undefined && !locales.has(resource.lang)) {
+      issues.push(
+        contractIssue(
+          'contract-locale',
+          manifestPath,
+          `Contract entry ${resource.id} references unknown locale ${resource.lang}`,
+        ),
+      )
+    }
+    const relativePath = outputPathForUrl(manifest.site.base, resource.url)
+    if (relativePath === undefined) {
+      issues.push(
+        contractIssue(
+          'contract-resource',
+          manifestPath,
+          `Contract entry ${resource.id} has a non-local public URL`,
+        ),
+      )
+      continue
+    }
+    const source = await input.read(relativePath)
+    if (source === undefined) {
+      issues.push(
+        contractIssue(
+          'contract-resource',
+          relativePath,
+          `Missing Agent Contract resource ${resource.id}`,
+        ),
+      )
+    } else if ('mode' in resource) {
+      loadedTasks.set(relativePath, source)
+    }
+  }
+
+  if (api !== undefined) {
+    const references = knownContractReferences(api)
+    for (const task of manifest.tasks) {
+      const relativePath = outputPathForUrl(manifest.site.base, task.url)
+      const source = relativePath ? loadedTasks.get(relativePath) : undefined
+      if (relativePath === undefined || source === undefined) continue
+      try {
+        const parsed = parseTaskDocument(source, relativePath, references)
+        if (
+          parsed.metadata.id !== task.id ||
+          parsed.metadata.mode !== task.mode
+        ) {
+          throw new Error('metadata mismatch')
+        }
+      } catch {
+        issues.push(
+          contractIssue(
+            'contract-reference',
+            relativePath,
+            `Task ${task.id} does not match the assembled Agent Contract`,
+          ),
+        )
+      }
+    }
+  }
+  return issues.sort(
+    (left, right) =>
+      left.path.localeCompare(right.path, 'en') ||
+      left.code.localeCompare(right.code, 'en'),
+  )
+}
 
 const absoluteScheme = /^[A-Za-z][A-Za-z\d+.-]*:/
 
@@ -172,12 +425,14 @@ export function auditDocuments(
   options: {
     artifacts: ReadonlySet<string>
     indexFresh: boolean
+    contractIssues?: readonly WorkspaceAuditIssue[]
   },
 ): WorkspaceAuditResult {
   const routes = new Set(
     documents.map((document) => normalizedRoute(document.route)),
   )
   const issues: WorkspaceAuditIssue[] = []
+  issues.push(...(options.contractIssues ?? []))
   for (const document of documents) {
     for (const link of markdownLinks(document.text)) {
       const target = targetRoute(document, link.target)
