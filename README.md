@@ -424,11 +424,12 @@ navigation item, Escape closes it, and focus returns to the trigger. Search is
 loaded only when requested, opens with `Control+K` or `Command+K`, supports
 arrow-key selection and Enter, and restores focus when dismissed.
 
-The appearance control cycles system, light, and dark, persists the selection
-in `localStorage`, follows operating-system changes in system mode, and applies
-the stored mode from an inline head script before hydration to avoid a color
-flash. Code-copy controls are keyboard buttons with live success/failure
-labels. Reduced-motion preferences disable nonessential transitions.
+The appearance control lets users choose dark, system, or light mode, persists
+the selection in `localStorage`, follows operating-system changes in system
+mode, and applies the stored mode from an inline head script before hydration to
+avoid a color flash. Code-copy controls are keyboard buttons with live
+success/failure labels. Reduced-motion preferences disable nonessential
+transitions.
 
 ## Trusted MDX
 

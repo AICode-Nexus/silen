@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-07-15
+
+### Documentation
+
+- Updated the README accessibility note to describe the explicit dark, system,
+  and light appearance controls introduced in 0.1.2.
+
 ## [0.1.2] - 2026-07-15
 
 ### Changed
@@ -97,7 +104,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Published Silen under the `@aicode-nexus` organization scope.
 
-[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.1.2...HEAD
+[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/AICode-Nexus/silen/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/AICode-Nexus/silen/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/AICode-Nexus/silen/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/AICode-Nexus/silen/compare/v0.1.0-alpha.3...v0.1.0
