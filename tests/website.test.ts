@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { build } from '../src/node/build'
 
 describe('example website homepage', () => {
   it('ships an explanatory workflow SVG', async () => {
@@ -52,5 +53,22 @@ describe('example website homepage', () => {
     expect(source).toContain('width={344}')
     expect(source).toContain('height={344}')
     expect(source).toContain('loading="lazy"')
+  })
+
+  it('emits four non-nested lede paragraphs per locale', async () => {
+    const result = await build(path.resolve('website'))
+
+    for (const file of ['index.html', 'zh/index.html']) {
+      const html = await readFile(path.join(result.outDir, file), 'utf8')
+      const ledes = [
+        ...html.matchAll(/<p class="silen-home-lede">([\s\S]*?)<\/p>/g),
+      ]
+
+      expect(ledes, file).toHaveLength(4)
+      for (const [, content] of ledes) {
+        expect(content, file).not.toMatch(/<\/?p(?:\s|>)/)
+        expect(content?.trim(), file).not.toBe('')
+      }
+    }
   })
 })
