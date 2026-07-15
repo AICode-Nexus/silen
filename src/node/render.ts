@@ -9,6 +9,10 @@ export interface AssetPreload {
 export interface RenderAssets {
   base: string
   clientEntry: string
+  favicon?: {
+    file: string
+    type: string
+  }
   stylesheets?: readonly string[]
   modulePreloads?: readonly string[]
   assetPreloads?: readonly AssetPreload[]
@@ -74,6 +78,11 @@ export function renderDocument(
     const file = entry.slice(separator + 1)
     return `<link rel="preload" as="${as}" href="${escapeHtml(assetUrl(assets.base, file))}">`
   })
+  const faviconLinks = assets.favicon
+    ? [
+        `<link rel="icon" type="${escapeHtml(assets.favicon.type)}" href="${escapeHtml(assetUrl(assets.base, assets.favicon.file))}">`,
+      ]
+    : []
 
   return [
     '<!doctype html>',
@@ -85,6 +94,7 @@ export function renderDocument(
     `<script>${appearanceScript}</script>`,
     `<title>${escapeHtml(page.title)}</title>`,
     `<meta name="description" content="${escapeHtml(page.description)}">`,
+    ...faviconLinks,
     ...stylesheets,
     ...modulePreloads,
     ...assetPreloads,

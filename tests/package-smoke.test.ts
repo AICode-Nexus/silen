@@ -287,10 +287,11 @@ The nested route was generated.
     expect(built.all).toContain('Silen built 2 routes')
 
     const output = path.join(consumer, 'docs', 'site')
-    const [home, guide, staticAsset, outputFiles] = await Promise.all([
+    const [home, guide, staticAsset, favicon, outputFiles] = await Promise.all([
       readFile(path.join(output, 'index.html'), 'utf8'),
       readFile(path.join(output, 'guide', 'index.html'), 'utf8'),
       readFile(path.join(output, 'brand.txt'), 'utf8'),
+      readFile(path.join(output, 'favicon.svg'), 'utf8'),
       readdir(path.join(output, 'assets')),
     ])
     expect(home).toContain('<!doctype html>')
@@ -301,9 +302,13 @@ The nested route was generated.
     expect(home).toContain('data-packed-base="/handbook/"')
     expect(home).toContain('Installed theme extension')
     expect(home).toMatch(/src="\/handbook\/assets\/.+\.js"/)
+    expect(home).toContain(
+      '<link rel="icon" type="image/svg+xml" href="/handbook/favicon.svg">',
+    )
     expect(home).toContain('</html>')
     expect(guide).toContain('<h1>External guide</h1>')
     expect(staticAsset).toBe('external-static-asset\n')
+    expect(favicon).toContain('aria-label="Silen"')
     expect(outputFiles.some((file) => file.endsWith('.js'))).toBe(true)
     const themeCss = (
       await Promise.all(
@@ -390,6 +395,9 @@ The nested route was generated.
       expect(developmentHtml).toContain('data-packed-root=""')
       expect(developmentHtml).toContain('data-packed-demo=""')
       expect(developmentHtml).toContain('data-packed-base="/handbook/"')
+      expect(developmentHtml).toContain(
+        '<link rel="icon" type="image/svg+xml" href="/handbook/favicon.svg">',
+      )
       expect(developmentHtml).toContain('/handbook/@vite/client')
       expect(viteHmrClient.status, viteHmrSource).toBe(200)
       expect(viteHmrSource).toContain('vite-hmr')

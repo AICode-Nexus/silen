@@ -17,6 +17,12 @@ import { resolveConfig } from './config.js'
 import { createMdxPlugins } from './mdx.js'
 import { silenPlugin } from './plugin.js'
 import { renderDocument } from './render.js'
+import {
+  defaultFavicon,
+  defaultFaviconSvg,
+  resolveSourceFavicon,
+  type ResolvedFavicon,
+} from './favicon.js'
 
 export interface ServerOptions {
   host?: boolean | string
@@ -227,6 +233,7 @@ async function renderDevelopmentRequest(
   vite: ViteDevServer,
   base: string,
   requestUrl: string,
+  favicon: ResolvedFavicon,
 ): Promise<void> {
   try {
     const loaded: unknown = await vite.ssrLoadModule(
@@ -238,8 +245,9 @@ async function renderDevelopmentRequest(
     }
     const page = await render(requestUrl)
     const source = renderDocument(page, {
-      base,
+      base: '/',
       clientEntry: viteFileUrl(clientEntrySource()),
+      favicon,
     })
     const document = await vite.transformIndexHtml(requestUrl, source)
     sendText(
@@ -260,9 +268,38 @@ async function renderDevelopmentRequest(
   }
 }
 
+function pathRelativeToBase(pathname: string, base: string): string {
+  return base === '/' ? pathname.slice(1) : pathname.slice(base.length)
+}
+
+function isDefaultFaviconRequest(
+  pathname: string,
+  base: string,
+  favicon: ResolvedFavicon,
+): boolean {
+  return (
+    favicon.source === 'default' &&
+    favicon.file === defaultFavicon.file &&
+    pathRelativeToBase(pathname, base) === defaultFavicon.file
+  )
+}
+
+function sendDefaultFavicon(
+  request: IncomingMessage,
+  response: ServerResponse,
+): void {
+  const length = Buffer.byteLength(defaultFaviconSvg)
+  response.statusCode = 200
+  response.setHeader('content-type', defaultFavicon.type)
+  response.setHeader('content-length', String(length))
+  if (request.method === 'HEAD') response.end()
+  else response.end(defaultFaviconSvg)
+}
+
 function createDevRequestHandler(
   vite: ViteDevServer,
   base: string,
+  favicon: ResolvedFavicon,
 ): (request: IncomingMessage, response: ServerResponse) => void {
   return (request, response) => {
     if (rejectUnsupportedMethod(request, response)) return
@@ -279,6 +316,10 @@ function createDevRequestHandler(
       sendText(request, response, 404, 'Not found\n')
       return
     }
+    if (isDefaultFaviconRequest(parsed.pathname, base, favicon)) {
+      sendDefaultFavicon(request, response)
+      return
+    }
 
     const requestUrl = request.url ?? base
     vite.middlewares(request, response, (error: unknown) => {
@@ -291,7 +332,14 @@ function createDevRequestHandler(
         )
         return
       }
-      void renderDevelopmentRequest(request, response, vite, base, requestUrl)
+      void renderDevelopmentRequest(
+        request,
+        response,
+        vite,
+        base,
+        requestUrl,
+        favicon,
+      )
     })
   }
 }
@@ -502,6 +550,7 @@ export async function createDevServer(
 ): Promise<SilenServer> {
   const resolvedListen = listenOptions(options, 5173)
   const config = await resolveConfig(root, 'serve')
+  const favicon = await resolveSourceFavicon(config.root)
   const server = createHttpServer()
   let vite: ViteDevServer | undefined
   try {
@@ -539,7 +588,10 @@ export async function createDevServer(
       },
     })
     vite = viteServer
-    server.on('request', createDevRequestHandler(viteServer, config.base))
+    server.on(
+      'request',
+      createDevRequestHandler(viteServer, config.base, favicon),
+    )
     const address = await listen(server, resolvedListen)
     return serverLifecycle(
       server,

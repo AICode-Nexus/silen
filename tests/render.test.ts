@@ -42,6 +42,7 @@ describe('renderDocument', () => {
     const document = renderDocument(page, {
       base: '/project/',
       clientEntry: 'assets/client-abcd.js',
+      favicon: { file: 'favicon.svg', type: 'image/svg+xml' },
       stylesheets: ['assets/page-abcd.css'],
       modulePreloads: ['assets/page-abcd.js'],
       assetPreloads: [{ as: 'image', file: 'assets/mark-abcd.svg' }],
@@ -53,6 +54,9 @@ describe('renderDocument', () => {
     )
     expect(document).toContain(
       '<meta name="description" content="Description &lt;unsafe&gt; &amp; &quot;quoted&quot;">',
+    )
+    expect(document).toContain(
+      '<link rel="icon" type="image/svg+xml" href="/project/favicon.svg">',
     )
     expect(document).toContain(
       '<link rel="stylesheet" href="/project/assets/page-abcd.css">',

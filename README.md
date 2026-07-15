@@ -54,6 +54,9 @@ Markdown and MDX files become static routes: `index.mdx` maps to `/`,
 `guide.mdx` maps to `/guide`, and `guide/index.mdx` maps to `/guide`.
 Files in `public/` are copied unchanged to the output root and should be linked
 with the configured `base`, such as `/handbook/logo.svg`.
+If no `public/favicon.svg`, `public/favicon.ico`, or `public/favicon.png`
+exists, Silen emits a packaged default `favicon.svg` and links it from every
+HTML page.
 
 ## Configuration
 

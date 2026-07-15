@@ -22,6 +22,7 @@ import type { AiPage } from '../shared/ai.js'
 import type { ResolvedConfig } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
 import { resolveConfig } from './config.js'
+import { ensureBuildFavicon, type ResolvedFavicon } from './favicon.js'
 import { validateInternalLinks } from './links.js'
 import { serializePageMarkdown } from './markdown-output.js'
 import { compilePage, createMdxPlugins, type CompiledPage } from './mdx.js'
@@ -509,6 +510,7 @@ async function renderRoutes(
   renderer: RendererModule,
   manifest: Manifest,
   outDir: string,
+  favicon: ResolvedFavicon,
 ): Promise<void> {
   for (const output of outputs) {
     const { route } = output
@@ -521,6 +523,7 @@ async function renderRoutes(
       const document = renderDocument(rendered, {
         ...assets,
         base: config.base,
+        favicon,
       })
       const destination = path.resolve(outDir, output.relativeFile)
       await mkdir(path.dirname(destination), { recursive: true })
@@ -620,11 +623,19 @@ async function buildSite(root: string): Promise<BuildResult> {
   try {
     await buildClient(config, stagedOutDir, routes)
     const ssrEntry = await buildServerRenderer(config, ssrOutDir, routes)
+    const favicon = await ensureBuildFavicon(stagedOutDir)
     const [manifest, renderer] = await Promise.all([
       readClientManifest(stagedOutDir, routes),
       loadRenderer(ssrEntry, routes),
     ])
-    await renderRoutes(config, routeOutputs, renderer, manifest, stagedOutDir)
+    await renderRoutes(
+      config,
+      routeOutputs,
+      renderer,
+      manifest,
+      stagedOutDir,
+      favicon,
+    )
     await generateAiArtifacts({
       outDir: stagedOutDir,
       site: config,

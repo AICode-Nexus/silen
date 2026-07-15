@@ -79,6 +79,9 @@ describe('static production build', () => {
   })
 
   it('uses manifest-resolved filenames for base-aware hashed JS, CSS, and assets', () => {
+    expect(home).toContain(
+      '<link rel="icon" type="image/svg+xml" href="/project/favicon.svg">',
+    )
     expect(home).toMatch(
       /<script type="module" src="\/project\/assets\/.+-[\w-]+\.js"><\/script>/,
     )
@@ -89,6 +92,15 @@ describe('static production build', () => {
       /<link rel="preload" as="image" href="\/project\/assets\/.+-[\w-]+\.[a-z]+">/,
     )
     expect(home).not.toContain('/project/assets/entry.js')
+  })
+
+  it('emits the packaged default favicon when the site has no public favicon', async () => {
+    const favicon = await readFile(path.join(result.outDir, 'favicon.svg'), {
+      encoding: 'utf8',
+    })
+
+    expect(favicon).toContain('aria-label="Silen"')
+    expect(favicon).toContain('silen-favicon-gradient')
   })
 
   it('embeds only public, hydration-safe page data', () => {

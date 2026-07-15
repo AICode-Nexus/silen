@@ -154,9 +154,17 @@ describe('development server', () => {
     expect(homeHtml).toContain('Rendered by Vite SSR.')
     expect(homeHtml).toContain('/docs/@vite/client')
     expect(homeHtml).toContain('/docs/@react-refresh')
+    expect(homeHtml).toContain(
+      '<link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">',
+    )
     expect(homeHtml).toContain('injectIntoGlobalHook(window)')
     expect(homeHtml).toContain('/docs/@fs/')
     await expectViteHmrConnection(server.url)
+
+    const favicon = await fetch(new URL('favicon.svg', server.url))
+    expect(favicon.status).toBe(200)
+    expect(favicon.headers.get('content-type')).toContain('image/svg+xml')
+    expect(await favicon.text()).toContain('aria-label="Silen"')
 
     const transformedClientModule = await fetch(
       new URL(
@@ -280,6 +288,9 @@ describe('preview server', () => {
     expect(home.headers.get('content-type')).toContain('text/html')
     const html = await home.text()
     expect(html).toContain('<h1>Development home</h1>')
+    expect(html).toContain(
+      '<link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">',
+    )
 
     const scriptPath = /<script type="module" src="([^"]+\.js)">/.exec(
       html,
@@ -293,6 +304,11 @@ describe('preview server', () => {
     expect(scriptHead.headers.get('content-type')).toContain('javascript')
     expect(Number(scriptHead.headers.get('content-length'))).toBeGreaterThan(0)
     expect(await scriptHead.text()).toBe('')
+
+    const favicon = await fetch(new URL('favicon.svg', server.url))
+    expect(favicon.status).toBe(200)
+    expect(favicon.headers.get('content-type')).toContain('image/svg+xml')
+    expect(await favicon.text()).toContain('aria-label="Silen"')
 
     const guide = await fetch(new URL('guide', server.url))
     expect(guide.status).toBe(200)
