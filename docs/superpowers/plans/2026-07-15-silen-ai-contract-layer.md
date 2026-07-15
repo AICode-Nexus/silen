@@ -191,7 +191,7 @@ git commit -m "feat(ai): define the versioned Agent Contract"
 - loadBuiltInTaskPack(locale) returns one guide and six tasks.
 - loadCustomTaskPack(options) remains path-injected and is completed in Task 6.
 
-- [ ] **Step 1: Add failing task-frontmatter tests**
+- [x] **Step 1: Add failing task-frontmatter tests**
 
 Test valid read and write tasks plus these failures:
 
@@ -215,14 +215,14 @@ pnpm test tests/ai/task-contract.test.ts
 
 Expected: failure because the task parser and content do not exist.
 
-- [ ] **Step 2: Implement frontmatter parsing and size limits**
+- [x] **Step 2: Implement frontmatter parsing and size limits**
 
 Use gray-matter, which is already a dependency. Normalize line endings, require
 one trailing newline, reject executable MDX, and allow plain Markdown only.
 
 Use stable relative paths in errors. Never include the absolute source root.
 
-- [ ] **Step 3: Author the canonical English task pack**
+- [x] **Step 3: Author the canonical English task pack**
 
 Each task must include:
 
@@ -238,12 +238,12 @@ create-site must work with an installed package and an otherwise empty content
 directory. deploy-site must stop at verified static output and avoid assuming a
 specific host.
 
-- [ ] **Step 4: Author the Chinese task pack**
+- [x] **Step 4: Author the Chinese task pack**
 
 Keep task ids and contract references identical to the English pack. Translate
 explanatory text and expected reports, not commands or identifiers.
 
-- [ ] **Step 5: Verify both packs**
+- [x] **Step 5: Verify both packs**
 
 ~~~bash
 pnpm test tests/ai/task-contract.test.ts
@@ -253,7 +253,7 @@ pnpm format:check
 Expected: both language packs contain the same six ids, all references resolve
 against the injected contract set, and formatting passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~bash
 git add src/ai/contract/tasks.ts src/ai/contract/content tests/ai/task-contract.test.ts
