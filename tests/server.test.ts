@@ -89,6 +89,7 @@ beforeAll(async () => {
   root = await mkdtemp(path.join(testTemp, 'silen-server-'))
   temporaryDirectories.push(root)
   await mkdir(path.join(root, '.silen'), { recursive: true })
+  await mkdir(path.join(root, 'public'), { recursive: true })
   const packageEntry = path.resolve('src/index.ts')
   await Promise.all([
     writeFile(
@@ -99,17 +100,34 @@ export default defineConfig({
   description: 'HTTP integration fixture',
   base: '/docs/',
   outDir: 'output',
+  themeConfig: {
+    logo: '/logo.svg',
+    home: {
+      hero: {
+        name: 'Server fixture',
+        image: { src: '/logo.svg', alt: 'Server fixture workflow' },
+      },
+    },
+  },
 })
 `,
     ),
     writeFile(
       path.join(root, 'index.mdx'),
-      `import './page.css'
+      `---
+layout: home
+---
 
-# Development home
+import './page.css'
+
+## Development home
 
 Rendered by Vite SSR.
 `,
+    ),
+    writeFile(
+      path.join(root, 'public/logo.svg'),
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32"/></svg>\n',
     ),
     writeFile(
       path.join(root, 'guide.mdx'),
@@ -150,7 +168,12 @@ describe('development server', () => {
     expect(home.status).toBe(200)
     expect(home.headers.get('content-type')).toContain('text/html')
     const homeHtml = await home.text()
-    expect(homeHtml).toContain('<h1>Development home</h1>')
+    expect(homeHtml).toContain('<h1')
+    expect(homeHtml).toContain('>Server fixture</h1>')
+    expect(homeHtml).toContain('<h2>Development home</h2>')
+    expect(homeHtml).toContain('src="/docs/logo.svg"')
+    expect(homeHtml).not.toContain('/docs/docs/logo.svg')
+    expect(homeHtml.match(/src="\/docs\/logo\.svg"/g)).toHaveLength(2)
     expect(homeHtml).toContain('Rendered by Vite SSR.')
     expect(homeHtml).toContain('/docs/@vite/client')
     expect(homeHtml).toContain('/docs/@react-refresh')
@@ -287,7 +310,9 @@ describe('preview server', () => {
     expect(home.status).toBe(200)
     expect(home.headers.get('content-type')).toContain('text/html')
     const html = await home.text()
-    expect(html).toContain('<h1>Development home</h1>')
+    expect(html).toContain('<h1')
+    expect(html).toContain('>Server fixture</h1>')
+    expect(html).toContain('<h2>Development home</h2>')
     expect(html).toContain(
       '<link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">',
     )

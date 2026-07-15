@@ -227,6 +227,26 @@ function ssrEntrySource(): string {
   )
 }
 
+const developmentSsrOutlet = '<!--silen-development-ssr-outlet-->'
+
+async function transformDevelopmentDocument(
+  page: RenderedPage,
+  vite: ViteDevServer,
+  requestUrl: string,
+  favicon: ResolvedFavicon,
+): Promise<string> {
+  const shell = renderDocument(
+    { ...page, appHtml: developmentSsrOutlet },
+    {
+      base: '/',
+      clientEntry: viteFileUrl(clientEntrySource()),
+      favicon,
+    },
+  )
+  const transformed = await vite.transformIndexHtml(requestUrl, shell)
+  return transformed.replace(developmentSsrOutlet, () => page.appHtml)
+}
+
 async function renderDevelopmentRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -244,12 +264,12 @@ async function renderDevelopmentRequest(
       throw new TypeError('the SSR entry does not export render(url)')
     }
     const page = await render(requestUrl)
-    const source = renderDocument(page, {
-      base: '/',
-      clientEntry: viteFileUrl(clientEntrySource()),
+    const document = await transformDevelopmentDocument(
+      page,
+      vite,
+      requestUrl,
       favicon,
-    })
-    const document = await vite.transformIndexHtml(requestUrl, source)
+    )
     sendText(
       request,
       response,
