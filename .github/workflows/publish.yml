@@ -1,0 +1,53 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish npm package
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@10.34.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run release checks
+        run: >-
+          pnpm format:check &&
+          pnpm lint &&
+          pnpm typecheck &&
+          pnpm test --maxWorkers=1 --no-file-parallelism
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Validate package metadata
+        run: pnpm exec publint
+
+      - name: Publish package to npm
+        run: npm publish --access public --tag alpha
