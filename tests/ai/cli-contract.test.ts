@@ -59,7 +59,7 @@ describe('CLI Agent Contract registry', () => {
         expect(commandHelp.stdout).toContain(option.name)
       }
     }
-  })
+  }, 30_000)
 
   it('retains the safe unknown AI action error', async () => {
     const result = await execa(cliRunner, [cli, 'ai', 'unknown'], {

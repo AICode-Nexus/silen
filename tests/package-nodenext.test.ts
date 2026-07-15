@@ -129,11 +129,11 @@ void aiExports
     )
     await writeFile(join(consumerDirectory, 'page.mdx'), '# Packed consumer')
 
-    const install = await execa(
-      'pnpm',
-      ['install', '--offline', '--ignore-scripts'],
-      { cwd: consumerDirectory, reject: false, all: true },
-    )
+    const install = await execa('pnpm', ['install', '--ignore-scripts'], {
+      cwd: consumerDirectory,
+      reject: false,
+      all: true,
+    })
     expect(install.exitCode, install.all).toBe(0)
 
     const typecheck = await execa(

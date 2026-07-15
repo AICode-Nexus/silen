@@ -40,11 +40,13 @@ jobs:
         run: >-
           pnpm format:check &&
           pnpm lint &&
-          pnpm typecheck &&
-          pnpm test --maxWorkers=1 --no-file-parallelism
+          pnpm typecheck
 
       - name: Build package
         run: pnpm build
+
+      - name: Run release tests
+        run: pnpm test --maxWorkers=1 --no-file-parallelism
 
       - name: Validate package metadata
         run: pnpm exec publint

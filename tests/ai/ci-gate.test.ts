@@ -30,6 +30,7 @@ describe('AI release CI gate', () => {
     expect(runtimeRelease).toContain('pnpm exec publint')
 
     expect(browser).toContain('node-version: 20.19.0')
+    expect(browser).toContain('pnpm build')
     expect(browser).toContain(
       'pnpm exec playwright install --with-deps chromium',
     )
@@ -42,7 +43,7 @@ describe('AI release CI gate', () => {
     expect(workflow.match(/pnpm format:check/g)).toHaveLength(1)
     expect(workflow.match(/pnpm lint/g)).toHaveLength(1)
     expect(workflow.match(/pnpm typecheck/g)).toHaveLength(1)
-    expect(workflow.match(/pnpm build/g)).toHaveLength(1)
+    expect(workflow.match(/pnpm build/g)).toHaveLength(2)
     expect(workflow.match(/pnpm test/g)).toHaveLength(1)
     expect(workflow.match(/pnpm exec playwright test/g)).toHaveLength(1)
     expect(workflow).toContain('run: pnpm exec playwright test tests/e2e')
@@ -53,6 +54,9 @@ describe('AI release CI gate', () => {
     )
     expect(runtimeRelease.indexOf('pnpm test')).toBeLessThan(
       runtimeRelease.indexOf('pnpm exec publint'),
+    )
+    expect(browser.indexOf('pnpm build')).toBeLessThan(
+      browser.indexOf('pnpm exec playwright test'),
     )
   })
 })

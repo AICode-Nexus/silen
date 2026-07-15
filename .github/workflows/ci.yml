@@ -93,6 +93,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build generated package assets
+        run: pnpm build
+
       - name: Install pinned Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
