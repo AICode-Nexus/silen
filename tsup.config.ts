@@ -14,7 +14,7 @@ export default defineConfig({
   format: ['esm'],
   dts: false,
   splitting: true,
-  sourcemap: true,
+  sourcemap: false,
   clean: true,
   external: [
     'react',

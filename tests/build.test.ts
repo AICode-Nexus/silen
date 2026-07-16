@@ -40,6 +40,11 @@ describe('static production build', () => {
     ).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
+  it('does not ship source maps in the static output', async () => {
+    const assetFiles = await readdir(path.join(result.outDir, 'assets'))
+    expect(assetFiles.some((file) => file.endsWith('.map'))).toBe(false)
+  })
+
   it('keeps root, nested-index, and no-trailing routes inside outDir', () => {
     expect(routeOutputFile('/tmp/silen-out', '/')).toBe(
       '/tmp/silen-out/index.html',

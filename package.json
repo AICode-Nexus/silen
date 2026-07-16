@@ -63,7 +63,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "check:no-maps": "jiti tooling/assert-no-source-maps.ts"
   },
   "peerDependencies": {
     "react": "^19.2.7",

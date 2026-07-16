@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import {
   mkdir,
   lstat,
+  readdir,
   readFile,
   realpath,
   rename,
@@ -280,6 +281,30 @@ async function assertNoReservedContractPublicFiles(
   }
 }
 
+async function removeSourceMapFiles(directory: string): Promise<void> {
+  let entries: string[]
+  try {
+    entries = await readdir(directory)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+    throw error
+  }
+
+  await Promise.all(
+    entries.map(async (entry) => {
+      const file = path.join(directory, entry)
+      const stats = await lstat(file)
+      if (stats.isDirectory()) {
+        await removeSourceMapFiles(file)
+        return
+      }
+      if (stats.isFile() && entry.endsWith('.map')) {
+        await rm(file, { force: true })
+      }
+    }),
+  )
+}
+
 async function compilePages(
   routes: readonly RouteRecord[],
   runner: PluginRunner,
@@ -351,6 +376,7 @@ async function buildClient(
         emptyOutDir: true,
         manifest: true,
         outDir,
+        sourcemap: false,
         rolldownOptions: {
           input: { client: entrySource() },
         },
@@ -385,6 +411,7 @@ async function buildServerRenderer(
         assetsInlineLimit: 0,
         emptyOutDir: true,
         outDir,
+        sourcemap: false,
         ssr: ssrSource(),
         rolldownOptions: {
           output: { entryFileNames: 'ssr-entry.mjs' },
@@ -695,6 +722,7 @@ async function buildSite(root: string): Promise<BuildResult> {
     validateInternalLinks(routes, pages, config.onBrokenLinks, config.base)
     await emitSearchIndex(config, pages, stagedOutDir)
     await rm(path.join(stagedOutDir, '.vite'), { force: true, recursive: true })
+    await removeSourceMapFiles(stagedOutDir)
     await installOutput(stagedOutDir, config.outDir, backupDir)
     installed = true
     try {
@@ -704,6 +732,7 @@ async function buildSite(root: string): Promise<BuildResult> {
         pages: pages.map(publicPageData),
         outDir: config.outDir,
       })
+      await removeSourceMapFiles(config.outDir)
     } catch (error) {
       throw new Error(
         `Silen installed the core output at ${config.outDir}, but ${errorDetail(error)}; plugin side effects were not rolled back`,

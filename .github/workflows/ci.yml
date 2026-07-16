@@ -66,6 +66,9 @@ jobs:
       - name: Build distributable CLI and package
         run: pnpm build
 
+      - name: Assert package has no source maps
+        run: pnpm check:no-maps dist
+
       - name: Run single-worker tests, built stdio, and package smoke
         run: pnpm test --maxWorkers=1 --no-file-parallelism
 
@@ -95,6 +98,9 @@ jobs:
 
       - name: Build generated package assets
         run: pnpm build
+
+      - name: Assert package has no source maps
+        run: pnpm check:no-maps dist
 
       - name: Install pinned Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium

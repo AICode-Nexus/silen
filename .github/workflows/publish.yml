@@ -48,6 +48,9 @@ jobs:
       - name: Build package
         run: pnpm build
 
+      - name: Assert package has no source maps
+        run: pnpm check:no-maps dist
+
       - name: Run release tests
         run: pnpm test --maxWorkers=1 --no-file-parallelism
 

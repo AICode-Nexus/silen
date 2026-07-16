@@ -46,6 +46,9 @@ jobs:
       - name: Build Silen and its website
         run: pnpm site:build
 
+      - name: Assert upload artifact has no source maps
+        run: pnpm check:no-maps dist website/.silen/dist
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
