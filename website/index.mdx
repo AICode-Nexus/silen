@@ -11,7 +11,6 @@ import {
   GitForkIcon,
   UsersIcon,
 } from 'lucide-react'
-import { CodeBlock } from '@aicode-nexus/silen/theme'
 
 <section
   className="silen-home-section silen-home-section--split"
@@ -26,16 +25,17 @@ import { CodeBlock } from '@aicode-nexus/silen/theme'
       }
     </p>
     <a className="silen-home-action" href="/silen/guide/">
-      Follow the quick start <ArrowRightIcon aria-hidden="true" />
+      {'Follow the quick start '}<ArrowRightIcon aria-hidden="true" />
     </a>
   </div>
   <div className="silen-home-code-panel">
-    <CodeBlock
-      language="sh"
-      code={
-        'pnpm add -D @aicode-nexus/silen\npnpm silen init docs\npnpm silen dev docs'
-      }
-    />
+
+```sh
+pnpm add -D @aicode-nexus/silen
+pnpm silen init docs
+pnpm silen dev docs
+```
+
   </div>
 </section>
 
@@ -88,8 +88,9 @@ import { CodeBlock } from '@aicode-nexus/silen/theme'
       </span>
       <h3>Human reading</h3>
       <p>
-        SSR HTML, responsive navigation, local search, accessible controls, and
-        focused typography.
+        {
+          'SSR HTML, responsive navigation, local search, accessible controls, and focused typography.'
+        }
       </p>
     </article>
     <article className="silen-home-proof">
@@ -98,8 +99,9 @@ import { CodeBlock } from '@aicode-nexus/silen/theme'
       </span>
       <h3>AI consumption</h3>
       <p>
-        Deterministic Markdown, discovery files, a versioned Agent Contract, and
-        opt-in local MCP.
+        {
+          'Deterministic Markdown, discovery files, a versioned Agent Contract, and opt-in local MCP.'
+        }
       </p>
     </article>
     <article className="silen-home-proof">
@@ -108,8 +110,9 @@ import { CodeBlock } from '@aicode-nexus/silen/theme'
       </span>
       <h3>Extensibility</h3>
       <p>
-        React MDX, semantic theme tokens, theme composition, analytics, and
-        ordered plugin hooks.
+        {
+          'React MDX, semantic theme tokens, theme composition, analytics, and ordered plugin hooks.'
+        }
       </p>
     </article>
   </div>
@@ -134,6 +137,7 @@ import { CodeBlock } from '@aicode-nexus/silen/theme'
     target="_blank"
     rel="noopener noreferrer"
   >
-    <GitForkIcon aria-hidden="true" /> Silen on GitHub
+    <GitForkIcon aria-hidden="true" />
+    {' Silen on GitHub'}
   </a>
 </section>

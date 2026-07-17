@@ -138,6 +138,25 @@ describe('example website homepage', () => {
     }
   })
 
+  it('emits browser-safe paragraph and action markup on both homepages', async () => {
+    for (const [file, copyText] of [
+      ['index.html', 'Copy'],
+      ['zh/index.html', '复制'],
+    ] as const) {
+      const html = await readFile(path.join(result.outDir, file), 'utf8')
+      const actions = [
+        ...html.matchAll(/<a class="silen-home-action"[^>]*>([\s\S]*?)<\/a>/g),
+      ]
+
+      expect(html, file).not.toMatch(/<p(?:\s[^>]*)?>\s*<p(?:\s|>)/)
+      expect(html, file).toContain(`data-copy-text="${copyText}"`)
+      expect(actions, file).toHaveLength(2)
+      for (const [, content] of actions) {
+        expect(content, file).not.toMatch(/<\/?p(?:\s|>)/)
+      }
+    }
+  })
+
   it('links each homepage to real base-aware generated artifacts', async () => {
     const [english, chinese] = await Promise.all([
       readFile(path.join(result.outDir, 'index.html'), 'utf8'),

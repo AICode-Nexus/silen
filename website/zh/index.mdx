@@ -12,7 +12,6 @@ import {
   GitForkIcon,
   UsersIcon,
 } from 'lucide-react'
-import { CodeBlock } from '@aicode-nexus/silen/theme'
 import wechatQr from '../assets/wechat-ai-dev-hub.png'
 
 <section
@@ -28,16 +27,17 @@ import wechatQr from '../assets/wechat-ai-dev-hub.png'
       }
     </p>
     <a className="silen-home-action" href="/silen/zh/guide/">
-      跟随快速开始 <ArrowRightIcon aria-hidden="true" />
+      {'跟随快速开始 '}<ArrowRightIcon aria-hidden="true" />
     </a>
   </div>
   <div className="silen-home-code-panel">
-    <CodeBlock
-      language="sh"
-      code={
-        'pnpm add -D @aicode-nexus/silen\npnpm silen init docs\npnpm silen dev docs'
-      }
-    />
+
+```sh
+pnpm add -D @aicode-nexus/silen
+pnpm silen init docs
+pnpm silen dev docs
+```
+
   </div>
 </section>
 
@@ -89,21 +89,23 @@ import wechatQr from '../assets/wechat-ai-dev-hub.png'
         <UsersIcon aria-hidden="true" />
       </span>
       <h3>人类阅读</h3>
-      <p>SSR HTML、响应式导航、本地搜索、无障碍控件与专注的排版。</p>
+      <p>{'SSR HTML、响应式导航、本地搜索、无障碍控件与专注的排版。'}</p>
     </article>
     <article className="silen-home-proof">
       <span className="silen-home-panel-icon">
         <BotIcon aria-hidden="true" />
       </span>
       <h3>AI 消费</h3>
-      <p>确定性 Markdown、发现文件、版本化 Agent Contract 与可选本地 MCP。</p>
+      <p>
+        {'确定性 Markdown、发现文件、版本化 Agent Contract 与可选本地 MCP。'}
+      </p>
     </article>
     <article className="silen-home-proof">
       <span className="silen-home-panel-icon">
         <BracesIcon aria-hidden="true" />
       </span>
       <h3>可扩展性</h3>
-      <p>React MDX、语义主题令牌、主题组合、分析配置与有序插件钩子。</p>
+      <p>{'React MDX、语义主题令牌、主题组合、分析配置与有序插件钩子。'}</p>
     </article>
   </div>
 </section>
@@ -126,7 +128,8 @@ import wechatQr from '../assets/wechat-ai-dev-hub.png'
       target="_blank"
       rel="noopener noreferrer"
     >
-      <GitForkIcon aria-hidden="true" /> 打开 GitHub
+      <GitForkIcon aria-hidden="true" />
+      {' 打开 GitHub'}
     </a>
   </div>
   <figure className="silen-home-qr">
