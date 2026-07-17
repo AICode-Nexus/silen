@@ -1,0 +1,42 @@
+---
+title: 主题令牌
+description: 用语义 CSS 变量定制 Silen 的颜色、形状与布局。
+---
+
+# 主题令牌
+
+覆盖语义 CSS 变量，不要依赖内部 utility class。令牌是默认主题行为与项目视觉身份之间稳定的边界。
+
+```css
+/* docs/.silen/custom.css */
+:root {
+  --silen-primary: oklch(0.55 0.17 245);
+  --silen-primary-foreground: oklch(0.99 0 0);
+  --silen-radius: 0.5rem;
+  --silen-content-width: 48rem;
+}
+
+.dark {
+  --silen-primary: oklch(0.76 0.12 245);
+}
+```
+
+从 `.silen/theme.tsx` 导入样式，让 Vite 同时把它加入 SSR 与客户端构建。
+
+## 颜色令牌
+
+核心语义集合包括 `--silen-background`、`--silen-foreground`、`--silen-card`、`--silen-primary`、`--silen-primary-foreground`、`--silen-muted`、`--silen-muted-foreground`、`--silen-border`、`--silen-input`、`--silen-ring` 与 `--silen-destructive`。secondary、accent、popover 令牌为交互组件提供同样的语义层。
+
+浅色值写在 `:root`，深色覆盖写在 `.dark`。保持前景/背景以及 primary/primary-foreground 之间的可读对比；外观控件允许用户明确选择深色、跟随系统或浅色。
+
+## 形状与布局
+
+- `--silen-radius` 控制统一圆角。
+- `--silen-nav-height` 定义顶部导航高度。
+- `--silen-sidebar-width` 控制桌面侧栏。
+- `--silen-content-width` 限制正文阅读宽度。
+- `--silen-layout-width` 限制首页与 page 布局宽度。
+
+每次只调整一层，并检查长标题、代码块、两种配色与移动导航。更宽不一定更好，正文过宽会降低扫读效率。
+
+令牌适合视觉变化；新增 MDX 组件、包装器、布局或 404 时再使用[主题扩展](/silen/zh/theme/extensions-accessibility/)。

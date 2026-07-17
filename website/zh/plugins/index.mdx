@@ -1,0 +1,25 @@
+---
+title: 插件
+description: Silen 插件生命周期文档的兼容入口。
+---
+
+# 插件
+
+此路由为已有书签继续保留。Silen 插件 API 是有序、公开的构建与客户端扩展边界。插件工厂在 `.silen/config.ts` 中配置，接收当前 command 与 root，并返回有名称的插件。
+
+```ts
+import { defineConfig, definePlugin } from '@aicode-nexus/silen'
+
+const metadata = definePlugin(() => ({
+  name: 'product-metadata',
+  transformPageData(page) {
+    return { data: { ...page.data, product: 'checkout' } }
+  },
+}))
+
+export default defineConfig({ plugins: [metadata] })
+```
+
+公开钩子覆盖配置、解析后配置、Remark/Rehype、Vite、客户端模块、页面数据、head 与构建结束。钩子按配置顺序运行。客户端模块必须兼容 SSR：浏览器 API 应放入 `setup`，而不是模块顶层或 `wrapRoot`。插件包应把 `@aicode-nexus/silen` 声明为 peer dependency，并只导入文档化导出。
+
+插件生命周期、身份、失败信息与打包规则请进入正式[插件指南](/silen/zh/guide/plugins)；分析与 Ask AI 见[集成](/silen/zh/integrations/)。

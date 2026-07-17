@@ -137,7 +137,7 @@ export default defineConfig({
     )
     const actionStart = documentStyles.indexOf('.silen-home-inline-link,')
     const actionEnd = documentStyles.indexOf(
-      '.silen-home-panel-grid,',
+      '.silen-home-proof-grid,',
       actionStart,
     )
     const actionStyles = documentStyles.slice(actionStart, actionEnd)

@@ -1,0 +1,52 @@
+---
+title: 主题、布局与导航
+description: 配置默认主题外壳、布局、搜索与多语言。
+---
+
+# 主题、布局与导航
+
+默认主题是一套响应式文档外壳，而不是封闭模板。它提供导航、侧栏、页面大纲、本地搜索、外观控制、代码复制、翻页、首页 hero 与完整 404。优先使用配置；只有产品要求无法通过配置表达时才扩展 React。
+
+## 布局
+
+在 frontmatter 中选择布局：
+
+```md
+---
+layout: doc
+---
+```
+
+- `doc` 是默认布局，提供阅读排版、标题大纲，以及从侧栏推导的上一篇/下一篇。
+- `home` 在页面 MDX 前渲染当前语言的 hero 与可选功能区，并使用全宽外壳。
+- `page` 保留导航和中性文章容器，但不显示文档翻页。
+
+## 导航与侧栏
+
+```ts
+themeConfig: {
+  logo: { src: '/logo.svg', alt: '产品文档' },
+  nav: [
+    { text: '指南', link: '/guide/' },
+    { text: 'GitHub', link: 'https://github.com/example/project' },
+  ],
+  sidebar: [
+    {
+      text: '开始使用',
+      items: [{ text: '快速开始', link: '/guide/' }],
+    },
+  ],
+}
+```
+
+内部主题链接会按 `base` 解析；外部 HTTP(S) 链接会带安全的关系属性。960px 以下，固定侧栏变成带标签的模态 Sheet；桌面宽度下，它持续显示在正文旁。
+
+## 搜索
+
+除非 `themeConfig.search` 为 `false`，否则本地搜索默认开启。搜索按需加载，可通过按钮或 `Control+K` / `Command+K` 打开，支持键盘选择，并在关闭后恢复焦点。search v2 记录页面语言，让当前语言结果得到正确排序与分组。
+
+## 多语言
+
+locale 条目定义 BCP 47 `lang`、显示标签与路由 `root`，并可覆盖导航、侧栏、首页与界面消息。路由镜像后，语言切换会保留当前页面。个别页面仍可用 frontmatter `lang` 覆盖。
+
+视觉定制使用[主题令牌](/silen/zh/theme/tokens/)，React 行为使用[主题扩展](/silen/zh/theme/extensions-accessibility/)。

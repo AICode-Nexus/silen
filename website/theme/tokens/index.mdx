@@ -1,0 +1,57 @@
+---
+title: Theme tokens
+description: Customize Silen colors, shape, and layout through semantic CSS variables.
+---
+
+# Theme tokens
+
+Override semantic CSS variables instead of styling internal utility classes.
+Tokens are the stable boundary between the default theme’s behavior and a
+project’s visual identity.
+
+```css
+/* docs/.silen/custom.css */
+:root {
+  --silen-primary: oklch(0.55 0.17 245);
+  --silen-primary-foreground: oklch(0.99 0 0);
+  --silen-radius: 0.5rem;
+  --silen-content-width: 48rem;
+}
+
+.dark {
+  --silen-primary: oklch(0.76 0.12 245);
+}
+```
+
+Import the stylesheet from `.silen/theme.tsx` so Vite includes it in both SSR
+and the client bundle.
+
+## Color tokens
+
+The primary semantic set is `--silen-background`, `--silen-foreground`,
+`--silen-card`, `--silen-card-foreground`, `--silen-primary`,
+`--silen-primary-foreground`, `--silen-muted`,
+`--silen-muted-foreground`, `--silen-border`, `--silen-input`,
+`--silen-ring`, and `--silen-destructive`. Secondary, accent, and popover
+tokens map the same semantics to interactive primitives.
+
+Define light values on `:root` and dark overrides on `.dark`. Preserve usable
+contrast between foreground/background and primary/primary-foreground pairs;
+the appearance control can switch explicitly among dark, system, and light.
+
+## Shape and layout tokens
+
+- `--silen-radius` controls the shared corner language.
+- `--silen-nav-height` sizes the fixed top navigation.
+- `--silen-sidebar-width` controls the desktop navigation rail.
+- `--silen-content-width` limits readable document lines.
+- `--silen-layout-width` limits wide home and page layouts.
+
+Change one layer at a time and test long titles, code blocks, both appearance
+modes, and mobile navigation. Increasing content width may look efficient on a
+dashboard but makes prose harder to scan.
+
+## Extension boundary
+
+Tokens are best for visual changes. Use a [theme extension](/silen/theme/extensions-accessibility/)
+only when you need a new MDX component, wrapper, layout, or 404 component.

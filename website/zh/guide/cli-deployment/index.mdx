@@ -1,0 +1,49 @@
+---
+title: CLI 与部署
+description: 使用 Silen 命令，并在正确 base 下部署静态产物。
+---
+
+# CLI 与部署
+
+Silen 提供一组精简 CLI。通过项目包管理器运行，命令实现与 Agent Contract 就会始终匹配当前安装版本。
+
+## 主要命令
+
+```sh
+pnpm silen init docs
+pnpm silen dev docs --host 127.0.0.1 --port 5173
+pnpm silen build docs
+pnpm silen preview docs --port 4173
+```
+
+`init <root>` 写入起始配置与首页，不替换已有目标；`dev [root]` 启动基于 Vite 的开发服务；`build [root]` 校验并生成静态产物；`preview [root]` 提供包含路由与语言感知 404 的预览。服务命令支持 `--host` 和 `--port`，构建命令不会自动部署。
+
+AI 工作区使用独立命令：
+
+```sh
+pnpm silen ai init docs
+pnpm silen ai index docs
+pnpm silen ai audit docs
+pnpm silen mcp docs
+```
+
+MCP 默认只读，只有可信用户显式加入 `--allow-write` 才会注册写工具。
+
+## 静态部署
+
+把 `docs/.silen/dist` 的内容发布到任意静态托管，并让托管平台按生成结果提供 `index.html` 与资源。例如项目地址为 `https://example.github.io/handbook/`：
+
+```ts
+export default defineConfig({
+  siteUrl: 'https://example.github.io',
+  base: '/handbook/',
+})
+```
+
+不要在 `siteUrl` 中重复 `/handbook/`。构建会组合 origin 与 base，用于 canonical、站点地图、语言替代、Markdown URL 与站点 Agent Contract。
+
+## 上线前检查
+
+先运行生产构建，再预览一个嵌套路由、一个不存在的路由，并打开 `llms.txt` 与 `.well-known/silen/manifest.json`。构建成功只证明文件已生成；直接访问才能证明托管平台按预期 base 提供了它们。
+
+命令语法与排错见[参考手册](/silen/zh/reference/)。

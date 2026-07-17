@@ -1,0 +1,40 @@
+---
+title: Agent Contract
+description: 为 AI 客户端提供版本化的 Silen 项目与站点发现入口。
+---
+
+# Agent Contract
+
+Agent Contract 是版本化、可检查的发现层，让 AI 客户端不必猜测配置字段、CLI 语法、MCP 权限与部署路由。
+
+## 安装包契约
+
+创建或维护本地项目时，从这里开始：
+
+```text
+@aicode-nexus/silen/agent/manifest.json
+```
+
+包清单会指向当前准确版本的配置 API、CLI/MCP 契约、公共 TypeScript 导出、指南与任务手册。例如 `agent/tasks/create-site.md` 描述受支持的激活路径，并链接回权威机器可读资源，而不是复制定义。
+
+## 部署站点契约
+
+开启后，每次生产构建都会发布站点专属的 `/.well-known/silen/manifest.json`，并按 `base` 解析。当前官网的[实时清单](/silen/.well-known/silen/manifest.json)描述部署 origin、base、语言、资源、任务与公开项目指引。
+
+```ts
+ai: {
+  contract: {
+    enabled: true,
+    instructions: '.silen/ai-public.md',
+    tasksDir: '.silen/ai-tasks',
+  },
+}
+```
+
+指令与任务都是显式公开构建输入。不要包含本地绝对路径、密钥、私有端点、凭证或未公开运行信息。
+
+## 客户端行为
+
+Codex、Claude Code、Cursor 等客户端应使用同一份清单，不要维护各自的 API 副本。若客户端不支持声明的契约 schema，应退回到链接的公开 Markdown，并保持只读。读取部署内容时以站点清单为准；针对已安装包生成代码时以包契约为准。
+
+下一步配置[本地工作区与 MCP](/silen/zh/ai/local-workspace-mcp/)。

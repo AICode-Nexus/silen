@@ -1,0 +1,62 @@
+---
+title: CLI and deployment
+description: Run Silen commands and deploy static output under the correct base.
+---
+
+# CLI and deployment
+
+Silen exposes a small CLI. Run it through the project package manager so the
+command and Agent Contract always match the installed version.
+
+## Primary commands
+
+```sh
+pnpm silen init docs
+pnpm silen dev docs --host 127.0.0.1 --port 5173
+pnpm silen build docs
+pnpm silen preview docs --port 4173
+```
+
+`init <root>` writes a starter config and homepage without replacing existing
+targets. `dev [root]` starts Vite-backed development. `build [root]` creates the
+static output and exits after validation. `preview [root]` serves that output
+with route and locale-aware 404 behavior. The server commands accept `--host`
+and `--port`; the build has no deployment side effects.
+
+AI workspace commands are separate:
+
+```sh
+pnpm silen ai init docs
+pnpm silen ai index docs
+pnpm silen ai audit docs
+pnpm silen mcp docs
+```
+
+The MCP command is read-only unless a trusted user explicitly starts it with
+`--allow-write`.
+
+## Static deployment
+
+Publish the contents of `docs/.silen/dist` to any static host. Configure the
+host to serve generated `index.html` files and assets as written. For a project
+site such as `https://example.github.io/handbook/`, use:
+
+```ts
+export default defineConfig({
+  siteUrl: 'https://example.github.io',
+  base: '/handbook/',
+})
+```
+
+Do not repeat `/handbook/` in `siteUrl`. The build combines the origin and
+base for canonical URLs, sitemap entries, locale alternates, generated
+Markdown URLs, and the site Agent Contract.
+
+## Release check
+
+Before uploading, run the production build, preview a nested route directly,
+open a missing route, and inspect `llms.txt` plus
+`.well-known/silen/manifest.json`. A successful build proves files were
+generated; those direct checks prove the host serves them at the expected base.
+
+Use [Reference](/silen/reference/) for command syntax and troubleshooting.

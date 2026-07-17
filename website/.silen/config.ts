@@ -18,17 +18,55 @@ export default defineConfig({
     logo: { src: '/logo.svg', alt: 'Silen' },
     nav: [
       { text: 'Guide', link: '/guide/' },
+      { text: 'Theme', link: '/theme/' },
+      { text: 'Integrations', link: '/integrations/' },
       { text: 'AI', link: '/ai/' },
+      { text: 'Reference', link: '/reference/' },
       { text: 'GitHub', link: 'https://github.com/AICode-Nexus/silen' },
     ],
     sidebar: [
       {
-        text: 'Start here',
+        text: 'Getting started',
         items: [
-          { text: 'Introduction', link: '/guide/' },
-          { text: 'Plugins', link: '/guide/plugins' },
-          { text: 'AI-ready docs', link: '/ai/' },
+          { text: 'Quick start', link: '/guide/' },
+          { text: 'Project structure', link: '/guide/project-structure/' },
+          { text: 'Configuration', link: '/guide/configuration/' },
+          { text: 'Markdown and MDX', link: '/guide/markdown-mdx/' },
+          { text: 'CLI and deployment', link: '/guide/cli-deployment/' },
         ],
+      },
+      {
+        text: 'Theme',
+        items: [
+          { text: 'Layouts and navigation', link: '/theme/' },
+          { text: 'Tokens', link: '/theme/tokens/' },
+          {
+            text: 'Extensions and accessibility',
+            link: '/theme/extensions-accessibility/',
+          },
+        ],
+      },
+      {
+        text: 'Integrations',
+        items: [
+          { text: 'Overview', link: '/integrations/' },
+          { text: 'Plugins', link: '/guide/plugins' },
+        ],
+      },
+      {
+        text: 'AI',
+        items: [
+          { text: 'Generated artifacts', link: '/ai/' },
+          { text: 'Agent Contract', link: '/ai/agent-contract/' },
+          {
+            text: 'Local workspace and MCP',
+            link: '/ai/local-workspace-mcp/',
+          },
+        ],
+      },
+      {
+        text: 'Reference',
+        items: [{ text: 'Configuration and CLI', link: '/reference/' }],
       },
     ],
     socialLinks: [
@@ -46,17 +84,61 @@ export default defineConfig({
         root: '/zh/',
         nav: [
           { text: '指南', link: '/zh/guide/' },
+          { text: '主题', link: '/zh/theme/' },
+          { text: '集成', link: '/zh/integrations/' },
           { text: 'AI', link: '/zh/ai/' },
+          { text: '参考', link: '/zh/reference/' },
           { text: 'GitHub', link: 'https://github.com/AICode-Nexus/silen' },
         ],
         sidebar: [
           {
-            text: '从这里开始',
+            text: '开始使用',
             items: [
               { text: '快速开始', link: '/zh/guide/' },
-              { text: '插件', link: '/zh/guide/plugins' },
-              { text: 'AI-ready 文档', link: '/zh/ai/' },
+              {
+                text: '项目结构',
+                link: '/zh/guide/project-structure/',
+              },
+              { text: '配置', link: '/zh/guide/configuration/' },
+              { text: 'Markdown 与 MDX', link: '/zh/guide/markdown-mdx/' },
+              {
+                text: 'CLI 与部署',
+                link: '/zh/guide/cli-deployment/',
+              },
             ],
+          },
+          {
+            text: '主题',
+            items: [
+              { text: '布局与导航', link: '/zh/theme/' },
+              { text: '设计令牌', link: '/zh/theme/tokens/' },
+              {
+                text: '扩展与无障碍',
+                link: '/zh/theme/extensions-accessibility/',
+              },
+            ],
+          },
+          {
+            text: '集成',
+            items: [
+              { text: '概览', link: '/zh/integrations/' },
+              { text: '插件', link: '/zh/guide/plugins' },
+            ],
+          },
+          {
+            text: 'AI',
+            items: [
+              { text: '生成产物', link: '/zh/ai/' },
+              { text: 'Agent Contract', link: '/zh/ai/agent-contract/' },
+              {
+                text: '本地工作区与 MCP',
+                link: '/zh/ai/local-workspace-mcp/',
+              },
+            ],
+          },
+          {
+            text: '参考',
+            items: [{ text: '配置与 CLI', link: '/zh/reference/' }],
           },
         ],
         home: {
@@ -79,32 +161,6 @@ export default defineConfig({
               },
             ],
           },
-          features: [
-            {
-              icon: 'blocks',
-              title: 'React 优先',
-              details:
-                '在可信 MDX 中组合 TypeScript 与 React 组件，保留轻量写作体验。',
-              link: '/zh/guide/',
-              linkText: '了解写作流程',
-            },
-            {
-              icon: 'zap',
-              title: 'Vite 驱动',
-              details:
-                '快速启动、无整页刷新的导航，并为生产环境生成完整静态 HTML。',
-              link: '/zh/guide/',
-              linkText: '查看快速开始',
-            },
-            {
-              icon: 'sparkles',
-              title: 'AI-ready',
-              details:
-                '生成 llms.txt、Markdown 路由、搜索索引与有权限边界的 MCP 工作区。',
-              link: '/zh/ai/',
-              linkText: '了解 AI 能力',
-            },
-          ],
         },
       },
     ],
@@ -128,32 +184,6 @@ export default defineConfig({
           },
         ],
       },
-      features: [
-        {
-          icon: 'blocks',
-          title: 'React-first',
-          details:
-            'Compose TypeScript and React components inside trusted MDX without losing a focused authoring loop.',
-          link: '/guide/',
-          linkText: 'Explore authoring',
-        },
-        {
-          icon: 'zap',
-          title: 'Vite-fast',
-          details:
-            'Start quickly, navigate without full reloads, and emit complete static HTML for production.',
-          link: '/guide/',
-          linkText: 'See the quick start',
-        },
-        {
-          icon: 'sparkles',
-          title: 'AI-ready',
-          details:
-            'Generate llms.txt, clean Markdown routes, search indexes, and a permission-gated MCP workspace.',
-          link: '/ai/',
-          linkText: 'Explore AI features',
-        },
-      ],
     },
   },
 })

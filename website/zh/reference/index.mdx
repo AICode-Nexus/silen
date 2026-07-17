@@ -1,0 +1,51 @@
+---
+title: 参考
+description: Silen 配置默认值、CLI 语法与排错。
+---
+
+# 参考
+
+本页是紧凑的运行参考；解释与完整示例请阅读链接的指南。
+
+## 配置
+
+| 字段            | 默认值        | 用途                           |
+| --------------- | ------------- | ------------------------------ |
+| `title`         | `Silen`       | 站点标题                       |
+| `description`   | 空            | 页面元数据                     |
+| `lang`          | `en-US`       | 默认 BCP 47 语言               |
+| `base`          | `/`           | 规范化部署路径                 |
+| `siteUrl`       | 未设置        | canonical HTTP(S) origin       |
+| `outDir`        | `.silen/dist` | 相对内容根的输出目录           |
+| `onBrokenLinks` | `error`       | `error`、`warn`、`ignore`      |
+| `themeConfig`   | `{}`          | 导航、语言、首页、搜索、Ask AI |
+| `analytics`     | `[]`          | 有序生产分析 provider          |
+| `plugins`       | `[]`          | 有序可信插件                   |
+| `ai.*`          | 开启          | AI 文件、Markdown、索引、契约  |
+
+`base` 必须以 `/` 开头，不含 query/hash 或穿越路径，并规范为结尾斜杠。`siteUrl` 只能是 origin，不含凭证、路径、query 或 fragment。
+
+## CLI
+
+| 命令                                   | 作用                               |
+| -------------------------------------- | ---------------------------------- |
+| `silen init <root>`                    | 安全创建起始配置与首页             |
+| `silen dev [root]`                     | 启动开发，支持 `--host`、`--port`  |
+| `silen build [root]`                   | 校验并生成静态产物                 |
+| `silen preview [root]`                 | 预览产物，支持 `--host`、`--port`  |
+| `silen ai <init\|index\|audit> [root]` | 管理本地 AI 工作区                 |
+| `silen mcp [root]`                     | 启动只读 MCP，可选 `--allow-write` |
+
+## 排错
+
+**本地链接正常，部署后失败。** 检查托管路径是否匹配 `base`、正文根相对链接是否包含挂载路径，以及托管是否按原样提供嵌套 `index.html`。
+
+**canonical 路径重复。** `siteUrl` 只写 origin，路径只写在 `base`。
+
+**语言切换进入 404。** 在每个语言 root 下创建完全镜像的路由，并加入翻译后的导航。
+
+**构建报告重复路由。** 删除 `topic.mdx` 或 `topic/index.mdx` 之一；二者指向同一路由。
+
+**MCP 没有写工具。** 这是安全默认值。只有用户明确授权有边界的写任务后，才加入 `--allow-write`。
+
+深入阅读[配置](/silen/zh/guide/configuration/)与 [CLI/部署](/silen/zh/guide/cli-deployment/)。

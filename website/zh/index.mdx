@@ -9,12 +9,7 @@ import {
   ArrowRightIcon,
   BotIcon,
   BracesIcon,
-  FileCode2Icon,
-  FileTextIcon,
   GitForkIcon,
-  Globe2Icon,
-  SearchIcon,
-  ServerCogIcon,
   UsersIcon,
 } from 'lucide-react'
 import { CodeBlock } from '@aicode-nexus/silen/theme'
@@ -22,130 +17,107 @@ import wechatQr from '../assets/wechat-ai-dev-hub.png'
 
 <section
   className="silen-home-section silen-home-section--split"
-  aria-labelledby="quick-start-title"
+  aria-labelledby="activation-title"
 >
   <div className="silen-home-section-copy">
-    <p className="silen-home-eyebrow">两条命令，一个安静的工作流</p>
-    <h2 id="quick-start-title">几秒内开始</h2>
+    <p className="silen-home-eyebrow">激活一个文档目录</p>
+    <h2 id="activation-title">从文件夹到知识接口</h2>
     <p className="silen-home-lede">
       {
-        '将 Silen 加入项目并指向文档目录，即可获得 React 驱动的 MDX、快速本地导航和可直接部署的静态输出。'
+        '安装 Silen，只初始化一次目录，然后继续编写普通 Markdown 或可信 MDX。同一份内容会成为面向人类的快速站点，以及面向 AI 的确定性语料。'
       }
     </p>
-    <a className="silen-home-inline-link" href="guide/">
-      阅读指南 <ArrowRightIcon aria-hidden="true" />
+    <a className="silen-home-action" href="/silen/zh/guide/">
+      跟随快速开始 <ArrowRightIcon aria-hidden="true" />
     </a>
   </div>
   <div className="silen-home-code-panel">
     <CodeBlock
       language="sh"
-      code={'pnpm add -D @aicode-nexus/silen\npnpm silen dev docs'}
+      code={
+        'pnpm add -D @aicode-nexus/silen\npnpm silen init docs\npnpm silen dev docs'
+      }
     />
   </div>
 </section>
 
-<section className="silen-home-section" aria-labelledby="audiences-title">
+<section className="silen-home-section" aria-labelledby="live-outputs-title">
   <div className="silen-home-section-copy">
-    <p className="silen-home-eyebrow">一个可信源</p>
-    <h2 id="audiences-title">一份内容，两类读者</h2>
+    <p className="silen-home-eyebrow">直接检查证据</p>
+    <h2 id="live-outputs-title">当前构建的真实产物</h2>
     <p className="silen-home-lede">
       {
-        '每条路由都从普通 MDX 出发，同时成为面向人类的可靠阅读体验，以及面向 AI 客户端的确定性接口。'
+        '这些链接由当前站点实际生成。直接打开它们，验证内容模型，而不只是相信功能介绍。'
       }
     </p>
   </div>
-  <div className="silen-home-panel-grid">
-    <article className="silen-home-panel">
-      <span className="silen-home-panel-icon">
-        <UsersIcon aria-hidden="true" />
-      </span>
-      <h3>人类读者</h3>
-      <p>快速、可访问，并且在 hydration 之前就能完整阅读。</p>
-      <ul>
-        <li>响应式导航与本地搜索</li>
-        <li>清晰的代码高亮与复制控件</li>
-        <li>每条路由都输出完整静态 HTML</li>
-      </ul>
-    </article>
-    <article className="silen-home-panel">
-      <span className="silen-home-panel-icon">
-        <BotIcon aria-hidden="true" />
-      </span>
-      <h3>AI 客户端</h3>
-      <p>提供边界明确的干净产物，而不是抓取浏览器界面。</p>
-      <ul>
-        <li>确定性的 Markdown 路由与清单</li>
-        <li>llms.txt 与本地搜索索引</li>
-        <li>可选且有权限边界的 MCP 工作区</li>
-      </ul>
-    </article>
+  <div className="silen-home-output-list">
+    <a className="silen-home-output-link" href="/silen/llms.txt">
+      <span>llms.txt</span>
+      <small>简明语料地图</small>
+    </a>
+    <a className="silen-home-output-link" href="/silen/llms-full.txt">
+      <span>llms-full.txt</span>
+      <small>完整可读语料</small>
+    </a>
+    <a className="silen-home-output-link" href="/silen/ai-index.json">
+      <span>ai-index.json</span>
+      <small>结构化页面发现</small>
+    </a>
+    <a
+      className="silen-home-output-link"
+      href="/silen/.well-known/silen/manifest.json"
+    >
+      <span>Agent 清单</span>
+      <small>版本化能力契约</small>
+    </a>
+    <a className="silen-home-output-link" href="/silen/zh/guide/index.md">
+      <span>指南 Markdown</span>
+      <small>干净的路由级内容</small>
+    </a>
   </div>
 </section>
 
-<section className="silen-home-section" aria-labelledby="outputs-title">
+<section className="silen-home-section" aria-labelledby="proof-title">
   <div className="silen-home-section-copy">
-    <p className="silen-home-eyebrow">默认就有用</p>
-    <h2 id="outputs-title">每次构建都会产出</h2>
-    <p className="silen-home-lede">
-      {'Silen 将同一棵内容树转换成不同读者真正需要的格式。'}
-    </p>
+    <p className="silen-home-eyebrow">一个内容源，三项证明</p>
+    <h2 id="proof-title">同时服务读者、智能体与维护者</h2>
   </div>
-  <div className="silen-home-output-grid">
-    <article className="silen-home-output">
-      <span className="silen-home-output-icon">
-        <Globe2Icon aria-hidden="true" />
+  <div className="silen-home-proof-grid">
+    <article className="silen-home-proof">
+      <span className="silen-home-panel-icon">
+        <UsersIcon aria-hidden="true" />
       </span>
-      <h3>静态 HTML</h3>
-      <p>主要内容已经渲染，可直接部署到任意静态托管。</p>
+      <h3>人类阅读</h3>
+      <p>SSR HTML、响应式导航、本地搜索、无障碍控件与专注的排版。</p>
     </article>
-    <article className="silen-home-output">
-      <span className="silen-home-output-icon">
-        <SearchIcon aria-hidden="true" />
+    <article className="silen-home-proof">
+      <span className="silen-home-panel-icon">
+        <BotIcon aria-hidden="true" />
       </span>
-      <h3>本地搜索</h3>
-      <p>快速、私有，不依赖托管搜索服务。</p>
+      <h3>AI 消费</h3>
+      <p>确定性 Markdown、发现文件、版本化 Agent Contract 与可选本地 MCP。</p>
     </article>
-    <article className="silen-home-output">
-      <span className="silen-home-output-icon">
-        <FileTextIcon aria-hidden="true" />
-      </span>
-      <h3>Markdown 路由</h3>
-      <p>为工具与智能体提供接近源文件的干净输出。</p>
-    </article>
-    <article className="silen-home-output">
-      <span className="silen-home-output-icon">
-        <FileCode2Icon aria-hidden="true" />
-      </span>
-      <h3>llms.txt</h3>
-      <p>为整套文档提供稳定、可预测的入口。</p>
-    </article>
-    <article className="silen-home-output">
-      <span className="silen-home-output-icon">
-        <ServerCogIcon aria-hidden="true" />
-      </span>
-      <h3>可选 MCP</h3>
-      <p>拥有明确读写权限的本地文档工作区。</p>
-    </article>
-    <article className="silen-home-output">
-      <span className="silen-home-output-icon">
+    <article className="silen-home-proof">
+      <span className="silen-home-panel-icon">
         <BracesIcon aria-hidden="true" />
       </span>
-      <h3>React MDX</h3>
-      <p>只在文档真正受益时加入类型化组件。</p>
+      <h3>可扩展性</h3>
+      <p>React MDX、语义主题令牌、主题组合、分析配置与有序插件钩子。</p>
     </article>
   </div>
 </section>
 
 <section
-  className="silen-home-section silen-home-contact"
-  aria-labelledby="contact-title"
+  className="silen-home-section silen-home-community silen-home-community--qr"
+  aria-labelledby="community-title"
 >
   <div className="silen-home-section-copy">
-    <p className="silen-home-eyebrow">一起构建</p>
-    <h2 id="contact-title">联系与关注</h2>
+    <p className="silen-home-eyebrow">开源，也保持克制</p>
+    <h2 id="community-title">一起完善文档基础设施</h2>
     <p className="silen-home-lede">
       {
-        '通过 GitHub 关注开发、提交问题或参与贡献；也可以扫码关注 AI Dev Hub，获取 AI 开发内容与 Silen 更新。'
+        '在 GitHub 阅读源码、反馈问题或提交聚焦的改进；也可关注 AI Dev Hub 获取中文开发内容。'
       }
     </p>
     <a

@@ -1,0 +1,56 @@
+---
+title: Agent Contract
+description: Give AI clients one versioned discovery surface for Silen projects and sites.
+---
+
+# Agent Contract
+
+The Agent Contract is a versioned, inspectable discovery layer. It keeps AI
+clients from guessing configuration fields, CLI syntax, MCP permissions, or
+deployed site routes.
+
+## Installed package contract
+
+For creating or maintaining a local project, start at:
+
+```text
+@aicode-nexus/silen/agent/manifest.json
+```
+
+The package manifest points to the exact version’s configuration API, CLI and
+MCP contracts, public TypeScript exports, guide, and task playbooks. For
+example, `agent/tasks/create-site.md` describes the supported activation path
+and links back to authoritative machine-readable resources rather than copying
+their definitions.
+
+## Deployed site contract
+
+Each enabled production build publishes a site-specific entry point at
+`/.well-known/silen/manifest.json`, resolved under `base`. This official site’s
+live contract is [the Silen manifest](/silen/.well-known/silen/manifest.json).
+It describes the deployed origin, base, language, resources, tasks, and public
+project guidance.
+
+```ts
+ai: {
+  contract: {
+    enabled: true,
+    instructions: '.silen/ai-public.md',
+    tasksDir: '.silen/ai-tasks',
+  },
+}
+```
+
+Instructions and tasks are explicit public build input. Do not include local
+absolute paths, secrets, private endpoints, credentials, or unpublished
+operating details.
+
+## Client behavior
+
+Codex, Claude Code, Cursor, and other clients should consume the same manifest
+instead of keeping client-specific API copies. When a client does not support
+the declared contract schema, it must follow linked public Markdown and remain
+read-only. For deployed content, the site manifest is authoritative; for code
+generation against an installed package, the package contract is authoritative.
+
+Continue with the [local workspace and MCP](/silen/ai/local-workspace-mcp/).

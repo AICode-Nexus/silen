@@ -1,0 +1,41 @@
+---
+title: 主题扩展与无障碍
+description: 在不破坏 SSR、hydration 与键盘行为的前提下扩展默认主题。
+---
+
+# 主题扩展与无障碍
+
+令牌与配置不够时再扩展默认主题。主题可以替换布局或 MDX 组件、提供自定义 404、包装 React 根节点，同时继承其余能力。
+
+```tsx
+// docs/.silen/theme.tsx
+import type { ReactNode } from 'react'
+import DefaultTheme, { defineTheme } from '@aicode-nexus/silen/theme'
+import './custom.css'
+
+function Note({ children }: { readonly children?: ReactNode }) {
+  return <aside className="product-note">{children}</aside>
+}
+
+export default defineTheme({
+  extends: DefaultTheme,
+  components: { Note },
+  wrapRoot({ children }) {
+    return <div data-product-docs="">{children}</div>
+  },
+})
+```
+
+`defineTheme` 按 key 合并继承的布局和组件；未替换时继续继承 `NotFound`。基础主题和扩展都定义 `wrapRoot` 时，扩展包装器组合在外层。递归扩展会被拒绝。
+
+## SSR 安全
+
+主题模块与根包装器会同时参与服务端渲染和 hydration。不要在模块顶层或 render 中直接读取 `window`、`document`、`localStorage`。浏览器行为放入 effect 或插件客户端 `setup`，注册监听器时返回清理函数。
+
+## 无障碍契约
+
+默认外壳包含跳转正文链接和清晰焦点样式。移动导航是带标签的模态框：打开后焦点进入导航，Escape 关闭，焦点返回触发按钮。搜索支持快捷键、方向键、Enter、Escape 与焦点恢复；代码复制是带实时状态文本的按钮。
+
+外观控件是明确的深色/系统/浅色单选组。head 内联脚本在 hydration 前应用已保存偏好，避免颜色闪烁；系统模式会跟随操作系统变化。非必要过渡遵循 reduced motion。
+
+替换交互组件时，保留可访问名称、键盘路径、焦点行为与 SSR 降级。上线前用纯键盘、200% 缩放和 reduced motion 检查。

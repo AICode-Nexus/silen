@@ -1,0 +1,46 @@
+---
+title: Markdown 与 MDX
+description: 编写可信内容、元数据、链接、代码与 React 组件。
+---
+
+# Markdown 与 MDX
+
+持久说明优先使用 Markdown；页面确实需要类型化 React 组件时再使用 MDX。两者都会生成相同的路由、SSR HTML、搜索记录与可选 AI Markdown。
+
+## Frontmatter
+
+Frontmatter 用于页面元数据与布局选择：
+
+```md
+---
+title: 服务运行手册
+description: 诊断并恢复结算服务。
+layout: doc
+lang: zh-CN
+ai: true
+---
+```
+
+`doc` 是默认布局；`home` 会先渲染配置的 hero，再渲染页面 MDX；`page` 保留应用外壳，但不显示文档翻页。`draft: true` 会让页面退出生产路由，`ai: false` 则只让公开页面退出 AI 产物。
+
+## 链接与标题
+
+使用稳定站点路由和有意义的链接文字。非根 `base` 下，主题配置链接会自动感知 base；正文里的根相对链接应直接指向挂载路径。构建期间 Silen 会校验内部页面目标，并按 `onBrokenLinks` 选择报错、警告或忽略。
+
+标题会形成页面大纲。每页保留一个 `#` 标题，后续层级不要跳级，以保证键盘与屏幕阅读器用户都能理解结构。
+
+## 代码与组件
+
+围栏代码块带语法高亮和可键盘操作的复制按钮。MDX 可以导入组件：
+
+```mdx
+import Status from './components/status.tsx'
+
+## 当前状态
+
+<Status service="checkout" />
+```
+
+MDX 会在构建中执行，也能导入项目代码，因此必须把它当成可信源文件，而不是不受信任投稿的沙箱。浏览器 API 应放在 effect 或客户端 setup 内，确保服务端渲染可重复。
+
+需要全站组件时，请扩展[默认主题](/silen/zh/theme/extensions-accessibility/)。

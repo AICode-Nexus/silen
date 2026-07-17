@@ -1,0 +1,47 @@
+---
+title: 本地工作区与 MCP
+description: 为本地 AI 客户端索引、审计并暴露有边界的文档工作区。
+---
+
+# 本地工作区与 MCP
+
+本地 AI 工作区是确定性、无模型的能力层：它为工具提供有边界的 Markdown 根目录、可检查索引与显式写权限，不暴露任意 shell 执行。
+
+## 初始化、索引与审计
+
+```sh
+pnpm silen ai init docs
+pnpm silen ai index docs
+pnpm silen ai audit docs
+```
+
+`ai init` 创建 `wiki/` 与被忽略的 `.silen/ai/` 缓存，不修改已有 MDX；`ai index` 重建本地搜索索引；`ai audit` 检查链接、引用、生成产物与索引新鲜度，发现问题时返回非零状态。
+
+## 连接 MCP 客户端
+
+从仓库根目录启动：
+
+```json
+{
+  "mcpServers": {
+    "silen": {
+      "command": "pnpm",
+      "args": ["silen", "mcp", "docs"]
+    }
+  }
+}
+```
+
+默认服务注册七个只读工具：`guide`、`list`、`search`、`read`、`backlinks`、`citations`、`build`。`build` 是有边界的预检，只读取 Markdown 输入与现有产物，不加载项目配置、不执行 MDX、不调用 Vite，也不写文件。
+
+## 谨慎授权写入
+
+```sh
+pnpm silen mcp docs --allow-write
+```
+
+显式参数会增加 `write`、`link`、`append`。写入只接受工作区相对 `.md`/`.mdx` 路径，拒绝目录穿越和逃逸符号链接，使用原子替换，并限制为 2 MiB UTF-8；它不会增加 shell 工具。
+
+只在边界明确的任务中授权可信本地客户端。修改后运行 audit 与站点构建，检查 Git diff，并在提交或部署前另行取得授权。
+
+客户端发现规则见 [Agent Contract](/silen/zh/ai/agent-contract/)。

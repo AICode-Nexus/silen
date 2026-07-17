@@ -92,44 +92,83 @@ describe('example website homepage', () => {
     {
       file: 'website/index.mdx',
       markers: [
-        'Start in seconds',
-        'One source, two audiences',
-        'What every build ships',
-        'Stay connected',
-        'AI Dev Hub on WeChat',
+        'From folder to knowledge interface',
+        'Live output from this build',
+        'Useful to readers, agents, and maintainers',
+        'Build the documentation layer with us',
       ],
+      hasQr: false,
     },
     {
       file: 'website/zh/index.mdx',
       markers: [
-        '几秒内开始',
-        '一份内容，两类读者',
-        '每次构建都会产出',
-        '联系与关注',
+        '从文件夹到知识接口',
+        '当前构建的真实产物',
+        '同时服务读者、智能体与维护者',
+        '一起完善文档基础设施',
         '微信公众号：AI Dev Hub',
       ],
+      hasQr: true,
     },
-  ])('keeps $file complete and localized', async ({ file, markers }) => {
+  ])('keeps $file complete and localized', async ({ file, hasQr, markers }) => {
     const source = await readFile(path.resolve(file), 'utf8')
     for (const marker of markers) expect(source).toContain(marker)
-    expect(source).toContain('wechat-ai-dev-hub.png')
-    expect(source).toContain('width={344}')
-    expect(source).toContain('height={344}')
-    expect(source).toContain('loading="lazy"')
+    if (hasQr) {
+      expect(source).toContain('wechat-ai-dev-hub.png')
+      expect(source).toContain('width={344}')
+      expect(source).toContain('height={344}')
+      expect(source).toContain('loading="lazy"')
+    } else {
+      expect(source).not.toContain('wechat-ai-dev-hub')
+    }
   })
 
-  it('emits four non-nested lede paragraphs per locale', async () => {
+  it('emits three non-nested lede paragraphs per locale', async () => {
     for (const file of ['index.html', 'zh/index.html']) {
       const html = await readFile(path.join(result.outDir, file), 'utf8')
       const ledes = [
         ...html.matchAll(/<p class="silen-home-lede">([\s\S]*?)<\/p>/g),
       ]
 
-      expect(ledes, file).toHaveLength(4)
+      expect(ledes, file).toHaveLength(3)
       for (const [, content] of ledes) {
         expect(content, file).not.toMatch(/<\/?p(?:\s|>)/)
         expect(content?.trim(), file).not.toBe('')
       }
+    }
+  })
+
+  it('links each homepage to real base-aware generated artifacts', async () => {
+    const [english, chinese] = await Promise.all([
+      readFile(path.join(result.outDir, 'index.html'), 'utf8'),
+      readFile(path.join(result.outDir, 'zh/index.html'), 'utf8'),
+    ])
+
+    for (const html of [english, chinese]) {
+      for (const href of [
+        '/silen/llms.txt',
+        '/silen/llms-full.txt',
+        '/silen/ai-index.json',
+        '/silen/.well-known/silen/manifest.json',
+      ]) {
+        expect(html).toContain(`href="${href}"`)
+      }
+    }
+    expect(english).toContain('href="/silen/guide/index.md"')
+    expect(chinese).toContain('href="/silen/zh/guide/index.md"')
+    expect(english).not.toContain('wechat-ai-dev-hub')
+
+    for (const artifact of [
+      'llms.txt',
+      'llms-full.txt',
+      'ai-index.json',
+      '.well-known/silen/manifest.json',
+      'guide/index.md',
+      'zh/guide/index.md',
+    ]) {
+      await expect(
+        readFile(path.join(result.outDir, artifact)),
+      ).resolves.toBeDefined()
     }
   })
 

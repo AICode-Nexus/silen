@@ -1,0 +1,58 @@
+---
+title: Theme extensions and accessibility
+description: Extend the default theme without losing SSR, hydration, or keyboard behavior.
+---
+
+# Theme extensions and accessibility
+
+Extend the default theme when tokens and configuration are not enough. A theme
+can replace layouts or MDX components, provide a custom 404, and wrap the React
+root while inheriting everything else.
+
+```tsx
+// docs/.silen/theme.tsx
+import type { ReactNode } from 'react'
+import DefaultTheme, { defineTheme } from '@aicode-nexus/silen/theme'
+import './custom.css'
+
+function Note({ children }: { readonly children?: ReactNode }) {
+  return <aside className="product-note">{children}</aside>
+}
+
+export default defineTheme({
+  extends: DefaultTheme,
+  components: { Note },
+  wrapRoot({ children }) {
+    return <div data-product-docs="">{children}</div>
+  },
+})
+```
+
+`defineTheme` merges inherited layouts and components by key. `NotFound` is
+inherited unless replaced. When both base and extension define `wrapRoot`, the
+extension wrapper composes outside the base wrapper. Recursive extension is
+rejected.
+
+## SSR-safe extensions
+
+Theme modules and root wrappers run during server rendering and hydration. Do
+not read `window`, `document`, or `localStorage` at module scope or directly in
+render. Put browser behavior in an effect or plugin client `setup` function and
+return cleanup when registering listeners.
+
+## Accessibility contract
+
+The default shell includes a skip link and visible focus indicators. Mobile
+navigation is a labelled modal: opening moves focus into navigation, Escape
+closes it, and focus returns to the trigger. Search supports its shortcut,
+arrow-key selection, Enter, Escape, and focus restoration. Code-copy controls
+are buttons with live status labels.
+
+The appearance control is an explicit dark/system/light radio group. Its
+inline head script applies the stored preference before hydration to prevent a
+color flash, while system mode follows operating-system changes. Nonessential
+transitions respect reduced-motion preferences.
+
+When replacing an interactive component, keep its accessible name, keyboard
+path, focus behavior, and server-rendered fallback. Test without a pointer,
+with 200% zoom, and with reduced motion before shipping.

@@ -1,0 +1,34 @@
+---
+title: Plugins
+description: Compatibility entry for the Silen plugin lifecycle documentation.
+---
+
+# Plugins
+
+This route remains available for existing bookmarks. Silen’s plugin API is the
+ordered, public extension boundary for build and client integrations. A plugin
+factory is configured in `.silen/config.ts`, receives the current command and
+root, and returns a named plugin.
+
+```ts
+import { defineConfig, definePlugin } from '@aicode-nexus/silen'
+
+const metadata = definePlugin(() => ({
+  name: 'product-metadata',
+  transformPageData(page) {
+    return { data: { ...page.data, product: 'checkout' } }
+  },
+}))
+
+export default defineConfig({ plugins: [metadata] })
+```
+
+Available hooks cover configuration, resolved configuration, Remark/Rehype,
+Vite, client modules, page data, head entries, and build completion. Hooks run
+in configuration order. Client modules must be safe during SSR: browser APIs
+belong in `setup`, not module scope or `wrapRoot`. Plugin packages should use
+`@aicode-nexus/silen` as a peer dependency and import only documented exports.
+
+Continue to the canonical [plugin guide](/silen/guide/plugins) for lifecycle,
+identity, failure, and packaging details, or see [Integrations](/silen/integrations/)
+for analytics and Ask AI.

@@ -1,0 +1,52 @@
+---
+title: 集成
+description: 添加插件、站点分析与可选 Ask AI 端点。
+---
+
+# 集成
+
+Silen 让集成保持显式：插件运行可信构建或客户端代码，分析在站点层配置，Ask AI 只访问你自己运营的端点。三者都不需要导入 Silen 内部文件。
+
+## 插件
+
+插件是 `.silen/config.ts` 中有序排列的工厂，用于 MDX 处理器、Vite 集成、页面元数据、head、客户端 setup 或构建后产物：
+
+```ts
+import { defineConfig } from '@aicode-nexus/silen'
+import readingTime from './plugins/reading-time'
+
+export default defineConfig({
+  plugins: [[readingTime, { wordsPerMinute: 250 }]],
+})
+```
+
+每个插件必须有 `name`，配置多个实例时增加 `id`。钩子按配置顺序运行，失败信息会包含插件身份与钩子名称。完整说明见[插件生命周期](/silen/zh/guide/plugins)。
+
+## 站点分析
+
+分析与主题无关，只在生产构建中输出。可配置 Google、百度或有序的自定义 provider：
+
+```ts
+analytics: [
+  { provider: 'google', id: 'G-XXXXXXXXXX' },
+  { provider: 'baidu', id: 'site-id' },
+]
+```
+
+Silen 上报初始页面和客户端路由变化，忽略仅 hash 变化。Google 用户应关闭 Enhanced Measurement 中的自动 history-change pageview，避免重复。自定义 provider 可加载外部或内联脚本并监听 `silen:pageview`。脚本是公开可信代码，不要放密钥。
+
+## Ask AI
+
+Ask AI 是可选主题端点，不捆绑模型 provider：
+
+```ts
+themeConfig: {
+  ai: {
+    endpoint: '/api/ask'
+  }
+}
+```
+
+浏览器提交当前路由、可选选中文本与消息；你的服务负责鉴权，并流式返回 `text`、`citation`、`error` 三类 NDJSON 事件。密钥与原始上游错误都留在服务端。未配置端点时不会输出 Ask AI 控件与客户端 bundle。
+
+无需模型 provider 的确定性访问见[生成产物](/silen/zh/ai/)与[本地 MCP](/silen/zh/ai/local-workspace-mcp/)。

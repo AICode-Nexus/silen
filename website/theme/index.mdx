@@ -1,0 +1,69 @@
+---
+title: Theme, layouts, and navigation
+description: Configure the default theme shell, layouts, search, and locales.
+---
+
+# Theme, layouts, and navigation
+
+The default theme is a responsive documentation shell rather than a closed
+template. It supplies navigation, sidebars, page outlines, local search,
+appearance controls, code copying, pagination, home heroes, and a complete 404
+page. Start with configuration; extend React only when a product requirement
+cannot be expressed there.
+
+## Layouts
+
+Choose a content layout in frontmatter:
+
+```md
+---
+layout: doc
+---
+```
+
+- `doc` is the default. It applies reading typography, the heading outline, and
+  previous/next links derived from the sidebar.
+- `home` renders the locale-resolved configured hero and optional feature row
+  before page MDX in a full-width shell.
+- `page` keeps navigation and a neutral article container without documentation
+  paging.
+
+## Navigation and sidebar
+
+```ts
+themeConfig: {
+  logo: { src: '/logo.svg', alt: 'Product docs' },
+  nav: [
+    { text: 'Guide', link: '/guide/' },
+    { text: 'GitHub', link: 'https://github.com/example/project' },
+  ],
+  sidebar: [
+    {
+      text: 'Getting started',
+      items: [{ text: 'Quick start', link: '/guide/' }],
+    },
+  ],
+}
+```
+
+Internal theme links are resolved under `base`; external HTTP(S) links open in
+a new context with safe relationship attributes. Below 960px the persistent
+sidebar becomes a labelled modal sheet. At desktop widths, it remains visible
+beside the document.
+
+## Search
+
+Local search is enabled unless `themeConfig.search` is `false`. It loads on
+demand, opens from the search button or `Control+K` / `Command+K`, supports
+keyboard selection, and restores focus when dismissed. Search v2 records page
+language so results from the active locale are ranked and grouped correctly.
+
+## Locales
+
+Locale entries define a BCP 47 `lang`, label, and route `root`; they may
+override nav, sidebar, home, and UI messages. Mirrored routes let the language
+switch preserve the current page. A page-level `lang` frontmatter value remains
+available for exceptional content.
+
+Customize visual values with [theme tokens](/silen/theme/tokens/) or compose
+React behavior through [theme extensions](/silen/theme/extensions-accessibility/).

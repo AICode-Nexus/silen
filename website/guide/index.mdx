@@ -1,80 +1,62 @@
 ---
-title: Get started
-description: Create and publish your first Silen documentation site.
+title: Quick start
+description: Activate, run, and build a Silen documentation site.
 ---
 
-# Get started
+# Quick start
 
-Silen turns a folder of Markdown and MDX files into a complete static website.
-It uses React for the component model, Vite for the development and build
-pipeline, and MDX for content that can grow beyond plain Markdown.
+Silen turns a directory of Markdown and MDX into a server-rendered static site,
+local search, and deterministic AI-readable output. Use Node.js `^20.19.0 || >=22.12.0`.
 
-## Install
+## Install and activate
 
-Use Node.js `^20.19.0 || >=22.12.0` and add Silen to your project:
+From your project root, install the package and activate a `docs` directory:
 
 ```sh
 pnpm add -D @aicode-nexus/silen
+pnpm silen init docs
 ```
 
-## Create the site
+`init` creates `docs/.silen/config.ts` and `docs/index.mdx`. It is safe for a
+new or existing directory: if either target already exists, Silen reports the
+collision instead of overwriting authored content.
 
-Add `docs/.silen/config.ts`:
-
-```ts
-import { defineConfig } from '@aicode-nexus/silen'
-
-export default defineConfig({
-  title: 'My documentation',
-})
-```
-
-Then add `docs/index.mdx`:
-
-```mdx
-# Hello, Silen
-
-Your documentation starts here.
-```
-
-An AI can follow the same supported path without guessing Silen APIs. Point it
-at `@aicode-nexus/silen/agent/manifest.json` in the installed package, then ask
-it to follow `agent/tasks/create-site.md`. The task links back to the versioned
-config and CLI contract instead of duplicating those definitions here.
-
-## Develop and build
+## Develop
 
 ```sh
 pnpm silen dev docs
+```
+
+Edit `docs/index.mdx` or add another `.md` or `.mdx` file. File routes are
+created from the directory tree, and client navigation updates without a full
+page reload. Local search stays on the site; no hosted search account is
+required.
+
+## Build and inspect
+
+```sh
 pnpm silen build docs
 pnpm silen preview docs
 ```
 
-The production output is written to `docs/.silen/dist` by default. Configure a
-`base` when the site is hosted below a subpath, such as GitHub Pages project
-sites.
+The default output directory is `docs/.silen/dist`. A build emits complete
+HTML plus AI artifacts such as `llms.txt`, `llms-full.txt`, `ai-index.json`,
+and clean Markdown routes. Draft pages and pages with `ai: false` remain out of
+those AI-facing artifacts.
 
-## Add site analytics
+## Make the first decision explicit
 
-Analytics is a site-level feature, so it works with the default theme and custom
-themes. Add Google Analytics, Baidu Analytics, or both:
+Set `base` when the site will live below a host subpath, and set `siteUrl` to
+the origin when canonical metadata is required:
 
 ```ts
 export default defineConfig({
-  analytics: [
-    { provider: 'google', id: 'G-XXXXXXXXXX' },
-    { provider: 'baidu', id: 'your-baidu-site-id' },
-  ],
+  base: '/handbook/',
+  siteUrl: 'https://docs.example.com',
+  onBrokenLinks: 'error',
 })
 ```
 
-Scripts are included only in production builds. Silen reports the initial page
-and client-side route changes, while ignoring hash-only navigation. Google
-Analytics users should disable automatic history-change pageviews in Enhanced
-Measurement to avoid duplicates. For another service, use a `custom` provider
-with external or inline scripts and listen for the `silen:pageview` event.
-
-## Next step
-
-Continue with [AI-ready documentation](/silen/ai/) or inspect the
-[source repository](https://github.com/AICode-Nexus/silen).
+Continue with [project structure](/silen/guide/project-structure/),
+[configuration](/silen/guide/configuration/), or inspect the
+[live AI output](/silen/ai/).
