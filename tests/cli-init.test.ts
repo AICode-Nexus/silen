@@ -418,7 +418,7 @@ describe('silen init', () => {
     await expectNoStagingDirectory(root)
   })
 
-  it.each(['EXDEV', 'EOPNOTSUPP'])(
+  it.each(['EXDEV', 'ENOTSUP', 'EOPNOTSUPP', 'EPERM'])(
     'falls back to exclusive file creation when hard links fail with %s',
     async (code) => {
       const root = path.join(parent, `fallback-${code.toLowerCase()}-site`)
@@ -499,6 +499,120 @@ describe('silen init', () => {
     ).rejects.toThrow('injected nested staging failure')
 
     await expectMissing(nestedParent)
+  })
+
+  it('rolls back a successful scaffold when staging removal fails', async () => {
+    const root = path.join(parent, 'cleanup-after-success-site')
+    let stagingPath = ''
+
+    const error = await initializeSite(root, {
+      removeStaging(staging) {
+        stagingPath = staging
+        return Promise.reject(new Error('injected staging removal failure'))
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toContain(
+      'injected staging removal failure',
+    )
+    expect(stagingPath).not.toBe('')
+    await access(stagingPath)
+    await expectMissing(path.join(root, '.silen/config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectMissing(root)
+  })
+
+  it('rejects a successful no-op staging remover and rolls back', async () => {
+    const root = path.join(parent, 'cleanup-noop-site')
+    let stagingPath = ''
+
+    const error = await initializeSite(root, {
+      removeStaging(staging) {
+        stagingPath = staging
+        return Promise.resolve()
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toMatch(/staging.*still exists|cleanup/i)
+    expect(stagingPath).not.toBe('')
+    await access(stagingPath)
+    await expectMissing(path.join(root, '.silen/config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectMissing(root)
+  })
+
+  it('reports operation and staging cleanup failures after rollback', async () => {
+    const root = path.join(parent, 'cleanup-after-operation-failure-site')
+    let stagingPath = ''
+
+    const error = await initializeSite(root, {
+      afterPromote() {
+        return Promise.reject(new Error('injected operation failure'))
+      },
+      removeStaging(staging) {
+        stagingPath = staging
+        return Promise.reject(new Error('injected cleanup failure'))
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as AggregateError).errors).toHaveLength(2)
+    expect((error as Error).message).toContain('injected operation failure')
+    expect((error as Error).message).toContain('injected cleanup failure')
+    expect((error as Error & { cause?: unknown }).cause).toMatchObject({
+      message: 'injected operation failure',
+    })
+    expect(stagingPath).not.toBe('')
+    await access(stagingPath)
+    await expectMissing(path.join(root, '.silen/config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectMissing(root)
+  })
+
+  it('safely removes a provisional staging directory after snapshot failure', async () => {
+    const root = path.join(parent, 'staging-snapshot-failure-site')
+    let stagingPath = ''
+
+    await expect(
+      initializeSite(root, {
+        snapshotStaging(staging) {
+          stagingPath = staging
+          return Promise.reject(new Error('injected staging snapshot failure'))
+        },
+      }),
+    ).rejects.toThrow('injected staging snapshot failure')
+
+    expect(stagingPath).not.toBe('')
+    await expectMissing(stagingPath)
+    await expectMissing(root)
+  })
+
+  it('preserves a replacement staging identity and rolls back the scaffold', async () => {
+    const root = path.join(parent, 'staging-replacement-site')
+    let stagingPath = ''
+    let displacedStaging = ''
+
+    await expect(
+      initializeSite(root, {
+        async beforeCleanupStaging(staging) {
+          stagingPath = staging
+          displacedStaging = `${staging}-owned`
+          await rename(staging, displacedStaging)
+          await mkdir(staging)
+          await writeFile(path.join(staging, 'keep.txt'), 'replacement stays\n')
+        },
+      }),
+    ).rejects.toThrow(/staging.*replaced/i)
+
+    expect(await readFile(path.join(stagingPath, 'keep.txt'), 'utf8')).toBe(
+      'replacement stays\n',
+    )
+    await access(displacedStaging)
+    await expectMissing(path.join(root, '.silen/config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectMissing(root)
   })
 
   it('does not touch the root when writing staged content fails', async () => {

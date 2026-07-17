@@ -97,6 +97,9 @@ export interface InitSiteOptions {
   ) => Promise<void>
   readonly beforePromote?: (targetFile: string) => Promise<void>
   readonly afterPromote?: (targetFile: string) => Promise<void>
+  readonly snapshotStaging?: (stagingPath: string) => Promise<void>
+  readonly beforeCleanupStaging?: (stagingPath: string) => Promise<void>
+  readonly removeStaging?: (stagingPath: string) => Promise<void>
 }
 
 interface FileIdentity {
@@ -113,6 +116,11 @@ interface PromotedFile extends FileIdentity {
   readonly target: string
 }
 
+interface StagingState {
+  readonly path: string
+  identity?: DirectoryIdentity
+}
+
 const unsupportedHardLinkCodes = new Set([
   'EXDEV',
   'ENOTSUP',
@@ -124,6 +132,10 @@ function errorCode(error: unknown): string | undefined {
   return typeof error === 'object' && error !== null && 'code' in error
     ? String(error.code)
     : undefined
+}
+
+function errorDetail(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 async function optionalStat(file: string): Promise<Stats | undefined> {
@@ -324,24 +336,104 @@ async function rollback(
   }
 }
 
+function stagingCleanupError(stagingPath: string, cause: unknown): Error {
+  return new Error(
+    `Silen init staging cleanup failed for ${stagingPath}: ${errorDetail(cause)}`,
+    { cause },
+  )
+}
+
+async function removeStagingDirectory(stagingPath: string): Promise<void> {
+  await rm(stagingPath, { force: true, recursive: true })
+}
+
+async function verifyStagingAbsent(
+  stagingPath: string,
+  expected?: FileIdentity,
+): Promise<void> {
+  let current: Stats
+  try {
+    current = await lstat(stagingPath)
+  } catch (error) {
+    if (errorCode(error) === 'ENOENT') return
+    throw stagingCleanupError(stagingPath, error)
+  }
+  if (expected && !sameIdentity(current, expected)) {
+    throw replacedPath('staging directory', stagingPath)
+  }
+  throw new Error(`Silen init staging directory still exists: ${stagingPath}`)
+}
+
+async function cleanupProvisionalStaging(stagingPath: string): Promise<void> {
+  let current: Stats
+  try {
+    current = await lstat(stagingPath)
+  } catch (error) {
+    if (errorCode(error) === 'ENOENT') return
+    throw stagingCleanupError(stagingPath, error)
+  }
+  if (current.isSymbolicLink() || !current.isDirectory()) {
+    throw replacedPath('provisional staging path', stagingPath)
+  }
+  try {
+    await rmdir(stagingPath)
+  } catch (error) {
+    if (errorCode(error) === 'ENOENT') return
+    throw new Error(
+      `Silen init could not safely remove unresolved provisional staging path ${stagingPath}: ${errorDetail(error)}`,
+      { cause: error },
+    )
+  }
+  await verifyStagingAbsent(stagingPath)
+}
+
 async function cleanupStaging(
-  staging: DirectoryIdentity | undefined,
+  staging: StagingState | undefined,
+  options: InitSiteOptions,
 ): Promise<void> {
   if (!staging) return
-  let current: Stats | undefined
   try {
-    current = await optionalStat(staging.path)
-  } catch {
+    await options.beforeCleanupStaging?.(staging.path)
+  } catch (error) {
+    throw stagingCleanupError(staging.path, error)
+  }
+  if (!staging.identity) {
+    await cleanupProvisionalStaging(staging.path)
     return
   }
-  if (
-    current &&
-    !current.isSymbolicLink() &&
-    current.isDirectory() &&
-    sameIdentity(current, staging)
-  ) {
-    await rm(staging.path, { force: true, recursive: true })
+
+  let current: Stats
+  try {
+    current = await lstat(staging.path)
+  } catch (error) {
+    if (errorCode(error) === 'ENOENT') return
+    throw stagingCleanupError(staging.path, error)
   }
+  if (
+    current.isSymbolicLink() ||
+    !current.isDirectory() ||
+    !sameIdentity(current, staging.identity)
+  ) {
+    throw replacedPath('staging directory', staging.path)
+  }
+  try {
+    await (options.removeStaging ?? removeStagingDirectory)(staging.path)
+  } catch (error) {
+    throw stagingCleanupError(staging.path, error)
+  }
+  await verifyStagingAbsent(staging.path, staging.identity)
+}
+
+function combinedFailure(
+  errors: readonly unknown[],
+  primary: unknown,
+): unknown {
+  if (errors.length === 1) return errors[0]
+  return new AggregateError(
+    errors,
+    `Silen init failed with multiple errors: ${errors.map(errorDetail).join('; ')}`,
+    { cause: primary },
+  )
 }
 
 async function validateParents(
@@ -432,7 +524,10 @@ export async function initializeSite(
   const createdPaths: string[] = []
   const promotedFiles: PromotedFile[] = []
   const createdDirectories: DirectoryIdentity[] = []
-  let staging: DirectoryIdentity | undefined
+  let staging: StagingState | undefined
+  let result: InitResult | undefined
+  let operationError: unknown
+  let operationFailed = false
 
   try {
     const rootParent = await ensureParentDirectory(
@@ -443,9 +538,11 @@ export async function initializeSite(
     const stagingRoot = await mkdtemp(
       path.join(path.dirname(root), `.${path.basename(root)}.silen-init-`),
     )
-    staging = await snapshotDirectory(stagingRoot, 'staging directory')
+    staging = { path: stagingRoot }
+    await options.snapshotStaging?.(stagingRoot)
+    staging.identity = await snapshotDirectory(stagingRoot, 'staging directory')
     await validateDirectory(rootParent, 'root parent')
-    assertDirectChild(rootParent, staging, 'staging directory')
+    assertDirectChild(rootParent, staging.identity, 'staging directory')
 
     await mkdir(path.join(staging.path, '.silen'))
     for (const file of scaffoldFiles) {
@@ -497,12 +594,34 @@ export async function initializeSite(
       createdPaths.push(target)
     }
 
-    await cleanupStaging(staging)
-    staging = undefined
-    return { root, createdPaths }
+    result = { root, createdPaths }
   } catch (error) {
-    await cleanupStaging(staging)
-    await rollback(promotedFiles, createdDirectories)
-    throw error
+    operationFailed = true
+    operationError = error
   }
+
+  let cleanupError: unknown
+  try {
+    await cleanupStaging(staging, options)
+  } catch (error) {
+    cleanupError = error
+  }
+
+  if (operationFailed || cleanupError !== undefined) {
+    let rollbackError: unknown
+    try {
+      await rollback(promotedFiles, createdDirectories)
+    } catch (error) {
+      rollbackError = error
+    }
+    const errors = [
+      ...(operationFailed ? [operationError] : []),
+      ...(cleanupError === undefined ? [] : [cleanupError]),
+      ...(rollbackError === undefined ? [] : [rollbackError]),
+    ]
+    throw combinedFailure(errors, operationFailed ? operationError : errors[0])
+  }
+
+  if (!result) throw new Error('Silen init finished without a result')
+  return result
 }
