@@ -10,7 +10,7 @@ import type {
 } from '../../shared/config.js'
 import type { JsonObject, JsonValue } from '../../shared/page.js'
 import { resolveThemeLink } from '../lib/navigation.js'
-import { resolveThemeConfig } from '../lib/theme-config.js'
+import { resolveThemeConfig, useThemeMessages } from '../lib/theme-config.js'
 import { Button } from './ui/button.js'
 import {
   Card,
@@ -370,6 +370,7 @@ export function HomeLayout({
   hero: heroProps,
 }: HomeLayoutProps): React.JSX.Element {
   const { base, frontmatter, themeConfig: rawThemeConfig } = useData()
+  const messages = useThemeMessages()
   const currentRoute = useRoute()
   const themeConfig = resolveThemeConfig(rawThemeConfig, currentRoute, base)
   const hero = heroProps ?? homeHero(frontmatter) ?? themeConfig?.home?.hero
@@ -427,7 +428,7 @@ export function HomeLayout({
           className="silen-home-features"
         >
           <h2 id={featuresTitleId} className="sr-only">
-            Features
+            {messages.navigation.features}
           </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => (

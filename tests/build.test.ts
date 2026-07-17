@@ -90,9 +90,12 @@ describe('static production build', () => {
   it('emits themed default and configured-locale 404 pages', () => {
     for (const html of [notFound, chineseNotFound]) {
       expect(html).toContain('<h1>404</h1>')
-      expect(html).toContain('Page not found')
       expect(html).toContain('href="/project/"')
     }
+    expect(notFound).toContain('Page not found')
+    expect(notFound).toContain('<html lang="en-US">')
+    expect(chineseNotFound).toContain('页面未找到')
+    expect(chineseNotFound).toContain('<html lang="zh-CN">')
     expect(notFound).not.toBe(chineseNotFound)
   })
 

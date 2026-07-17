@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Command as CommandPrimitive } from 'cmdk'
 
 import { cn } from '../../lib/cn'
+import { useThemeMessages } from '../../lib/theme-config'
 import {
   Dialog,
   DialogContent,
@@ -31,8 +32,8 @@ function Command({
 }
 
 function CommandDialog({
-  title = 'Command Palette',
-  description = 'Search for a command to run...',
+  title,
+  description,
   children,
   className,
   showCloseButton = false,
@@ -43,6 +44,7 @@ function CommandDialog({
   className?: string
   showCloseButton?: boolean
 }) {
+  const messages = useThemeMessages()
   return (
     <Dialog {...props}>
       <DialogContent
@@ -53,8 +55,10 @@ function CommandDialog({
         showCloseButton={showCloseButton}
       >
         <DialogHeader className="sr-only">
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>{title ?? messages.search.commandPalette}</DialogTitle>
+          <DialogDescription>
+            {description ?? messages.search.commandDescription}
+          </DialogDescription>
         </DialogHeader>
         {children}
       </DialogContent>

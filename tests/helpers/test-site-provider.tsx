@@ -28,6 +28,7 @@ interface TestSiteProviderProps {
   children: ReactNode
   frontmatter?: JsonObject
   headings?: readonly Heading[]
+  lang?: string
   path?: string
   siteTitle?: string
   themeConfig?: ThemeConfig
@@ -47,6 +48,7 @@ export function TestSiteProvider({
     { depth: 2, title: 'Install', slug: 'install' },
     { depth: 3, title: 'Options', slug: 'options' },
   ],
+  lang = 'en-US',
   path = '/guide/',
   siteTitle = 'Silen Docs',
   themeConfig = defaultThemeConfig,
@@ -59,7 +61,7 @@ export function TestSiteProvider({
   }
   const data: PagePublicData = {
     siteTitle,
-    lang: 'en-US',
+    lang,
     base,
     route: path,
     ...(frontmatter === undefined ? {} : { frontmatter }),

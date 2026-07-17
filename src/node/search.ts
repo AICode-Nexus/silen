@@ -6,9 +6,11 @@ import MiniSearch, {
 import { createProcessor } from '@mdx-js/mdx'
 import remarkFrontmatter from 'remark-frontmatter'
 import type { CompiledPage } from './mdx.js'
+import { resolveCurrentLocale, type ThemeLocaleItem } from '../shared/config.js'
 
 export interface SearchDocument {
   readonly id: string
+  readonly lang: string
   readonly title: string
   readonly route: string
   readonly description?: string
@@ -23,10 +25,12 @@ export interface SearchResult {
   readonly route: string
   readonly snippet: string
   readonly heading?: string
+  readonly lang?: string
 }
 
 interface IndexedSearchDocument {
   id: string
+  lang: string
   title: string
   route: string
   description?: string
@@ -35,14 +39,34 @@ interface IndexedSearchDocument {
   heading?: string
 }
 
-export interface SerializedSearchIndex {
+export interface LegacySerializedSearchIndex {
   readonly version: 1
   readonly index: AsPlainObject
 }
 
+export interface SerializedSearchIndex {
+  readonly version: 2
+  readonly index: AsPlainObject
+}
+
+export type ReadableSearchIndex =
+  LegacySerializedSearchIndex | SerializedSearchIndex
+
+export interface SearchOptions {
+  readonly lang?: string
+}
+
 const SEARCH_OPTIONS: Options<IndexedSearchDocument> = {
   fields: ['title', 'description', 'headings', 'text'],
-  storeFields: ['title', 'route', 'description', 'text', 'headings', 'heading'],
+  storeFields: [
+    'title',
+    'route',
+    'description',
+    'text',
+    'headings',
+    'heading',
+    'lang',
+  ],
   searchOptions: {
     boost: { title: 4, description: 3, headings: 2 },
     prefix: true,
@@ -71,6 +95,7 @@ function normalizedDocument(document: SearchDocument): IndexedSearchDocument {
     document.description && normalizedText(document.description)
   return {
     id: document.id,
+    lang: document.lang,
     title: normalizedText(document.title),
     route: document.route,
     ...(description ? { description } : {}),
@@ -93,7 +118,7 @@ export function createSearchIndex(
     )
   const miniSearch = new MiniSearch<IndexedSearchDocument>(SEARCH_OPTIONS)
   miniSearch.addAll(ordered)
-  return { version: 1, index: miniSearch.toJSON() }
+  return { version: 2, index: miniSearch.toJSON() }
 }
 
 function escapeHtml(value: string): string {
@@ -214,8 +239,12 @@ function matchingHeading(
 function compareSearchResults(
   left: MiniSearchResult,
   right: MiniSearchResult,
+  lang: string | undefined,
 ): number {
   return (
+    (lang === undefined
+      ? 0
+      : Number(right.lang === lang) - Number(left.lang === lang)) ||
     right.score - left.score ||
     compareStrings(String(left.title ?? ''), String(right.title ?? '')) ||
     compareStrings(String(left.route ?? ''), String(right.route ?? '')) ||
@@ -224,14 +253,15 @@ function compareSearchResults(
 }
 
 export function querySearchIndex(
-  serialized: SerializedSearchIndex,
+  serialized: ReadableSearchIndex,
   query: string,
+  options: SearchOptions = {},
 ): SearchResult[] {
   const normalizedQuery = normalizedText(query)
   if (!normalizedQuery) return []
-  if (serialized.version !== 1) {
+  if (serialized.version !== 1 && serialized.version !== 2) {
     throw new TypeError(
-      `Unsupported Silen search index version ${String(serialized.version)}`,
+      `Unsupported Silen search index version ${String((serialized as { readonly version: unknown }).version)}`,
     )
   }
 
@@ -241,7 +271,13 @@ export function querySearchIndex(
   )
   return miniSearch
     .search(normalizedQuery)
-    .sort(compareSearchResults)
+    .sort((left, right) =>
+      compareSearchResults(
+        left,
+        right,
+        serialized.version === 2 ? options.lang : undefined,
+      ),
+    )
     .map((result): SearchResult => {
       const terms = [...result.terms, ...result.queryTerms]
       const title = typeof result.title === 'string' ? result.title : ''
@@ -250,6 +286,10 @@ export function querySearchIndex(
         typeof result.description === 'string' ? result.description : ''
       const text = typeof result.text === 'string' ? result.text : title
       const heading = matchingHeading(result, terms)
+      const lang =
+        serialized.version === 2 && typeof result.lang === 'string'
+          ? result.lang
+          : undefined
       return {
         id: String(result.id),
         title,
@@ -258,6 +298,7 @@ export function querySearchIndex(
           snippetSource({ title, description, text, terms }),
           terms,
         ),
+        ...(lang === undefined ? {} : { lang }),
         ...(heading === undefined ? {} : { heading }),
       }
     })
@@ -396,11 +437,22 @@ export function markdownToSearchText(source: string): string {
 
 export function createPageSearchDocuments(
   pages: readonly CompiledPage[],
+  options: {
+    readonly lang: string
+    readonly locales?: readonly ThemeLocaleItem[]
+  } = { lang: 'en-US' },
 ): SearchDocument[] {
   return pages.map((page) => {
     const content = extractSearchContent(page.source)
+    const lang = resolveCurrentLocale(
+      options.locales,
+      page.route,
+      '/',
+      options.lang,
+    ).lang
     return {
       id: page.route,
+      lang,
       title: page.title,
       route: page.route,
       ...(page.description ? { description: page.description } : {}),

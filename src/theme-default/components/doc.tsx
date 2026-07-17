@@ -4,7 +4,11 @@ import { Link, useData, useRoute } from '../../client/index.js'
 import type { ThemeSidebarItem } from '../../shared/config.js'
 import { joinBaseRoute } from '../../shared/url.js'
 import { isActiveThemeLink, resolveThemeLink } from '../lib/navigation.js'
-import { resolveThemeConfig } from '../lib/theme-config.js'
+import {
+  formatThemeMessage,
+  resolveThemeConfig,
+  useThemeMessages,
+} from '../lib/theme-config.js'
 import { AiPageActions } from './ai-actions.js'
 import {
   Card,
@@ -18,20 +22,26 @@ function PagerLink({
   base,
   direction,
   item,
+  messages,
 }: {
   readonly base: string
-  readonly direction: 'Previous' | 'Next'
+  readonly direction: 'previous' | 'next'
   readonly item: ThemeSidebarItem
+  readonly messages: ReturnType<typeof useThemeMessages>['pagination']
 }): React.JSX.Element {
-  const next = direction === 'Next'
+  const next = direction === 'next'
+  const directionLabel = next ? messages.next : messages.previous
   return (
     <Card className={next ? 'sm:col-start-2' : undefined}>
       <CardHeader>
-        <CardDescription>{direction}</CardDescription>
+        <CardDescription>{directionLabel}</CardDescription>
         <CardTitle>
           <Link
             href={resolveThemeLink(item.link, base)}
-            aria-label={`${direction}: ${item.text}`}
+            aria-label={formatThemeMessage(messages.linkLabel, {
+              direction: directionLabel,
+              title: item.text,
+            })}
             className="flex items-center gap-2 rounded-sm text-base focus-visible:outline-2 focus-visible:outline-offset-4"
           >
             {!next ? <ArrowLeftIcon aria-hidden="true" /> : null}
@@ -41,7 +51,10 @@ function PagerLink({
         </CardTitle>
       </CardHeader>
       <CardContent className="sr-only">
-        {direction} page: {item.text}
+        {formatThemeMessage(messages.pageLabel, {
+          direction: directionLabel,
+          title: item.text,
+        })}
       </CardContent>
     </Card>
   )
@@ -61,6 +74,7 @@ export function DocLayout({
     themeConfig: rawThemeConfig,
   } = useData()
   const currentRoute = useRoute()
+  const messages = useThemeMessages()
   const themeConfig = resolveThemeConfig(rawThemeConfig, currentRoute, base)
   const pages = (themeConfig?.sidebar ?? []).flatMap((group) => group.items)
   const currentIndex = pages.findIndex((item) =>
@@ -92,11 +106,26 @@ export function DocLayout({
         />
       ) : null}
       {previous || next ? (
-        <nav aria-label="Page navigation" className="silen-pager">
+        <nav
+          aria-label={messages.pagination.navigation}
+          className="silen-pager"
+        >
           {previous ? (
-            <PagerLink base={base} direction="Previous" item={previous} />
+            <PagerLink
+              base={base}
+              direction="previous"
+              item={previous}
+              messages={messages.pagination}
+            />
           ) : null}
-          {next ? <PagerLink base={base} direction="Next" item={next} /> : null}
+          {next ? (
+            <PagerLink
+              base={base}
+              direction="next"
+              item={next}
+              messages={messages.pagination}
+            />
+          ) : null}
         </nav>
       ) : null}
     </article>

@@ -40,6 +40,12 @@ vi.mock('virtual:silen/config', () => ({
         scripts: [{ content: 'void 0' }],
       },
     ],
+    themeConfig: {
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        { lang: 'zh-CN', label: '中文', root: '/guide/' },
+      ],
+    },
   },
 }))
 
@@ -100,7 +106,7 @@ vi.mock('virtual:silen/routes', async () => {
       frontmatter: {
         title: 'Guide',
         description: 'Guide description',
-        lang: 'zh-CN',
+        lang: 'en-US',
       },
       headings: [
         { depth: 2, title: 'Install', slug: 'install' },

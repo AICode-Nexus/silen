@@ -14,7 +14,11 @@ import {
   resolveThemeLink,
   resolveThemeLocaleLinks,
 } from '../lib/navigation.js'
-import { resolveThemeConfig } from '../lib/theme-config.js'
+import {
+  formatThemeMessage,
+  resolveThemeConfig,
+  useThemeMessages,
+} from '../lib/theme-config.js'
 import { AppearanceSwitch } from './appearance.js'
 import { Button } from './ui/button.js'
 import {
@@ -54,6 +58,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 function SearchLauncher(): React.JSX.Element {
+  const messages = useThemeMessages()
   const [SearchDialog, setSearchDialog] =
     useState<SearchDialogComponent | null>(null)
   const [open, setOpen] = useState(false)
@@ -116,20 +121,21 @@ function SearchLauncher(): React.JSX.Element {
         type="button"
         variant="outline"
         size="sm"
-        aria-label="Search documentation"
+        className="min-h-10 min-w-10"
+        aria-label={messages.search.dialogTitle}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={openSearch}
       >
         <SearchIcon data-icon="inline-start" />
-        <span className="hidden sm:inline">Search</span>
+        <span className="hidden sm:inline">{messages.search.button}</span>
         <kbd className="hidden text-[0.65rem] text-muted-foreground lg:inline">
           ⌘K
         </kbd>
       </Button>
       {loadFailed ? (
         <span role="status" className="sr-only">
-          Search is temporarily unavailable.
+          {messages.search.unavailable}
         </span>
       ) : null}
       {SearchDialog ? (
@@ -140,6 +146,7 @@ function SearchLauncher(): React.JSX.Element {
 }
 
 function AskAiLauncher({ endpoint }: { readonly endpoint: string }) {
+  const messages = useThemeMessages()
   const [open, setOpen] = useState(false)
   const returnFocus = useRef<HTMLButtonElement | null>(null)
 
@@ -162,13 +169,13 @@ function AskAiLauncher({ endpoint }: { readonly endpoint: string }) {
         onClick={() => setOpen(true)}
       >
         <SparklesIcon data-icon="inline-start" />
-        Ask AI
+        {messages.askAi.button}
       </Button>
       {open && LazyAskAiDialog ? (
         <Suspense
           fallback={
             <span role="status" className="sr-only">
-              Loading Ask AI…
+              {messages.askAi.loading}
             </span>
           }
         >
@@ -189,12 +196,17 @@ function LanguageSwitch({
   readonly locales: readonly ThemeLocaleItem[]
 }): React.JSX.Element | null {
   const { base } = useData()
+  const messages = useThemeMessages()
   const currentRoute = useRoute()
   const fallbackLocale = locales[0]
   if (fallbackLocale === undefined || locales.length < 2) return null
 
   const links = resolveThemeLocaleLinks(locales, currentRoute, base)
   const active = links.find((item) => item.active)?.locale ?? fallbackLocale
+  const languageLabel = formatThemeMessage(
+    messages.navigation.languageCurrent,
+    { label: active.label },
+  )
 
   return (
     <DropdownMenu>
@@ -203,15 +215,16 @@ function LanguageSwitch({
           type="button"
           variant="ghost"
           size="sm"
-          aria-label={`Language: ${active.label}`}
-          title={`Language: ${active.label}`}
+          className="min-h-10 min-w-10"
+          aria-label={languageLabel}
+          title={languageLabel}
         >
           <LanguagesIcon data-icon="inline-start" />
           <span className="hidden lg:inline">{active.label}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" aria-label="Language">
-        <DropdownMenuLabel>Language</DropdownMenuLabel>
+      <DropdownMenuContent align="end" aria-label={languageLabel}>
+        <DropdownMenuLabel>{messages.navigation.language}</DropdownMenuLabel>
         <DropdownMenuGroup>
           {links.map(({ locale, href, active: activeLocale }) => (
             <DropdownMenuItem key={`${locale.lang}:${locale.label}`} asChild>
@@ -238,6 +251,7 @@ function LanguageSwitch({
 export function Nav(): React.JSX.Element {
   const { base, siteTitle, themeConfig: rawThemeConfig } = useData()
   const currentRoute = useRoute()
+  const messages = useThemeMessages()
   const themeConfig = resolveThemeConfig(rawThemeConfig, currentRoute, base)
   const logo = themeConfig?.logo
   const askAiEndpoint = themeConfig?.ai?.endpoint
@@ -245,8 +259,8 @@ export function Nav(): React.JSX.Element {
   return (
     <header className="sticky top-0 z-40 h-[var(--silen-nav-height)] border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
       <nav
-        aria-label="Main navigation"
-        className="mx-auto flex h-full max-w-[var(--silen-layout-width)] items-center gap-4 px-4 sm:px-6"
+        aria-label={messages.navigation.mainNavigation}
+        className="mx-auto flex h-full max-w-[var(--silen-layout-width)] items-center gap-1 px-2 sm:gap-4 sm:px-6"
       >
         <Link
           href={resolveThemeLink('/', base)}

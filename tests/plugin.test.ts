@@ -297,6 +297,45 @@ describe('virtual modules', () => {
     expect(source).not.toContain('G-DEVELOPMENT')
   })
 
+  it('serializes public locale message overrides into the virtual config', async () => {
+    const root = path.resolve('tests/fixtures/ssr')
+    const config = resolvedConfig(root)
+    config.themeConfig = {
+      locales: [
+        {
+          lang: 'zh-CN',
+          label: '中文',
+          root: '/zh/',
+          messages: {
+            search: { noResults: '这里没有内容。' },
+            copy: { copied: '复制好了' },
+          },
+        },
+      ],
+    }
+
+    const source = createVirtualModules({
+      routes: [],
+      config,
+      publicConfigOnly: true,
+    }).config
+    const loaded = (await importGeneratedModule(source)) as {
+      default: { themeConfig: { locales: unknown[] } }
+    }
+
+    expect(loaded.default.themeConfig.locales).toEqual([
+      {
+        lang: 'zh-CN',
+        label: '中文',
+        root: '/zh/',
+        messages: {
+          search: { noResults: '这里没有内容。' },
+          copy: { copied: '复制好了' },
+        },
+      },
+    ])
+  })
+
   it('discovers the project theme without recursively aliasing public theme imports', async () => {
     const root = path.resolve('tests/fixtures/basic')
     const themeFile = path.join(root, '.silen/theme.tsx')

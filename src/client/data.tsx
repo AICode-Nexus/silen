@@ -39,3 +39,7 @@ export function useData(): PagePublicData {
   if (!data) throw new Error('useData must be used within DataProvider')
   return data
 }
+
+export function useOptionalData(): PagePublicData | undefined {
+  return useContext(DataContext) ?? undefined
+}

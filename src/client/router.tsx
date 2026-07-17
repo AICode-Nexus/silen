@@ -45,6 +45,10 @@ export function useRouter(): Router {
   return router
 }
 
+export function useOptionalRouter(): Router | undefined {
+  return useContext(RouterContext) ?? undefined
+}
+
 export function useRoute(): string {
   return useRouter().path
 }

@@ -140,11 +140,116 @@ declare module 'virtual:silen/config' {
     readonly features?: readonly ThemeHomeFeature[]
   }
 
+  interface ThemeNavigationMessages {
+    readonly skipToContent: string
+    readonly mainNavigation: string
+    readonly language: string
+    readonly languageCurrent: string
+    readonly close: string
+    readonly features: string
+  }
+
+  interface ThemeSearchMessages {
+    readonly button: string
+    readonly commandPalette: string
+    readonly commandDescription: string
+    readonly dialogTitle: string
+    readonly dialogDescription: string
+    readonly placeholder: string
+    readonly prompt: string
+    readonly searching: string
+    readonly noResults: string
+    readonly unavailable: string
+    readonly unableToOpen: string
+    readonly documentation: string
+    readonly otherLanguages: string
+    readonly home: string
+  }
+
+  interface ThemeAppearanceMessages {
+    readonly label: string
+    readonly option: string
+    readonly system: string
+    readonly light: string
+    readonly dark: string
+  }
+
+  interface ThemeSidebarMessages {
+    readonly main: string
+    readonly documentation: string
+    readonly openNavigation: string
+    readonly dialogTitle: string
+    readonly dialogDescription: string
+    readonly mobileNavigation: string
+  }
+
+  interface ThemeOutlineMessages {
+    readonly onThisPage: string
+  }
+
+  interface ThemePaginationMessages {
+    readonly navigation: string
+    readonly previous: string
+    readonly next: string
+    readonly linkLabel: string
+    readonly pageLabel: string
+  }
+
+  interface ThemeCopyMessages {
+    readonly group: string
+    readonly copy: string
+    readonly copyThisPage: string
+    readonly copyMarkdown: string
+    readonly copyForAi: string
+    readonly preparingAi: string
+    readonly copyingMarkdown: string
+    readonly aiCopied: string
+    readonly markdownCopied: string
+    readonly fetchError: string
+    readonly clipboardError: string
+    readonly copyCode: string
+    readonly codeCopied: string
+    readonly copied: string
+    readonly copyFailed: string
+  }
+
+  interface ThemeNotFoundMessages {
+    readonly title: string
+    readonly description: string
+    readonly returnHome: string
+  }
+
+  interface ThemeAskAiMessages {
+    readonly button: string
+    readonly loading: string
+    readonly title: string
+    readonly description: string
+    readonly question: string
+    readonly submit: string
+    readonly unableToAnswer: string
+    readonly providerFailure: string
+    readonly generating: string
+    readonly ready: string
+  }
+
+  interface ThemeMessagesOverrides {
+    readonly navigation?: Partial<ThemeNavigationMessages>
+    readonly search?: Partial<ThemeSearchMessages>
+    readonly appearance?: Partial<ThemeAppearanceMessages>
+    readonly sidebar?: Partial<ThemeSidebarMessages>
+    readonly outline?: Partial<ThemeOutlineMessages>
+    readonly pagination?: Partial<ThemePaginationMessages>
+    readonly copy?: Partial<ThemeCopyMessages>
+    readonly notFound?: Partial<ThemeNotFoundMessages>
+    readonly askAi?: Partial<ThemeAskAiMessages>
+  }
+
   interface ThemeLocaleItem {
     readonly lang: string
     readonly label: string
     readonly root?: string
     readonly link?: string
+    readonly messages?: ThemeMessagesOverrides
     readonly nav?: readonly ThemeNavItem[]
     readonly sidebar?: readonly ThemeSidebarGroup[]
     readonly home?: ThemeHomeConfig

@@ -152,8 +152,8 @@ describe('default documentation layout', () => {
       </TestSiteProvider>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'Language: 中文' }))
-    const chineseMenu = screen.getByRole('menu', { name: 'Language: 中文' })
+    await user.click(screen.getByRole('button', { name: '语言：中文' }))
+    const chineseMenu = screen.getByRole('menu', { name: '语言：中文' })
     expect(
       within(chineseMenu)
         .getByRole('menuitem', { name: '中文' })
@@ -204,10 +204,10 @@ describe('default documentation layout', () => {
     )
 
     const mainNavigation = screen.getByRole('navigation', {
-      name: 'Main navigation',
+      name: '主导航',
     })
     const sidebar = screen.getByRole('navigation', {
-      name: 'Documentation sidebar',
+      name: '文档侧边栏',
     })
 
     expect(
@@ -229,6 +229,54 @@ describe('default documentation layout', () => {
     expect(
       within(sidebar).queryByRole('link', { name: 'Getting Started' }),
     ).toBeNull()
+  })
+
+  it('localizes every shell label and applies deep locale overrides', async () => {
+    const user = userEvent.setup()
+    const themeConfig: ThemeConfig = {
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        {
+          lang: 'zh-CN',
+          label: '中文',
+          root: '/zh/',
+          messages: { navigation: { skipToContent: '直接阅读正文' } },
+        },
+      ],
+    }
+
+    render(
+      <TestSiteProvider
+        lang="zh-CN"
+        path="/zh/guide/"
+        themeConfig={themeConfig}
+      >
+        <Layout>指南</Layout>
+      </TestSiteProvider>,
+    )
+
+    expect(screen.getByRole('link', { name: '直接阅读正文' })).not.toBeNull()
+    expect(screen.getByRole('navigation', { name: '主导航' })).not.toBeNull()
+    expect(
+      screen.getByRole('navigation', { name: '文档侧边栏' }),
+    ).not.toBeNull()
+    expect(
+      screen.getByRole('complementary', { name: '本页内容' }),
+    ).not.toBeNull()
+    expect(screen.getByRole('radiogroup', { name: '外观' })).not.toBeNull()
+    expect(screen.getByRole('radio', { name: '外观：深色' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: '语言：中文' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: '打开导航' })).not.toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '搜索文档' }))
+    expect(
+      await screen.findByRole('dialog', { name: '搜索文档' }),
+    ).not.toBeNull()
+    expect(screen.getByText('输入内容以搜索文档。')).not.toBeNull()
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: '打开导航' }))
+    expect(screen.getByRole('dialog', { name: '文档导航' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: '关闭' })).not.toBeNull()
   })
 
   it.each([
@@ -371,6 +419,41 @@ describe('default documentation layout', () => {
       'min-[60rem]:grid-cols-[var(--silen-sidebar-width)_minmax(0,1fr)_14rem]',
     )
     expect(grid?.className).not.toContain('min-[75rem]:grid-cols-')
+  })
+
+  it('keeps every mobile header control at least 40 CSS pixels at 390px', () => {
+    const themeConfig: ThemeConfig = {
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        { lang: 'zh-CN', label: '中文', root: '/zh/' },
+      ],
+    }
+    render(
+      <TestSiteProvider themeConfig={themeConfig}>
+        <Layout>Guide</Layout>
+      </TestSiteProvider>,
+    )
+
+    const mainNavigation = screen.getByRole('navigation', {
+      name: 'Main navigation',
+    })
+    expect(mainNavigation.className).toContain('gap-1')
+    expect(mainNavigation.className.split(/\s+/)).not.toContain('gap-4')
+
+    for (const name of [
+      'Search documentation',
+      'Language: English',
+      'Open navigation',
+    ]) {
+      const control = screen.getByRole('button', { name })
+      expect(control.className).toContain('min-h-10')
+      expect(control.className).toContain('min-w-10')
+    }
+    const appearance = screen.getByRole('radiogroup', { name: 'Appearance' })
+    expect(appearance.className).toContain('min-h-10')
+    for (const control of within(appearance).getAllByRole('radio')) {
+      expect(control.className).toContain('size-10')
+    }
   })
 
   it('hydrates the complete server-rendered shell without recovering markup', async () => {

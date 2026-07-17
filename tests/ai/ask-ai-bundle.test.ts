@@ -37,8 +37,6 @@ describe('Ask AI production bundle boundary', () => {
     const source = assets.map((asset) => asset.source).join('\n')
 
     expect(source).not.toContain('application/x-ndjson')
-    expect(source).not.toContain('The AI provider could not complete')
-    expect(source).not.toContain('Answers use the current documentation')
     expect(source).not.toContain('do-not-bundle-disabled-ai')
   })
 
@@ -46,7 +44,7 @@ describe('Ask AI production bundle boundary', () => {
     const result = await build(enabledRoot)
     const assets = await javascriptAssets(enabledRoot)
     const askAsset = assets.find(({ source }) =>
-      source.includes('Answers use the current documentation'),
+      source.includes('application/x-ndjson'),
     )
     const html = await readFile(path.join(result.outDir, 'index.html'), 'utf8')
     const source = assets.map((asset) => asset.source).join('\n')

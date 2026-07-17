@@ -62,6 +62,31 @@ it('exposes both copy actions from one accessible dropdown trigger', async () =>
   expect(screen.getByRole('menuitem', { name: 'Copy for AI' })).not.toBeNull()
 })
 
+it('localizes page copy actions and their accessible feedback', async () => {
+  const user = userEvent.setup()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(new Response('# 安装\n\n运行 pnpm。\n')),
+  )
+  clipboard()
+  render(
+    <TestSiteProvider lang="zh-CN">
+      <AiPageActions
+        title="安装"
+        markdownUrl="/zh/guide/install.md"
+        canonicalUrl="https://docs.example/zh/guide/install"
+      />
+    </TestSiteProvider>,
+  )
+
+  expect(screen.getByRole('group', { name: '页面复制操作' })).not.toBeNull()
+  await user.click(screen.getByRole('button', { name: '复制' }))
+  await user.click(screen.getByRole('menuitem', { name: '复制 Markdown' }))
+  expect((await screen.findByRole('status')).textContent).toBe(
+    '已复制 Markdown',
+  )
+})
+
 it('copies normalized Markdown without page navigation content', async () => {
   const user = userEvent.setup()
   const fetch = vi

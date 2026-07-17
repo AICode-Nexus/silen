@@ -673,7 +673,14 @@ async function emitSearchIndex(
   const destination = path.join(outDir, 'search-index.json')
   const temporary = path.join(outDir, `.search-index-${randomUUID()}.tmp`)
   const serialized = serializeSearchIndex(
-    createSearchIndex(createPageSearchDocuments(pages)),
+    createSearchIndex(
+      createPageSearchDocuments(pages, {
+        lang: config.lang,
+        ...(config.themeConfig.locales === undefined
+          ? {}
+          : { locales: config.themeConfig.locales }),
+      }),
+    ),
   )
   try {
     await writeFile(temporary, serialized, 'utf8')

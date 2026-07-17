@@ -10,15 +10,18 @@ export interface SearchResult {
   readonly route: string
   readonly snippet: string
   readonly heading?: string
+  readonly lang?: string
 }
 
 export interface SearchOptions {
   readonly base?: string
   readonly signal?: AbortSignal
+  readonly lang?: string
 }
 
 interface IndexedSearchDocument {
   id: string
+  lang?: string
   title: string
   route: string
   description?: string
@@ -28,17 +31,26 @@ interface IndexedSearchDocument {
 }
 
 interface SerializedSearchIndex {
-  version: 1
+  version: 1 | 2
   index: AsPlainObject
 }
 
 interface LoadedSearchIndex {
   miniSearch: MiniSearch<IndexedSearchDocument>
+  version: 1 | 2
 }
 
 const SEARCH_OPTIONS: Options<IndexedSearchDocument> = {
   fields: ['title', 'description', 'headings', 'text'],
-  storeFields: ['title', 'route', 'description', 'text', 'headings', 'heading'],
+  storeFields: [
+    'title',
+    'route',
+    'description',
+    'text',
+    'headings',
+    'heading',
+    'lang',
+  ],
   searchOptions: {
     boost: { title: 4, description: 3, headings: 2 },
     prefix: true,
@@ -66,7 +78,7 @@ function isSerializedSearchIndex(
     value !== null &&
     !Array.isArray(value) &&
     'version' in value &&
-    value.version === 1 &&
+    (value.version === 1 || value.version === 2) &&
     'index' in value &&
     typeof value.index === 'object' &&
     value.index !== null &&
@@ -76,6 +88,7 @@ function isSerializedSearchIndex(
 
 async function fetchSearchIndex(url: string): Promise<LoadedSearchIndex> {
   const response = await fetch(url, {
+    cache: 'no-cache',
     headers: { accept: 'application/json' },
   })
   if (!response.ok) {
@@ -88,6 +101,7 @@ async function fetchSearchIndex(url: string): Promise<LoadedSearchIndex> {
     throw new TypeError('Invalid Silen search index')
   }
   return {
+    version: value.version,
     miniSearch: MiniSearch.loadJSON<IndexedSearchDocument>(
       JSON.stringify(value.index),
       SEARCH_OPTIONS,
@@ -246,7 +260,10 @@ function resultHeading(
     })
 }
 
-function mapResult(result: MiniSearchResult): SearchResult {
+function mapResult(
+  result: MiniSearchResult,
+  includeLanguage: boolean,
+): SearchResult {
   const title = typeof result.title === 'string' ? result.title : ''
   const route = typeof result.route === 'string' ? result.route : ''
   const description =
@@ -254,6 +271,8 @@ function mapResult(result: MiniSearchResult): SearchResult {
   const text = typeof result.text === 'string' ? result.text : title
   const terms = [...result.terms, ...result.queryTerms]
   const heading = resultHeading(result, terms)
+  const lang =
+    includeLanguage && typeof result.lang === 'string' ? result.lang : undefined
   return {
     id: String(result.id),
     title,
@@ -263,6 +282,7 @@ function mapResult(result: MiniSearchResult): SearchResult {
       terms,
     ),
     ...(heading === undefined ? {} : { heading }),
+    ...(lang === undefined ? {} : { lang }),
   }
 }
 
@@ -281,10 +301,14 @@ export async function search(
     .search(normalizedQuery)
     .sort(
       (left, right) =>
+        (loaded.version === 2 && options.lang !== undefined
+          ? Number(right.lang === options.lang) -
+            Number(left.lang === options.lang)
+          : 0) ||
         right.score - left.score ||
         compareStrings(String(left.title ?? ''), String(right.title ?? '')) ||
         compareStrings(String(left.route ?? ''), String(right.route ?? '')) ||
         compareStrings(String(left.id), String(right.id)),
     )
-    .map(mapResult)
+    .map((result) => mapResult(result, loaded.version === 2))
 }

@@ -452,6 +452,84 @@ describe('default content layouts', () => {
       screen.getByRole('link', { name: 'Return home' }).getAttribute('href'),
     ).toBe('/project/')
   })
+
+  it('localizes home landmarks, pager labels, and the complete 404 screen', () => {
+    const themeConfig: ThemeConfig = {
+      sidebar: [
+        {
+          text: '指南',
+          items: [
+            { text: '介绍', link: '/zh/guide/' },
+            { text: '安装', link: '/zh/guide/install' },
+            { text: '接口', link: '/zh/reference/api' },
+          ],
+        },
+      ],
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        {
+          lang: 'zh-CN',
+          label: '中文',
+          root: '/zh/',
+          sidebar: [
+            {
+              text: '指南',
+              items: [
+                { text: '介绍', link: '/zh/guide/' },
+                { text: '安装', link: '/zh/guide/install' },
+                { text: '接口', link: '/zh/reference/api' },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const view = render(
+      <TestSiteProvider
+        lang="zh-CN"
+        path="/zh/guide/install"
+        themeConfig={themeConfig}
+      >
+        <DocLayout>安装</DocLayout>
+      </TestSiteProvider>,
+    )
+
+    const pager = screen.getByRole('navigation', { name: '页面导航' })
+    expect(
+      within(pager).getByRole('link', { name: '上一页：介绍' }),
+    ).not.toBeNull()
+    expect(
+      within(pager).getByRole('link', { name: '下一页：接口' }),
+    ).not.toBeNull()
+    view.unmount()
+
+    const notFoundView = render(
+      <TestSiteProvider
+        lang="zh-CN"
+        path="/zh/missing"
+        themeConfig={themeConfig}
+      >
+        <NotFound />
+      </TestSiteProvider>,
+    )
+    expect(screen.getByText('页面未找到')).not.toBeNull()
+    expect(screen.getByText('你请求的页面不存在或已被移动。')).not.toBeNull()
+    expect(screen.getByRole('link', { name: '返回首页' })).not.toBeNull()
+    notFoundView.unmount()
+
+    render(
+      <TestSiteProvider lang="zh-CN">
+        <HomeLayout
+          hero={{ name: '首页' }}
+          features={[{ title: '快速', details: '构建更快。' }]}
+        >
+          正文
+        </HomeLayout>
+      </TestSiteProvider>,
+    )
+    expect(screen.getByRole('region', { name: '特性' })).not.toBeNull()
+  })
 })
 
 describe('delegated code copy', () => {
@@ -490,6 +568,27 @@ describe('delegated code copy', () => {
     expect(writeText).toHaveBeenCalledWith('pnpm test')
     expect(buttons[1]?.getAttribute('aria-label')).toBe('Code copied')
     expect(buttons[1]?.textContent).toBe('Copied')
+  })
+
+  it('localizes delegated DOM copy state without hard-coded labels', async () => {
+    const writeText = vi.fn<(value: string) => Promise<void>>(() =>
+      Promise.resolve(),
+    )
+    clipboard(writeText)
+    render(
+      <TestSiteProvider lang="zh-CN">
+        <CodeBlock code="pnpm test" language="sh" />
+      </TestSiteProvider>,
+    )
+
+    const button = screen.getByRole('button', { name: '复制代码' })
+    await act(async () => {
+      fireEvent.click(button)
+      await Promise.resolve()
+    })
+
+    expect(button.getAttribute('aria-label')).toBe('代码已复制')
+    expect(button.textContent).toBe('已复制')
   })
 
   it('contains clipboard failure and resets its accessible state', async () => {

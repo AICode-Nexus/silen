@@ -1,6 +1,7 @@
 export {
   DataProvider,
   useData,
+  useOptionalData,
   type DataProviderProps,
   type PagePublicData,
 } from './data.js'
@@ -9,6 +10,7 @@ export {
   RouterProvider,
   useRoute,
   useRouter,
+  useOptionalRouter,
   type LinkProps,
   type Router,
   type RouterProviderProps,

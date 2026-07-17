@@ -83,7 +83,7 @@ describe('SSR entry', () => {
     expect(rendered.appHtml).toContain('data-silen-code-block=""')
     expect(rendered.appHtml).toContain('class="shiki shiki-themes')
     expect(rendered.appHtml).toContain('data-language="sh"')
-    expect(rendered.appHtml).toContain('aria-label="Copy code"')
+    expect(rendered.appHtml).toContain('aria-label="复制代码"')
   })
 
   it.each([

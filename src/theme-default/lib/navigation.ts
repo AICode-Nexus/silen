@@ -1,4 +1,5 @@
 import type { ThemeLocaleItem } from '../../shared/config.js'
+import { resolveCurrentLocale } from '../../shared/config.js'
 import { resolveSiteLink } from '../../shared/url.js'
 
 function normalizedBase(base: string): string {
@@ -84,11 +85,6 @@ function stripBasePath(path: string, base: string): string {
   return path
 }
 
-function isWithinLocaleRoot(path: string, root: string): boolean {
-  if (root === '/') return true
-  return path === root.slice(0, -1) || path.startsWith(root)
-}
-
 function localeRelativePath(path: string, root: string): string {
   if (root === '/') return path === '/' ? '' : path.slice(1)
   if (path === root || path === root.slice(0, -1)) return ''
@@ -107,23 +103,13 @@ export function resolveThemeLocaleLinks(
 ): readonly ResolvedThemeLocaleLink[] {
   const currentUrl = new URL(currentRoute, 'https://silen.local')
   const currentPath = stripBasePath(currentUrl.pathname, base)
-  const localeRoots = locales
-    .map((locale) => ({
-      locale,
-      root:
-        locale.root === undefined
-          ? undefined
-          : normalizedLocaleRoot(locale.root),
-    }))
-    .filter(
-      (entry): entry is { locale: ThemeLocaleItem; root: string } =>
-        entry.root !== undefined,
-    )
-  const currentRoot =
-    localeRoots
-      .filter(({ root }) => isWithinLocaleRoot(currentPath, root))
-      .sort((left, right) => right.root.length - left.root.length)[0]?.root ??
-    '/'
+  const currentLocale = resolveCurrentLocale(
+    locales,
+    currentRoute,
+    base,
+    locales[0]?.lang ?? 'en-US',
+  )
+  const currentRoot = currentLocale.root
   const relativePath = localeRelativePath(currentPath, currentRoot)
   const suffix = `${currentUrl.search}${currentUrl.hash}`
 
@@ -134,7 +120,7 @@ export function resolveThemeLocaleLinks(
       return {
         locale,
         href: resolveThemeLink(target, base),
-        active: root === currentRoot,
+        active: root === currentRoot && currentLocale.locale === locale,
       }
     }
 
@@ -142,7 +128,7 @@ export function resolveThemeLocaleLinks(
     return {
       locale,
       href: resolveThemeLink(link, base),
-      active: isActiveThemeLink(currentRoute, link, base),
+      active: currentLocale.locale === locale,
     }
   })
 }

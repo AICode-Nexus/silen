@@ -14,7 +14,9 @@ import routes, { type PageModule } from 'virtual:silen/routes'
 import InitialTheme, { type Theme } from 'virtual:silen/theme'
 import clientExtensions from 'virtual:silen/client-extensions'
 import type { JsonObject } from '../shared/page.js'
+import { resolveCurrentLocale } from '../shared/config.js'
 import type { ThemeMdxComponents } from '../theme-default/index.js'
+import { resolveThemeMessages } from '../theme-default/lib/theme-config.js'
 import { analyticsPagePath, trackAnalyticsPageview } from './analytics.js'
 import { DataProvider, type PagePublicData } from './data.js'
 import {
@@ -141,14 +143,21 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
   const loader = route === undefined ? undefined : routes[route]
 
   if (!loader || !route) {
+    const locale = resolveCurrentLocale(
+      config.themeConfig?.locales,
+      request.route ?? request.pathname,
+      '/',
+      config.lang,
+    )
+    const messages = resolveThemeMessages(locale.lang, locale.locale?.messages)
     return {
       found: false,
       page: {
-        title: 'Page not found',
+        title: messages.notFound.title,
         description: '',
         publicData: {
           siteTitle: config.title,
-          lang: config.lang,
+          lang: locale.lang,
           base: config.base,
           route: request.route ?? request.pathname,
           ai: config.ai,
@@ -166,6 +175,12 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
 }
 
 function resolvedPage(route: string, module: PageModule): ResolvedPage {
+  const lang = resolveCurrentLocale(
+    config.themeConfig?.locales,
+    route,
+    '/',
+    stringField(module.frontmatter, 'lang', config.lang),
+  ).lang
   return {
     title:
       module.title || stringField(module.frontmatter, 'title', config.title),
@@ -174,7 +189,7 @@ function resolvedPage(route: string, module: PageModule): ResolvedPage {
       stringField(module.frontmatter, 'description', config.description),
     publicData: {
       siteTitle: config.title,
-      lang: stringField(module.frontmatter, 'lang', config.lang),
+      lang,
       base: config.base,
       route,
       ai: config.ai,

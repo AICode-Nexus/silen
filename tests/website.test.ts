@@ -17,6 +17,16 @@ afterAll(async () => {
 })
 
 describe('example website homepage', () => {
+  it('derives each generated html lang from the resolved locale root', async () => {
+    const [english, chinese] = await Promise.all([
+      readFile(path.join(result.outDir, 'guide/index.html'), 'utf8'),
+      readFile(path.join(result.outDir, 'zh/guide/index.html'), 'utf8'),
+    ])
+
+    expect(english).toContain('<html lang="en-US">')
+    expect(chinese).toContain('<html lang="zh-CN">')
+  })
+
   it('uses the exact Node engine contract and base-contained guide links', async () => {
     const [englishGuide, chineseGuide, englishAi, chineseAi] =
       await Promise.all([

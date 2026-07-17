@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react'
 import { cn } from '../lib/cn'
+import { formatThemeMessage, useThemeMessages } from '../lib/theme-config.js'
 
 export { appearanceScript } from '../appearance-script.js'
 
@@ -8,12 +9,6 @@ export type AppearancePreference = 'light' | 'dark' | 'system'
 
 const STORAGE_KEY = 'silen-theme'
 const DARK_QUERY = '(prefers-color-scheme: dark)'
-
-const preferenceLabels: Readonly<Record<AppearancePreference, string>> = {
-  system: 'System',
-  light: 'Light',
-  dark: 'Dark',
-}
 
 const preferenceOptions = ['dark', 'system', 'light'] as const
 
@@ -68,6 +63,7 @@ function PreferenceIcon({
 }
 
 export function AppearanceSwitch(): React.JSX.Element {
+  const messages = useThemeMessages()
   const [preference, setPreference] = useState<AppearancePreference>('system')
   const preferenceRef = useRef<AppearancePreference>('system')
   const buttonRefs = useRef(new Map<AppearancePreference, HTMLButtonElement>())
@@ -168,11 +164,14 @@ export function AppearanceSwitch(): React.JSX.Element {
   return (
     <div
       role="radiogroup"
-      aria-label="Appearance"
-      className="inline-flex h-8 items-center rounded-full border border-border bg-muted/70 p-0.5 text-muted-foreground shadow-sm transition-colors dark:bg-muted/40"
+      aria-label={messages.appearance.label}
+      className="inline-flex min-h-10 items-center rounded-full border border-border bg-muted/70 p-0.5 text-muted-foreground shadow-sm transition-colors dark:bg-muted/40"
     >
       {preferenceOptions.map((option) => {
         const selected = preference === option
+        const optionLabel = formatThemeMessage(messages.appearance.option, {
+          label: messages.appearance[option],
+        })
         return (
           <button
             key={option}
@@ -186,11 +185,11 @@ export function AppearanceSwitch(): React.JSX.Element {
             type="button"
             role="radio"
             aria-checked={selected}
-            aria-label={`Appearance: ${preferenceLabels[option]}`}
-            title={`Appearance: ${preferenceLabels[option]}`}
+            aria-label={optionLabel}
+            title={optionLabel}
             tabIndex={selected ? 0 : -1}
             className={cn(
-              'inline-flex size-7 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-95 [&_svg]:size-3.5',
+              'inline-flex size-10 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-95 [&_svg]:size-3.5',
               selected
                 ? 'bg-background text-foreground shadow-sm dark:bg-input/70'
                 : 'text-muted-foreground',
