@@ -49,7 +49,7 @@ jobs:
         run: pnpm build
 
       - name: Run release tests
-        run: pnpm test --maxWorkers=1 --no-file-parallelism
+        run: pnpm test
 
       - name: Validate package metadata
         run: pnpm exec publint

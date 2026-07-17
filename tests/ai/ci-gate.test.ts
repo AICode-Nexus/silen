@@ -13,6 +13,9 @@ function job(workflow: string, name: string): string {
 describe('AI release CI gate', () => {
   it('runs release behavior on every supported Node line and the browser gate once', async () => {
     const workflow = await readFile('.github/workflows/ci.yml', 'utf8')
+    const packageJson = JSON.parse(await readFile('package.json', 'utf8')) as {
+      scripts: { test: string }
+    }
     const quality = job(workflow, 'quality')
     const runtimeRelease = job(workflow, 'runtime-release')
     const browser = job(workflow, 'browser')
@@ -23,10 +26,12 @@ describe('AI release CI gate', () => {
     expect(runtimeRelease).toContain('node-version: ${{ matrix.node-version }}')
     expect(runtimeRelease).toContain('pnpm install --frozen-lockfile')
     expect(runtimeRelease).toContain('pnpm build')
-    expect(runtimeRelease).toContain(
-      'pnpm test --maxWorkers=1 --no-file-parallelism',
+    expect(runtimeRelease).toContain('run: pnpm test')
+    expect(runtimeRelease).not.toContain('--maxWorkers')
+    expect(runtimeRelease).not.toContain('--no-file-parallelism')
+    expect(packageJson.scripts.test).toBe(
+      'vitest run --maxWorkers=1 --no-file-parallelism',
     )
-    expect(runtimeRelease).not.toContain('pnpm test -- --maxWorkers')
     expect(runtimeRelease).toContain('pnpm exec publint')
 
     expect(browser).toContain('node-version: 20.19.0')
