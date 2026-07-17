@@ -1,6 +1,7 @@
 import {
   access,
   link,
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
@@ -43,6 +44,34 @@ async function expectNoStagingDirectory(root: string): Promise<void> {
       name.startsWith(prefix),
     ),
   ).toEqual([])
+}
+
+async function optionalLstat(file: string) {
+  try {
+    return await lstat(file)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
+interface RollbackTestHooks {
+  readonly inspect?: typeof optionalLstat
+  readonly removeFile?: (target: string) => Promise<void>
+  readonly removeDirectory?: (target: string) => Promise<void>
+}
+
+interface InitSiteTestOptions extends NonNullable<
+  Parameters<typeof initializeSite>[1]
+> {
+  readonly rollbackHooks: RollbackTestHooks
+}
+
+function initializeSiteWithRollbackHooks(
+  root: string,
+  options: InitSiteTestOptions,
+) {
+  return initializeSite(root, options)
 }
 
 beforeAll(async () => {
@@ -231,21 +260,22 @@ describe('silen init', () => {
     await mkdir(path.join(root, '.silen'), { recursive: true })
     let promotions = 0
 
-    await expect(
-      initializeSite(root, {
-        async promoteFile(stagedFile: string, targetFile: string) {
-          promotions += 1
-          if (promotions === 1) {
-            await link(stagedFile, targetFile)
-            return
-          }
-          await rm(configFile)
-          await writeFile(configFile, 'concurrent unrelated content\n')
-          throw new Error('injected promotion race')
-        },
-      }),
-    ).rejects.toThrow('injected promotion race')
+    const error = await initializeSite(root, {
+      async promoteFile(stagedFile: string, targetFile: string) {
+        promotions += 1
+        if (promotions === 1) {
+          await link(stagedFile, targetFile)
+          return
+        }
+        await rm(configFile)
+        await writeFile(configFile, 'concurrent unrelated content\n')
+        throw new Error('injected promotion race')
+      },
+    }).catch((failure: unknown) => failure)
 
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toContain('injected promotion race')
+    expect((error as Error).message).toMatch(/rollback.*identity.*config\.ts/i)
     expect(await readFile(configFile, 'utf8')).toBe(
       'concurrent unrelated content\n',
     )
@@ -569,6 +599,245 @@ describe('silen init', () => {
     await expectMissing(path.join(root, '.silen/config.ts'))
     await expectMissing(path.join(root, 'index.mdx'))
     await expectMissing(root)
+  })
+
+  it('continues rollback after a promoted-file inspection failure', async () => {
+    const root = path.join(parent, 'rollback-file-stat-failure-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    const homepage = path.join(root, 'index.mdx')
+    const inspected: string[] = []
+    const removedFiles: string[] = []
+    const removedDirectories: string[] = []
+
+    const error = await initializeSiteWithRollbackHooks(root, {
+      afterPromote(target) {
+        return target === homepage
+          ? Promise.reject(new Error('injected operation failure'))
+          : Promise.resolve()
+      },
+      rollbackHooks: {
+        async inspect(target) {
+          inspected.push(target)
+          if (target === homepage) {
+            throw Object.assign(new Error('injected file stat failure'), {
+              code: 'EIO',
+            })
+          }
+          return optionalLstat(target)
+        },
+        async removeFile(target) {
+          removedFiles.push(target)
+          await rm(target, { force: true })
+        },
+        async removeDirectory(target) {
+          removedDirectories.push(target)
+          await rmdir(target)
+        },
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toMatch(
+      /rollback.*inspect.*index\.mdx.*file stat failure/i,
+    )
+    expect(inspected).toEqual([
+      homepage,
+      configFile,
+      path.join(root, '.silen'),
+      root,
+    ])
+    expect(removedFiles).toEqual([configFile])
+    expect(removedDirectories).toEqual([path.join(root, '.silen'), root])
+    await access(homepage)
+    await expectMissing(configFile)
+  })
+
+  it('continues rollback after a promoted-file removal failure', async () => {
+    const root = path.join(parent, 'rollback-file-rm-failure-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    const homepage = path.join(root, 'index.mdx')
+    const removedFiles: string[] = []
+    const removedDirectories: string[] = []
+
+    const error = await initializeSiteWithRollbackHooks(root, {
+      afterPromote(target) {
+        return target === homepage
+          ? Promise.reject(new Error('injected operation failure'))
+          : Promise.resolve()
+      },
+      rollbackHooks: {
+        inspect: optionalLstat,
+        async removeFile(target) {
+          removedFiles.push(target)
+          if (target === homepage) {
+            throw Object.assign(new Error('injected file rm failure'), {
+              code: 'EACCES',
+            })
+          }
+          await rm(target, { force: true })
+        },
+        async removeDirectory(target) {
+          removedDirectories.push(target)
+          await rmdir(target)
+        },
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toMatch(
+      /rollback.*remove.*index\.mdx.*file rm failure/i,
+    )
+    expect(removedFiles).toEqual([homepage, configFile])
+    expect(removedDirectories).toEqual([path.join(root, '.silen'), root])
+    await access(homepage)
+    await expectMissing(configFile)
+  })
+
+  it('continues rollback after a created-directory inspection failure', async () => {
+    const root = path.join(parent, 'rollback-directory-stat-failure-site')
+    const configDirectory = path.join(root, '.silen')
+    const homepage = path.join(root, 'index.mdx')
+    const inspected: string[] = []
+    const removedDirectories: string[] = []
+
+    const error = await initializeSiteWithRollbackHooks(root, {
+      afterPromote(target) {
+        return target === homepage
+          ? Promise.reject(new Error('injected operation failure'))
+          : Promise.resolve()
+      },
+      rollbackHooks: {
+        async inspect(target) {
+          inspected.push(target)
+          if (target === configDirectory) {
+            throw Object.assign(new Error('injected directory stat failure'), {
+              code: 'EIO',
+            })
+          }
+          return optionalLstat(target)
+        },
+        async removeFile(target) {
+          await rm(target, { force: true })
+        },
+        async removeDirectory(target) {
+          removedDirectories.push(target)
+          await rmdir(target)
+        },
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toMatch(
+      /rollback.*inspect.*\.silen.*directory stat failure/i,
+    )
+    expect(inspected).toContain(root)
+    expect(removedDirectories).toEqual([root])
+    await access(configDirectory)
+    await expectMissing(homepage)
+  })
+
+  it('continues rollback after a created-directory removal failure', async () => {
+    const root = path.join(parent, 'rollback-directory-rmdir-failure-site')
+    const configDirectory = path.join(root, '.silen')
+    const homepage = path.join(root, 'index.mdx')
+    const removedDirectories: string[] = []
+
+    const error = await initializeSiteWithRollbackHooks(root, {
+      afterPromote(target) {
+        return target === homepage
+          ? Promise.reject(new Error('injected operation failure'))
+          : Promise.resolve()
+      },
+      rollbackHooks: {
+        inspect: optionalLstat,
+        async removeFile(target) {
+          await rm(target, { force: true })
+        },
+        async removeDirectory(target) {
+          removedDirectories.push(target)
+          if (target === configDirectory) {
+            throw Object.assign(new Error('injected directory rmdir failure'), {
+              code: 'EACCES',
+            })
+          }
+          await rmdir(target)
+        },
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toMatch(
+      /rollback.*remove.*\.silen.*directory rmdir failure/i,
+    )
+    expect(removedDirectories).toEqual([configDirectory, root])
+    await access(configDirectory)
+    await expectMissing(homepage)
+  })
+
+  it('aggregates every rollback failure with operation and cleanup failures', async () => {
+    const root = path.join(parent, 'rollback-multiple-failures-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    const homepage = path.join(root, 'index.mdx')
+    const configDirectory = path.join(root, '.silen')
+    const rollbackAttempts: string[] = []
+
+    const error = await initializeSiteWithRollbackHooks(root, {
+      afterPromote(target) {
+        return target === homepage
+          ? Promise.reject(new Error('injected operation failure'))
+          : Promise.resolve()
+      },
+      removeStaging() {
+        return Promise.reject(new Error('injected cleanup failure'))
+      },
+      rollbackHooks: {
+        async inspect(target) {
+          rollbackAttempts.push(`inspect:${target}`)
+          return optionalLstat(target)
+        },
+        removeFile(target) {
+          rollbackAttempts.push(`remove-file:${target}`)
+          return Promise.reject(
+            Object.assign(new Error(`injected rm failure for ${target}`), {
+              code: 'EACCES',
+            }),
+          )
+        },
+        removeDirectory(target) {
+          rollbackAttempts.push(`remove-directory:${target}`)
+          return Promise.reject(
+            Object.assign(new Error(`injected rmdir failure for ${target}`), {
+              code: 'EACCES',
+            }),
+          )
+        },
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    const outer = error as AggregateError
+    const outerErrors = outer.errors as unknown[]
+    expect(outerErrors).toHaveLength(3)
+    expect(outerErrors[0]).toMatchObject({
+      message: 'injected operation failure',
+    })
+    expect(outerErrors[1]).toBeInstanceOf(Error)
+    expect((outerErrors[1] as Error).message).toContain(
+      'injected cleanup failure',
+    )
+    expect(outerErrors[2]).toBeInstanceOf(AggregateError)
+    expect((outerErrors[2] as AggregateError).errors).toHaveLength(4)
+    expect((outer as Error & { cause?: unknown }).cause).toBe(outerErrors[0])
+    expect(rollbackAttempts).toEqual([
+      `inspect:${homepage}`,
+      `remove-file:${homepage}`,
+      `inspect:${configFile}`,
+      `remove-file:${configFile}`,
+      `inspect:${configDirectory}`,
+      `remove-directory:${configDirectory}`,
+      `inspect:${root}`,
+      `remove-directory:${root}`,
+    ])
   })
 
   it('safely removes a provisional staging directory after snapshot failure', async () => {

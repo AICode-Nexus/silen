@@ -89,6 +89,12 @@ export interface InitResult {
   readonly createdPaths: readonly string[]
 }
 
+interface RollbackHooks {
+  readonly inspect?: (target: string) => Promise<Stats | undefined>
+  readonly removeFile?: (target: string) => Promise<void>
+  readonly removeDirectory?: (target: string) => Promise<void>
+}
+
 export interface InitSiteOptions {
   readonly writeStagedFile?: (file: string, source: string) => Promise<void>
   readonly promoteFile?: (
@@ -100,6 +106,10 @@ export interface InitSiteOptions {
   readonly snapshotStaging?: (stagingPath: string) => Promise<void>
   readonly beforeCleanupStaging?: (stagingPath: string) => Promise<void>
   readonly removeStaging?: (stagingPath: string) => Promise<void>
+}
+
+interface InternalInitSiteOptions extends InitSiteOptions {
+  readonly rollbackHooks?: RollbackHooks
 }
 
 interface FileIdentity {
@@ -299,41 +309,114 @@ async function ensureParentDirectory(
 async function rollback(
   promotedFiles: readonly PromotedFile[],
   createdDirectories: readonly DirectoryIdentity[],
+  hooks: RollbackHooks = {},
 ): Promise<void> {
+  const failures: Error[] = []
+
   for (const file of [...promotedFiles].reverse()) {
     let current: Stats | undefined
     try {
-      current = await optionalStat(file.target)
-    } catch {
+      current = await (hooks.inspect ?? optionalStat)(file.target)
+    } catch (error) {
+      if (errorCode(error) !== 'ENOENT') {
+        failures.push(
+          rollbackActionError('inspect promoted file', file.target, error),
+        )
+      }
       continue
     }
-    if (current && !current.isSymbolicLink() && sameIdentity(current, file)) {
-      await rm(file.target, { force: true })
+    if (!current) continue
+    if (
+      current.isSymbolicLink() ||
+      !current.isFile() ||
+      !sameIdentity(current, file)
+    ) {
+      failures.push(rollbackIdentityError('promoted file', file.target))
+      continue
+    }
+    try {
+      if (hooks.removeFile) {
+        await hooks.removeFile(file.target)
+      } else {
+        await rm(file.target, { force: true })
+      }
+    } catch (error) {
+      if (errorCode(error) !== 'ENOENT') {
+        failures.push(
+          rollbackActionError('remove promoted file', file.target, error),
+        )
+      }
     }
   }
+
   for (const directory of [...createdDirectories].reverse()) {
     let current: Stats | undefined
     try {
-      current = await optionalStat(directory.path)
-    } catch {
+      current = await (hooks.inspect ?? optionalStat)(directory.path)
+    } catch (error) {
+      if (errorCode(error) !== 'ENOENT') {
+        failures.push(
+          rollbackActionError(
+            'inspect created directory',
+            directory.path,
+            error,
+          ),
+        )
+      }
       continue
     }
+    if (!current) continue
     if (
-      !current ||
       current.isSymbolicLink() ||
       !current.isDirectory() ||
       !sameIdentity(current, directory)
     ) {
+      failures.push(rollbackIdentityError('created directory', directory.path))
       continue
     }
     try {
-      await rmdir(directory.path)
+      if (hooks.removeDirectory) {
+        await hooks.removeDirectory(directory.path)
+      } else {
+        await rmdir(directory.path)
+      }
     } catch (error) {
-      if (errorCode(error) !== 'ENOENT' && errorCode(error) !== 'ENOTEMPTY') {
-        throw error
+      if (errorCode(error) !== 'ENOENT') {
+        failures.push(
+          rollbackActionError(
+            'remove created directory',
+            directory.path,
+            error,
+          ),
+        )
       }
     }
   }
+
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      `Silen init rollback failed with ${failures.length} errors: ${failures.map(errorDetail).join('; ')}`,
+      { cause: failures[0] },
+    )
+  }
+}
+
+function rollbackActionError(
+  action: string,
+  target: string,
+  cause: unknown,
+): Error {
+  return new Error(
+    `Silen init rollback ${action} failed for ${target}: ${errorDetail(cause)}`,
+    { cause },
+  )
+}
+
+function rollbackIdentityError(kind: string, target: string): Error {
+  return new Error(
+    `Silen init rollback identity mismatch for ${kind} ${target}; replacement preserved`,
+  )
 }
 
 function stagingCleanupError(stagingPath: string, cause: unknown): Error {
@@ -610,7 +693,11 @@ export async function initializeSite(
   if (operationFailed || cleanupError !== undefined) {
     let rollbackError: unknown
     try {
-      await rollback(promotedFiles, createdDirectories)
+      await rollback(
+        promotedFiles,
+        createdDirectories,
+        (options as InternalInitSiteOptions).rollbackHooks,
+      )
     } catch (error) {
       rollbackError = error
     }
