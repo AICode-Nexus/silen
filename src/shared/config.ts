@@ -1,5 +1,5 @@
 import type { ResolvedSilenPlugin, SilenPluginEntry } from './plugin.js'
-import { stripSiteBase } from './url.js'
+import { pathnameIdentity, stripSiteBase } from './url.js'
 
 export interface ResolvedThemeLocale {
   readonly lang: string
@@ -28,7 +28,13 @@ function routeWithoutBase(route: string, base: string): string {
 }
 
 function routeWithinRoot(route: string, root: string): boolean {
-  return root === '/' || route === root.slice(0, -1) || route.startsWith(root)
+  const routeKey = pathnameIdentity(route)
+  const rootKey = pathnameIdentity(root)
+  return (
+    rootKey === '/' ||
+    routeKey === rootKey.slice(0, -1) ||
+    routeKey.startsWith(rootKey)
+  )
 }
 
 export function resolveCurrentLocale(
@@ -63,7 +69,9 @@ export function resolveCurrentLocale(
       target === '/' || !target.endsWith('/') ? target : target.slice(0, -1)
     const normalizedRoute =
       route === '/' || !route.endsWith('/') ? route : route.slice(0, -1)
-    return normalizedTarget === normalizedRoute
+    return (
+      pathnameIdentity(normalizedTarget) === pathnameIdentity(normalizedRoute)
+    )
   })
   if (linked) {
     return {

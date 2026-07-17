@@ -134,6 +134,39 @@ describe('resolveConfig', () => {
     ).rejects.toThrow(/duplicate.*locale.*root.*\/en\//i)
   })
 
+  it('rejects locale roots whose percent-triplet hex case is equivalent', async () => {
+    await expect(
+      resolveInlineConfig({
+        themeConfig: {
+          locales: [
+            { lang: 'fr-FR', label: 'Français', root: '/caf%C3%A9/' },
+            { lang: 'fr-CA', label: 'Français canadien', root: '/caf%c3%a9/' },
+          ],
+        },
+      }),
+    ).rejects.toThrow(/duplicate.*locale.*root.*\/caf%C3%A9\//i)
+  })
+
+  it('keeps ordinary pathname character case distinct in locale roots', async () => {
+    await expect(
+      resolveInlineConfig({
+        themeConfig: {
+          locales: [
+            { lang: 'en-US', label: 'Uppercase path', root: '/EN/' },
+            { lang: 'en-GB', label: 'Lowercase path', root: '/en/' },
+          ],
+        },
+      }),
+    ).resolves.toMatchObject({
+      themeConfig: {
+        locales: [
+          { lang: 'en-US', root: '/EN/' },
+          { lang: 'en-GB', root: '/en/' },
+        ],
+      },
+    })
+  })
+
   it('keeps distinct longest-prefix locale roots valid', async () => {
     await expect(
       resolveInlineConfig({

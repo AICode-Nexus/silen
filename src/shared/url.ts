@@ -10,7 +10,7 @@ function normalizedBase(base: string | undefined): string {
     : `${withLeadingSlash}/`
 }
 
-function comparisonPathname(pathname: string): string {
+export function pathnameIdentity(pathname: string): string {
   return pathname.replace(/%[\da-f]{2}/gi, (triplet) => triplet.toUpperCase())
 }
 
@@ -20,8 +20,8 @@ export function isSitePathWithinBase(
 ): boolean {
   const base = normalizedBase(configuredBase)
   if (base === '/') return true
-  const comparedPathname = comparisonPathname(pathname)
-  const comparedBase = comparisonPathname(base)
+  const comparedPathname = pathnameIdentity(pathname)
+  const comparedBase = pathnameIdentity(base)
   return (
     comparedPathname === comparedBase.slice(0, -1) ||
     comparedPathname.startsWith(comparedBase)
@@ -36,8 +36,8 @@ export function stripSiteBase(
   if (!isSitePathWithinBase(pathname, base)) return undefined
   if (base === '/') return pathname
 
-  const comparedPathname = comparisonPathname(pathname)
-  const comparedBase = comparisonPathname(base)
+  const comparedPathname = pathnameIdentity(pathname)
+  const comparedBase = pathnameIdentity(base)
   if (
     comparedPathname === comparedBase ||
     comparedPathname === comparedBase.slice(0, -1)

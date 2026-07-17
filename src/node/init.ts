@@ -99,6 +99,7 @@ interface RollbackHooks {
 }
 
 interface ExclusivePromotionHooks {
+  readonly initialStat?: (handle: FileHandle) => Promise<Stats>
   readonly writeFile?: (handle: FileHandle, contents: Buffer) => Promise<void>
   readonly sync?: (handle: FileHandle) => Promise<void>
   readonly finalStat?: (handle: FileHandle) => Promise<Stats>
@@ -776,7 +777,7 @@ async function promoteExclusively(
   let failed = false
   const secondaryFailures: unknown[] = []
   try {
-    const created = await handle.stat()
+    const created = await (hooks.initialStat ?? statExclusiveFile)(handle)
     promoted = {
       target: targetFile,
       ...identityOf(created),
@@ -795,13 +796,16 @@ async function promoteExclusively(
   } catch (error) {
     failed = true
     primaryFailure = error
-    if (promoted) {
-      try {
+    try {
+      if (promoted) {
         await snapshotFailedExclusiveFile(handle, promoted)
-        await hooks.afterFailureSnapshot?.(targetFile)
-      } catch (snapshotError) {
-        secondaryFailures.push(snapshotError)
+      } else {
+        promoted = await snapshotUntrackedExclusiveFile(handle, targetFile)
+        promotedFiles.push(promoted)
       }
+      await hooks.afterFailureSnapshot?.(targetFile)
+    } catch (snapshotError) {
+      secondaryFailures.push(snapshotError)
     }
   }
 
@@ -890,6 +894,38 @@ async function snapshotFailedExclusiveFile(
   promoted.size = after.size
   promoted.mtimeMs = after.mtimeMs
   promoted.contentHash = hashContents(contents)
+}
+
+async function snapshotUntrackedExclusiveFile(
+  handle: FileHandle,
+  target: string,
+): Promise<PromotedFile> {
+  const before = await handle.stat()
+  if (!before.isFile()) {
+    throw replacedPath('exclusive target handle', target)
+  }
+  const contents = await readOpenFile(handle, before.size)
+  const after = await handle.stat()
+  if (
+    !after.isFile() ||
+    !sameIdentity(after, identityOf(before)) ||
+    before.mode !== after.mode ||
+    before.size !== after.size ||
+    before.mtimeMs !== after.mtimeMs
+  ) {
+    throw new Error(
+      `Silen init exclusive target changed during recovery snapshot; preserved: ${target}`,
+    )
+  }
+
+  return {
+    target,
+    ...identityOf(after),
+    mode: after.mode,
+    size: after.size,
+    mtimeMs: after.mtimeMs,
+    contentHash: hashContents(contents),
+  }
 }
 
 async function snapshotStagedPromotion(

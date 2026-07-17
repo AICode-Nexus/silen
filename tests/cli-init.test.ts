@@ -78,6 +78,7 @@ function initializeSiteWithRollbackHooks(
 }
 
 interface ExclusivePromotionTestHooks {
+  readonly initialStat?: (handle: FileHandle) => Promise<Stats>
   readonly writeFile?: (handle: FileHandle, contents: Buffer) => Promise<void>
   readonly sync?: (handle: FileHandle) => Promise<void>
   readonly finalStat?: (handle: FileHandle) => Promise<Stats>
@@ -89,6 +90,7 @@ interface ExclusivePromotionTestOptions extends NonNullable<
   Parameters<typeof initializeSite>[1]
 > {
   readonly exclusivePromotionHooks: ExclusivePromotionTestHooks
+  readonly rollbackHooks?: RollbackTestHooks
 }
 
 function initializeSiteWithExclusivePromotionHooks(
@@ -615,6 +617,161 @@ describe('silen init', () => {
     await expectMissing(path.join(root, '.silen/config.ts'))
     await expectMissing(path.join(root, 'index.mdx'))
     await expectMissing(root)
+    await expectNoStagingDirectory(root)
+  })
+
+  it('recovers and removes an unchanged exclusive target after initial stat failure', async () => {
+    const root = path.join(parent, 'fallback-initial-stat-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    const failure = Object.assign(new Error('injected initial stat failure'), {
+      code: 'EIO',
+    })
+    const inspected: string[] = []
+
+    const error = await initializeSiteWithExclusivePromotionHooks(root, {
+      promoteFile() {
+        return Promise.reject(
+          Object.assign(new Error('injected EXDEV'), { code: 'EXDEV' }),
+        )
+      },
+      exclusivePromotionHooks: {
+        initialStat() {
+          return Promise.reject(failure)
+        },
+      },
+      rollbackHooks: {
+        async inspect(target) {
+          inspected.push(target)
+          return optionalLstat(target)
+        },
+      },
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toBe(failure)
+    expect(inspected.filter((target) => target === configFile)).toHaveLength(1)
+    await expectMissing(configFile)
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectMissing(root)
+    await expectNoStagingDirectory(root)
+
+    await expect(initializeSite(root)).resolves.toMatchObject({ root })
+  })
+
+  it('preserves a user edit after recovering an initial stat failure snapshot', async () => {
+    const root = path.join(parent, 'fallback-initial-stat-edit-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    const failure = Object.assign(new Error('injected initial stat failure'), {
+      code: 'EIO',
+    })
+
+    const error = await initializeSiteWithExclusivePromotionHooks(root, {
+      promoteFile() {
+        return Promise.reject(
+          Object.assign(new Error('injected EXDEV'), { code: 'EXDEV' }),
+        )
+      },
+      exclusivePromotionHooks: {
+        initialStat() {
+          return Promise.reject(failure)
+        },
+        async afterFailureSnapshot(target) {
+          const before = await lstat(target)
+          await writeFile(target, 'user edit after recovered snapshot\n')
+          const after = await lstat(target)
+          expect(after.dev).toBe(before.dev)
+          expect(after.ino).toBe(before.ino)
+        },
+      },
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toContain('injected initial stat failure')
+    expect((error as Error).message).toMatch(
+      /rollback.*(?:content|metadata).*config\.ts/i,
+    )
+    expect(await readFile(configFile, 'utf8')).toBe(
+      'user edit after recovered snapshot\n',
+    )
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectNoStagingDirectory(root)
+  })
+
+  it('preserves a replacement after recovering an initial stat failure snapshot', async () => {
+    const root = path.join(parent, 'fallback-initial-stat-replacement-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    const failure = Object.assign(new Error('injected initial stat failure'), {
+      code: 'EIO',
+    })
+
+    const error = await initializeSiteWithExclusivePromotionHooks(root, {
+      promoteFile() {
+        return Promise.reject(
+          Object.assign(new Error('injected EXDEV'), { code: 'EXDEV' }),
+        )
+      },
+      exclusivePromotionHooks: {
+        initialStat() {
+          return Promise.reject(failure)
+        },
+        async afterFailureSnapshot(target) {
+          await rm(target)
+          await writeFile(target, 'user replacement after recovered snapshot\n')
+        },
+      },
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toContain('injected initial stat failure')
+    expect((error as Error).message).toMatch(/rollback.*identity.*config\.ts/i)
+    expect(await readFile(configFile, 'utf8')).toBe(
+      'user replacement after recovered snapshot\n',
+    )
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectNoStagingDirectory(root)
+  })
+
+  it('aggregates a true initial-stat recovery snapshot failure and preserves the uncertain leaf', async () => {
+    const root = path.join(parent, 'fallback-initial-stat-recovery-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    const failure = Object.assign(new Error('injected initial stat failure'), {
+      code: 'EIO',
+    })
+    let initialStatCalls = 0
+
+    const error = await initializeSiteWithExclusivePromotionHooks(root, {
+      promoteFile() {
+        return Promise.reject(
+          Object.assign(new Error('injected EXDEV'), { code: 'EXDEV' }),
+        )
+      },
+      exclusivePromotionHooks: {
+        async initialStat(handle) {
+          initialStatCalls += 1
+          await handle.close()
+          throw failure
+        },
+        close() {
+          return Promise.resolve()
+        },
+      },
+    }).catch((caught: unknown) => caught)
+
+    expect(initialStatCalls).toBe(1)
+    expect(error).toBeInstanceOf(AggregateError)
+    const promotionFailure = (error as { readonly errors: readonly unknown[] })
+      .errors[0]
+    expect(promotionFailure).toBeInstanceOf(AggregateError)
+    expect(
+      (promotionFailure as { readonly errors: readonly unknown[] }).errors[0],
+    ).toBe(failure)
+    expect((promotionFailure as Error & { cause?: unknown }).cause).toBe(
+      failure,
+    )
+    expect((promotionFailure as Error).message).toMatch(
+      /initial stat failure.*(?:closed|bad file descriptor|EBADF)/i,
+    )
+    await expect(readFile(configFile)).resolves.toHaveLength(0)
+    await expectMissing(path.join(root, 'index.mdx'))
     await expectNoStagingDirectory(root)
   })
 

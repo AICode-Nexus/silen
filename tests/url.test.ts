@@ -70,6 +70,24 @@ describe('resolveSiteLink', () => {
     expect(stripSiteBase('/docs/guide/', '/Docs/')).toBeUndefined()
   })
 
+  it('exports the percent-triplet-only pathname identity used by route consumers', async () => {
+    const urlModule = await import('../src/shared/url')
+    const pathnameIdentity = (
+      urlModule as typeof urlModule & {
+        pathnameIdentity?: (pathname: string) => string
+      }
+    ).pathnameIdentity
+
+    expect(pathnameIdentity).toBeTypeOf('function')
+    if (pathnameIdentity === undefined) return
+
+    expect(pathnameIdentity('/caf%c3%a9/%2fguide/')).toBe(
+      '/caf%C3%A9/%2Fguide/',
+    )
+    expect(pathnameIdentity('/EN/%2f')).toBe('/EN/%2F')
+    expect(pathnameIdentity('/en/%2f')).not.toBe(pathnameIdentity('/EN/%2f'))
+  })
+
   it('does not fold ordinary pathname character case for base containment', () => {
     expect(resolveSiteLink('/docs/guide/', '/Docs/')).toBe('/Docs/docs/guide/')
   })

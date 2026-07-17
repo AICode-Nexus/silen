@@ -187,6 +187,52 @@ describe('localized SEO alternates', () => {
     ).toThrow(/duplicate normalized locale root \/shared\//i)
   })
 
+  it('rejects percent-case-equivalent locale roots in SEO resolution', () => {
+    expect(() =>
+      createPageSeo(
+        resolvedConfig('fr-FR', [
+          { lang: 'fr-FR', label: 'Français', root: '/caf%C3%A9/' },
+          { lang: 'fr-CA', label: 'Français canadien', root: '/caf%c3%a9/' },
+        ]),
+        routeRecords('/caf%c3%a9/guide/'),
+        '/caf%c3%a9/guide/',
+      ),
+    ).toThrow(/duplicate normalized locale root \/caf%C3%A9\//i)
+  })
+
+  it('uses compiled route spelling when locale root percent case changes', () => {
+    const routes = routeRecords('/guide/', '/caf%c3%a9/guide/')
+    const resolveWithRoot = (root: string) =>
+      createPageSeo(
+        resolvedConfig('en-US', [
+          { lang: 'en-US', label: 'English', root: '/' },
+          { lang: 'fr-FR', label: 'Français', root },
+        ]),
+        routes,
+        '/caf%c3%a9/guide/',
+      )
+    const expected = {
+      canonicalUrl: 'https://docs.example.com/handbook/caf%c3%a9/guide/',
+      alternates: [
+        {
+          lang: 'en-US',
+          url: 'https://docs.example.com/handbook/guide/',
+        },
+        {
+          lang: 'fr-FR',
+          url: 'https://docs.example.com/handbook/caf%c3%a9/guide/',
+        },
+        {
+          lang: 'x-default',
+          url: 'https://docs.example.com/handbook/guide/',
+        },
+      ],
+    }
+
+    expect(resolveWithRoot('/caf%C3%A9/')).toEqual(expected)
+    expect(resolveWithRoot('/caf%c3%a9/')).toEqual(expected)
+  })
+
   it('builds one immutable route index before the build render loop', async () => {
     const seoModule = await import('../src/node/seo')
     const createResolver = (

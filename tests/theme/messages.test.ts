@@ -107,6 +107,33 @@ describe('theme message contract', () => {
     ).toMatchObject({ lang: 'zh-CN', root: '/zh/' })
   })
 
+  it('matches percent-case-equivalent locale roots without folding ordinary case', () => {
+    const locales = [
+      { lang: 'en-US', label: 'English', root: '/' },
+      { lang: 'fr-FR', label: 'Français', root: '/caf%C3%A9/' },
+      { lang: 'de-DE', label: 'Deutsch', root: '/EN/' },
+    ] as const
+
+    expect(
+      sharedConfig.resolveCurrentLocale(
+        locales,
+        '/caf%c3%a9/guide/',
+        '/',
+        'en-US',
+      ),
+    ).toMatchObject({
+      lang: 'fr-FR',
+      label: 'Français',
+      root: '/caf%C3%A9/',
+    })
+    expect(
+      sharedConfig.resolveCurrentLocale(locales, '/EN/guide/', '/', 'en-US'),
+    ).toMatchObject({ lang: 'de-DE', root: '/EN/' })
+    expect(
+      sharedConfig.resolveCurrentLocale(locales, '/en/guide/', '/', 'en-US'),
+    ).toMatchObject({ lang: 'en-US', root: '/' })
+  })
+
   it('falls back to the site language when no configured locale matches', () => {
     expect(
       sharedConfig.resolveCurrentLocale([], '/guide/', '/', 'fr-FR'),

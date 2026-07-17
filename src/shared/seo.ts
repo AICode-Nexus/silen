@@ -1,4 +1,5 @@
 import { normalizeLocaleRoot } from './config.js'
+import { pathnameIdentity } from './url.js'
 
 export const coreSeoAttribute = 'data-silen-seo'
 
@@ -52,7 +53,9 @@ function routePathname(route: string): string {
 
 function routeIdentity(route: string): string {
   const pathname = routePathname(route)
-  return pathname === '/' ? pathname : pathname.replace(/\/$/, '')
+  return pathnameIdentity(
+    pathname === '/' ? pathname : pathname.replace(/\/$/, ''),
+  )
 }
 
 function localeRoots(config: PageSeoConfig): readonly SeoLocale[] {
@@ -63,10 +66,11 @@ function localeRoots(config: PageSeoConfig): readonly SeoLocale[] {
   )
   const rootOwners = new Set<string>()
   for (const locale of configured) {
-    if (rootOwners.has(locale.root)) {
-      throw new Error(`duplicate normalized locale root ${locale.root}`)
+    const rootIdentity = pathnameIdentity(locale.root)
+    if (rootOwners.has(rootIdentity)) {
+      throw new Error(`duplicate normalized locale root ${rootIdentity}`)
     }
-    rootOwners.add(locale.root)
+    rootOwners.add(rootIdentity)
   }
 
   const configuredDefault = configured.find(
@@ -84,12 +88,20 @@ function localeRoots(config: PageSeoConfig): readonly SeoLocale[] {
 }
 
 function routeWithinRoot(route: string, root: string): boolean {
-  return root === '/' || route === root.slice(0, -1) || route.startsWith(root)
+  const routeKey = pathnameIdentity(route)
+  const rootKey = pathnameIdentity(root)
+  return (
+    rootKey === '/' ||
+    routeKey === rootKey.slice(0, -1) ||
+    routeKey.startsWith(rootKey)
+  )
 }
 
 function relativeLocaleRoute(route: string, root: string): string {
   if (root === '/') return route
-  if (route === root.slice(0, -1) || route === root) return '/'
+  const routeKey = pathnameIdentity(route)
+  const rootKey = pathnameIdentity(root)
+  if (routeKey === rootKey.slice(0, -1) || routeKey === rootKey) return '/'
   return `/${route.slice(root.length)}`
 }
 

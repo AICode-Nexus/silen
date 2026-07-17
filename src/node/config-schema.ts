@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { normalizeLocaleRoot, type UserConfig } from '../shared/config.js'
-import { hasExecutableUrlScheme } from '../shared/url.js'
+import { hasExecutableUrlScheme, pathnameIdentity } from '../shared/url.js'
 
 function invalidBase(reason: string): Error {
   return new Error(`base must be a normalized absolute pathname: ${reason}`)
@@ -176,16 +176,17 @@ const themeConfigSchema = z
         continue
       }
       const root = normalizeLocaleRoot(locale.root)
-      const previous = owners.get(root)
+      const identity = pathnameIdentity(root)
+      const previous = owners.get(identity)
       if (previous !== undefined) {
         context.addIssue({
           code: 'custom',
           path: ['locales', index, 'root'],
-          message: `duplicate normalized locale root ${root}; it is already used by locales.${previous}.root`,
+          message: `duplicate normalized locale root ${identity}; it is already used by locales.${previous}.root`,
         })
         continue
       }
-      owners.set(root, index)
+      owners.set(identity, index)
     }
   })
   .default({})
