@@ -376,6 +376,11 @@
   padding: clamp(1.5rem, 4vw, 2.5rem);
 }
 
+.silen-home-community > .silen-home-section-copy > .silen-home-eyebrow {
+  color: var(--silen-foreground);
+  color: color-mix(in oklab, var(--silen-primary) 80%, var(--silen-foreground));
+}
+
 .silen-home-community--qr {
   grid-template-columns: minmax(0, 1fr) auto;
 }

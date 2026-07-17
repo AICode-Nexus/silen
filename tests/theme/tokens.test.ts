@@ -166,4 +166,19 @@ export default defineConfig({
     expect(actionStyles).toContain('margin: 0;')
     expect(actionStyles).toContain('flex: 0 0 auto;')
   })
+
+  it('strengthens the community eyebrow against its muted background', async () => {
+    const documentStyles = await readFile(
+      'src/theme-default/styles/document.css',
+      'utf8',
+    )
+    const communityEyebrow = documentStyles.match(
+      /\.silen-home-community\s*>\s*\.silen-home-section-copy\s*>\s*\.silen-home-eyebrow\s*\{([^}]*)\}/,
+    )
+
+    expect(communityEyebrow).not.toBeNull()
+    expect(communityEyebrow?.[1]).toMatch(
+      /color:\s*var\(--silen-foreground\);[\s\S]*color:\s*color-mix\(\s*in oklab,\s*var\(--silen-primary\) 80%,\s*var\(--silen-foreground\)\s*\);/,
+    )
+  })
 })
