@@ -208,6 +208,7 @@ function publicThemeMessages(
     'languageCurrent',
     'close',
     'features',
+    'featureLink',
   ])
   const search = publicMessageGroup(messages.search, [
     'button',

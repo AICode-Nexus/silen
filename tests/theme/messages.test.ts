@@ -21,14 +21,23 @@ describe('theme message contract', () => {
     expect(themeConfig.resolveThemeMessages('fr-FR').search.noResults).toBe(
       'No results found.',
     )
+    expect(
+      themeConfig.resolveThemeMessages('en-US').navigation.featureLink,
+    ).toBe('Learn more about {title}')
+    expect(
+      themeConfig.resolveThemeMessages('zh-CN').navigation.featureLink,
+    ).toBe('进一步了解{title}')
   })
 
   it('deep-merges grouped locale overrides without dropping defaults', () => {
     const messages = themeConfig.resolveThemeMessages('zh-CN', {
+      navigation: { featureLink: '查看{title}' },
       search: { noResults: '这里没有内容。' },
       copy: { copied: '已复制好' },
     })
 
+    expect(messages.navigation.featureLink).toBe('查看{title}')
+    expect(messages.navigation.features).toBe('特性')
     expect(messages.search.noResults).toBe('这里没有内容。')
     expect(messages.search.placeholder).toBe('搜索文档')
     expect(messages.copy.copied).toBe('已复制好')

@@ -323,6 +323,7 @@ describe('virtual modules', () => {
           label: '中文',
           root: '/zh/',
           messages: {
+            navigation: { featureLink: '继续了解{title}' },
             search: { noResults: '这里没有内容。' },
             copy: { copied: '复制好了' },
           },
@@ -345,6 +346,7 @@ describe('virtual modules', () => {
         label: '中文',
         root: '/zh/',
         messages: {
+          navigation: { featureLink: '继续了解{title}' },
           search: { noResults: '这里没有内容。' },
           copy: { copied: '复制好了' },
         },

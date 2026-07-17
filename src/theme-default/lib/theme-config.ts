@@ -22,6 +22,7 @@ const englishMessages: ThemeMessages = {
     languageCurrent: 'Language: {label}',
     close: 'Close',
     features: 'Features',
+    featureLink: 'Learn more about {title}',
   },
   search: {
     button: 'Search',
@@ -107,6 +108,7 @@ const chineseMessages: ThemeMessages = {
     languageCurrent: '语言：{label}',
     close: '关闭',
     features: '特性',
+    featureLink: '进一步了解{title}',
   },
   search: {
     button: '搜索',

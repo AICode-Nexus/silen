@@ -147,6 +147,7 @@ declare module 'virtual:silen/config' {
     readonly languageCurrent: string
     readonly close: string
     readonly features: string
+    readonly featureLink: string
   }
 
   interface ThemeSearchMessages {

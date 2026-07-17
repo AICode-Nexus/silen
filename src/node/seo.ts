@@ -34,10 +34,11 @@ function localeRoots(config: ResolvedConfig): readonly LocaleRoot[] {
     const rooted = localeRoot(locale)
     return rooted === undefined ? [] : [rooted]
   })
-  const defaultLocale = configured.find(({ root }) => root === '/') ?? {
-    lang: config.lang,
-    root: '/',
-  }
+  const defaultLocale = configured.find(({ lang }) => lang === config.lang) ??
+    configured.find(({ root }) => root === '/') ?? {
+      lang: config.lang,
+      root: '/',
+    }
   return [
     defaultLocale,
     ...configured.filter(

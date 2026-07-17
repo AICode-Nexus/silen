@@ -399,6 +399,100 @@ describe('default content layouts', () => {
     expect(screen.queryByText('React-first')).toBeNull()
   })
 
+  it.each([
+    {
+      expected: 'Learn more about Typed links',
+      lang: 'en-US',
+      title: 'Typed links',
+    },
+    {
+      expected: '进一步了解类型化链接',
+      lang: 'zh-CN',
+      title: '类型化链接',
+    },
+  ])(
+    'localizes an omitted feature link label for $lang',
+    ({ expected, lang, title }) => {
+      render(
+        <TestSiteProvider lang={lang}>
+          <HomeLayout
+            features={[
+              {
+                title,
+                details: 'Localized fallback.',
+                link: '/guide/',
+              },
+            ]}
+          >
+            Home body
+          </HomeLayout>
+        </TestSiteProvider>,
+      )
+
+      expect(screen.getByRole('link', { name: expected })).not.toBeNull()
+    },
+  )
+
+  it('hydrates a custom feature link template and preserves explicit link text', async () => {
+    const themeConfig: ThemeConfig = {
+      locales: [
+        {
+          lang: 'en-US',
+          label: 'English',
+          root: '/',
+          messages: {
+            navigation: { featureLink: 'Explore {title}' },
+          },
+        },
+      ],
+    }
+    const tree = (
+      <TestSiteProvider path="/" themeConfig={themeConfig}>
+        <HomeLayout
+          features={[
+            {
+              title: 'Stable rendering',
+              details: 'Uses the resolved locale message.',
+              link: '/rendering/',
+            },
+            {
+              title: 'Explicit label',
+              details: 'Keeps the configured feature copy.',
+              link: '/explicit/',
+              linkText: 'Configured action',
+            },
+          ]}
+        >
+          Home body
+        </HomeLayout>
+      </TestSiteProvider>
+    )
+    const container = document.createElement('div')
+    container.innerHTML = renderToString(tree)
+    document.body.append(container)
+    const recoverableError = vi.fn()
+    const root = hydrateRoot(container, tree, {
+      onRecoverableError: recoverableError,
+    })
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+
+    expect(
+      within(container).getByRole('link', {
+        name: 'Explore Stable rendering',
+      }),
+    ).not.toBeNull()
+    expect(
+      within(container).getByRole('link', { name: 'Configured action' }),
+    ).not.toBeNull()
+    expect(recoverableError).not.toHaveBeenCalled()
+
+    act(() => root.unmount())
+    container.remove()
+  })
+
   it('renders document typography and base-aware previous/next pager cards', () => {
     const themeConfig: ThemeConfig = {
       sidebar: [

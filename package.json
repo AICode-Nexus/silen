@@ -60,7 +60,7 @@
     "build": "tsup && jiti tooling/build-agent-contract.ts",
     "site:build": "pnpm build && node dist/node/cli.js build website",
     "site:dev": "pnpm build && node dist/node/cli.js dev website",
-    "pretest": "jiti tooling/build-agent-contract.ts",
+    "pretest": "pnpm build",
     "test": "vitest run --maxWorkers=1 --no-file-parallelism",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

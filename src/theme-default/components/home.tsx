@@ -10,7 +10,11 @@ import type {
 } from '../../shared/config.js'
 import type { JsonObject, JsonValue } from '../../shared/page.js'
 import { resolveThemeLink } from '../lib/navigation.js'
-import { resolveThemeConfig, useThemeMessages } from '../lib/theme-config.js'
+import {
+  formatThemeMessage,
+  resolveThemeConfig,
+  useThemeMessages,
+} from '../lib/theme-config.js'
 import { Button } from './ui/button.js'
 import {
   Card,
@@ -217,9 +221,11 @@ function FeatureIcon({ icon }: { readonly icon: string }): React.JSX.Element {
 function FeatureCard({
   base,
   feature,
+  linkTextTemplate,
 }: {
   readonly base: string
   readonly feature: ThemeHomeFeature
+  readonly linkTextTemplate: string
 }): React.JSX.Element {
   const destination = feature.link
     ? safeDestination(feature.link, base)
@@ -241,7 +247,10 @@ function FeatureCard({
               target={feature.target}
               rel={feature.rel}
             >
-              {feature.linkText ?? `Learn more about ${feature.title}`}
+              {feature.linkText ??
+                formatThemeMessage(linkTextTemplate, {
+                  title: feature.title,
+                })}
               <ArrowRightIcon aria-hidden="true" />
             </HomeLink>
           </Button>
@@ -436,6 +445,7 @@ export function HomeLayout({
                 key={`${feature.title}:${feature.link ?? ''}`}
                 feature={feature}
                 base={base}
+                linkTextTemplate={messages.navigation.featureLink}
               />
             ))}
           </div>

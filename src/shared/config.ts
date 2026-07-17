@@ -149,6 +149,7 @@ export interface ThemeNavigationMessages {
   readonly languageCurrent: string
   readonly close: string
   readonly features: string
+  readonly featureLink: string
 }
 
 export interface ThemeSearchMessages {
