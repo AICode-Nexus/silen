@@ -13,6 +13,8 @@ import {
   symlink,
   writeFile,
 } from 'node:fs/promises'
+import type { FileHandle } from 'node:fs/promises'
+import type { Stats } from 'node:fs'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { execa } from 'execa'
@@ -71,6 +73,27 @@ interface InitSiteTestOptions extends NonNullable<
 function initializeSiteWithRollbackHooks(
   root: string,
   options: InitSiteTestOptions,
+) {
+  return initializeSite(root, options)
+}
+
+interface ExclusivePromotionTestHooks {
+  readonly writeFile?: (handle: FileHandle, contents: Buffer) => Promise<void>
+  readonly sync?: (handle: FileHandle) => Promise<void>
+  readonly finalStat?: (handle: FileHandle) => Promise<Stats>
+  readonly afterFailureSnapshot?: (target: string) => Promise<void>
+  readonly close?: (handle: FileHandle) => Promise<void>
+}
+
+interface ExclusivePromotionTestOptions extends NonNullable<
+  Parameters<typeof initializeSite>[1]
+> {
+  readonly exclusivePromotionHooks: ExclusivePromotionTestHooks
+}
+
+function initializeSiteWithExclusivePromotionHooks(
+  root: string,
+  options: ExclusivePromotionTestOptions,
 ) {
   return initializeSite(root, options)
 }
@@ -592,6 +615,144 @@ describe('silen init', () => {
     await expectMissing(path.join(root, '.silen/config.ts'))
     await expectMissing(path.join(root, 'index.mdx'))
     await expectMissing(root)
+    await expectNoStagingDirectory(root)
+  })
+
+  it('removes an unchanged exclusive partial target after a write failure', async () => {
+    const root = path.join(parent, 'fallback-partial-write-site')
+    const failure = Object.assign(new Error('injected partial write failure'), {
+      code: 'ENOSPC',
+    })
+
+    const error = await initializeSiteWithExclusivePromotionHooks(root, {
+      promoteFile() {
+        return Promise.reject(
+          Object.assign(new Error('injected EXDEV'), { code: 'EXDEV' }),
+        )
+      },
+      exclusivePromotionHooks: {
+        async writeFile(handle, contents) {
+          const partial = contents.subarray(0, 32)
+          await handle.write(partial, 0, partial.length, 0)
+          throw failure
+        },
+      },
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toBe(failure)
+    await expectMissing(path.join(root, '.silen/config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectMissing(root)
+    await expectNoStagingDirectory(root)
+
+    await expect(initializeSite(root)).resolves.toMatchObject({ root })
+  })
+
+  it('removes an unchanged exclusive target after sync and close failures', async () => {
+    const root = path.join(parent, 'fallback-sync-close-site')
+    const syncFailure = Object.assign(new Error('injected sync failure'), {
+      code: 'EIO',
+    })
+    const closeFailure = Object.assign(new Error('injected close failure'), {
+      code: 'EIO',
+    })
+
+    const error = await initializeSiteWithExclusivePromotionHooks(root, {
+      promoteFile() {
+        return Promise.reject(
+          Object.assign(new Error('injected EXDEV'), { code: 'EXDEV' }),
+        )
+      },
+      exclusivePromotionHooks: {
+        sync() {
+          return Promise.reject(syncFailure)
+        },
+        async close(handle) {
+          await handle.close()
+          throw closeFailure
+        },
+      },
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toContain('injected sync failure')
+    expect((error as Error).message).toContain('injected close failure')
+    expect((error as Error & { cause?: unknown }).cause).toBe(syncFailure)
+    await expectMissing(path.join(root, '.silen/config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectMissing(root)
+    await expectNoStagingDirectory(root)
+
+    await expect(initializeSite(root)).resolves.toMatchObject({ root })
+  })
+
+  it('removes an unchanged exclusive target after final stat failure', async () => {
+    const root = path.join(parent, 'fallback-final-stat-site')
+    const failure = Object.assign(new Error('injected final stat failure'), {
+      code: 'EIO',
+    })
+
+    const error = await initializeSiteWithExclusivePromotionHooks(root, {
+      promoteFile() {
+        return Promise.reject(
+          Object.assign(new Error('injected EXDEV'), { code: 'EXDEV' }),
+        )
+      },
+      exclusivePromotionHooks: {
+        finalStat() {
+          return Promise.reject(failure)
+        },
+      },
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toBe(failure)
+    await expectMissing(path.join(root, '.silen/config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectMissing(root)
+    await expectNoStagingDirectory(root)
+
+    await expect(initializeSite(root)).resolves.toMatchObject({ root })
+  })
+
+  it('preserves a user edit made after an exclusive failure snapshot', async () => {
+    const root = path.join(parent, 'fallback-post-snapshot-edit-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    const failure = Object.assign(new Error('injected partial write failure'), {
+      code: 'ENOSPC',
+    })
+    let identityBeforeEdit: Awaited<ReturnType<typeof lstat>> | undefined
+
+    const error = await initializeSiteWithExclusivePromotionHooks(root, {
+      promoteFile() {
+        return Promise.reject(
+          Object.assign(new Error('injected EXDEV'), { code: 'EXDEV' }),
+        )
+      },
+      exclusivePromotionHooks: {
+        async writeFile(handle, contents) {
+          const partial = contents.subarray(0, 32)
+          await handle.write(partial, 0, partial.length, 0)
+          throw failure
+        },
+        async afterFailureSnapshot(target) {
+          identityBeforeEdit = await lstat(target)
+          await writeFile(target, 'user edit after partial snapshot\n')
+          const edited = await lstat(target)
+          expect(edited.dev).toBe(identityBeforeEdit.dev)
+          expect(edited.ino).toBe(identityBeforeEdit.ino)
+        },
+      },
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toContain('injected partial write failure')
+    expect((error as Error).message).toMatch(
+      /rollback.*(?:content|metadata).*config\.ts/i,
+    )
+    expect(await readFile(configFile, 'utf8')).toBe(
+      'user edit after partial snapshot\n',
+    )
+    await expectMissing(path.join(root, 'index.mdx'))
     await expectNoStagingDirectory(root)
   })
 

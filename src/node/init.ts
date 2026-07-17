@@ -12,6 +12,7 @@ import {
   unlink,
   writeFile,
 } from 'node:fs/promises'
+import type { FileHandle } from 'node:fs/promises'
 import type { Stats } from 'node:fs'
 import path from 'node:path'
 
@@ -97,6 +98,14 @@ interface RollbackHooks {
   readonly removeDirectory?: (target: string) => Promise<void>
 }
 
+interface ExclusivePromotionHooks {
+  readonly writeFile?: (handle: FileHandle, contents: Buffer) => Promise<void>
+  readonly sync?: (handle: FileHandle) => Promise<void>
+  readonly finalStat?: (handle: FileHandle) => Promise<Stats>
+  readonly afterFailureSnapshot?: (target: string) => Promise<void>
+  readonly close?: (handle: FileHandle) => Promise<void>
+}
+
 export interface InitSiteOptions {
   readonly writeStagedFile?: (file: string, source: string) => Promise<void>
   readonly promoteFile?: (
@@ -113,6 +122,7 @@ export interface InitSiteOptions {
 interface InternalInitSiteOptions extends InitSiteOptions {
   readonly cleanupHooks?: StagingCleanupHooks
   readonly rollbackHooks?: RollbackHooks
+  readonly exclusivePromotionHooks?: ExclusivePromotionHooks
 }
 
 interface FileIdentity {
@@ -130,7 +140,7 @@ interface PromotedFile extends FileIdentity {
   mode: number
   size: number
   mtimeMs: number
-  readonly contentHash: string
+  contentHash: string
 }
 
 interface StagedFile extends FileIdentity {
@@ -758,11 +768,16 @@ async function promoteExclusively(
   targetFile: string,
   contentHash: string,
   promotedFiles: PromotedFile[],
+  hooks: ExclusivePromotionHooks = {},
 ): Promise<PromotedFile> {
-  const handle = await open(targetFile, 'wx')
+  const handle = await open(targetFile, 'wx+')
+  let promoted: PromotedFile | undefined
+  let primaryFailure: unknown
+  let failed = false
+  const secondaryFailures: unknown[] = []
   try {
     const created = await handle.stat()
-    const promoted: PromotedFile = {
+    promoted = {
       target: targetFile,
       ...identityOf(created),
       mode: created.mode,
@@ -771,16 +786,110 @@ async function promoteExclusively(
       contentHash,
     }
     promotedFiles.push(promoted)
-    await handle.writeFile(contents)
-    await handle.sync()
-    const completed = await handle.stat()
+    await (hooks.writeFile ?? writeExclusiveContents)(handle, contents)
+    await (hooks.sync ?? syncExclusiveFile)(handle)
+    const completed = await (hooks.finalStat ?? statExclusiveFile)(handle)
     promoted.mode = completed.mode
     promoted.size = completed.size
     promoted.mtimeMs = completed.mtimeMs
-    return promoted
-  } finally {
-    await handle.close()
+  } catch (error) {
+    failed = true
+    primaryFailure = error
+    if (promoted) {
+      try {
+        await snapshotFailedExclusiveFile(handle, promoted)
+        await hooks.afterFailureSnapshot?.(targetFile)
+      } catch (snapshotError) {
+        secondaryFailures.push(snapshotError)
+      }
+    }
   }
+
+  try {
+    await (hooks.close ?? closeExclusiveFile)(handle)
+  } catch (error) {
+    secondaryFailures.push(error)
+  }
+
+  if (failed) {
+    throw combinedFailure(
+      [primaryFailure, ...secondaryFailures],
+      primaryFailure,
+    )
+  }
+  if (secondaryFailures.length > 0) {
+    throw combinedFailure(secondaryFailures, secondaryFailures[0])
+  }
+  if (!promoted) throw new Error(`Silen init did not promote ${targetFile}`)
+  return promoted
+}
+
+function writeExclusiveContents(
+  handle: FileHandle,
+  contents: Buffer,
+): Promise<void> {
+  return handle.writeFile(contents)
+}
+
+function syncExclusiveFile(handle: FileHandle): Promise<void> {
+  return handle.sync()
+}
+
+function statExclusiveFile(handle: FileHandle): Promise<Stats> {
+  return handle.stat()
+}
+
+function closeExclusiveFile(handle: FileHandle): Promise<void> {
+  return handle.close()
+}
+
+async function readOpenFile(handle: FileHandle, size: number): Promise<Buffer> {
+  const contents = Buffer.alloc(size)
+  let offset = 0
+  while (offset < contents.length) {
+    const { bytesRead } = await handle.read(
+      contents,
+      offset,
+      contents.length - offset,
+      offset,
+    )
+    if (bytesRead === 0) {
+      throw new Error('exclusive target changed while capturing partial data')
+    }
+    offset += bytesRead
+  }
+  return contents
+}
+
+async function snapshotFailedExclusiveFile(
+  handle: FileHandle,
+  promoted: PromotedFile,
+): Promise<void> {
+  const before = await handle.stat()
+  if (!before.isFile() || !sameIdentity(before, promoted)) {
+    throw replacedPath('exclusive target handle', promoted.target)
+  }
+  const contents = await readOpenFile(handle, before.size)
+  const after = await handle.stat()
+  if (
+    !after.isFile() ||
+    !sameIdentity(after, promoted) ||
+    before.mode !== after.mode ||
+    before.size !== after.size ||
+    before.mtimeMs !== after.mtimeMs
+  ) {
+    throw new Error(
+      `Silen init exclusive target changed during failure snapshot; preserved: ${promoted.target}`,
+    )
+  }
+
+  // FileHandle stat/read/stat binds the snapshot to the created inode. A
+  // same-user write after the final stat is still irreducible without file
+  // leases; rollback's pathname identity, metadata, and hash checks preserve it.
+  promoted.mode = after.mode
+  promoted.size = after.size
+  promoted.mtimeMs = after.mtimeMs
+  promoted.contentHash = hashContents(contents)
 }
 
 async function snapshotStagedPromotion(
@@ -834,6 +943,7 @@ async function promoteStagedFile(
         targetFile,
         snapshot.promoted.contentHash,
         promotedFiles,
+        (options as InternalInitSiteOptions).exclusivePromotionHooks,
       )
     }
     if (errorCode(error) !== 'EEXIST') {
