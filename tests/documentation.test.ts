@@ -133,6 +133,78 @@ describe('0.2.0 product documentation', () => {
     expect(config).not.toMatch(/home:\s*\{[\s\S]*?features:\s*\[/)
   })
 
+  it('documents draft as AI exclusion without implying route privacy', async () => {
+    const [english, chinese] = await Promise.all([
+      source('website/guide/markdown-mdx/index.mdx'),
+      source('website/zh/guide/markdown-mdx/index.mdx'),
+    ])
+
+    expect(english).toContain(
+      '`draft: true` excludes the page from AI-readable artifacts and indexes only.',
+    )
+    expect(english).toContain(
+      'does not stop route scanning, building, or publishing',
+    )
+    expect(english).toMatch(
+      /Never store private\s+content in the content tree\./,
+    )
+    expect(chinese).toContain(
+      '`draft: true` 只会让页面退出 AI 可读产物与索引。',
+    )
+    expect(chinese).toContain('不会阻止路由扫描、构建或发布')
+    expect(chinese).toContain('不要把私密内容放入内容树。')
+  })
+
+  it('distinguishes compiler routes from generated and served paths', async () => {
+    const [english, chinese] = await Promise.all([
+      source('website/guide/project-structure/index.mdx'),
+      source('website/zh/guide/project-structure/index.mdx'),
+    ])
+
+    expect(english).toMatch(/`guide\/index\.mdx`[^.]*compiler route `\/guide`/)
+    expect(english).toContain('`guide/index.html`')
+    expect(english).toContain('usual browser URL `/guide/`')
+    expect(english).not.toContain('`guide/index.mdx` maps to `/guide/`')
+    expect(chinese).toMatch(/`guide\/index\.mdx`[^。]*编译器路由是 `\/guide`/)
+    expect(chinese).toContain('`guide/index.html`')
+    expect(chinese).toContain('通常以 `/guide/` 访问')
+    expect(chinese).not.toContain('`guide/index.mdx` 对应 `/guide/`')
+  })
+
+  it('documents actual nav link and locale language resolution semantics', async () => {
+    const [english, chinese] = await Promise.all([
+      source('website/theme/index.mdx'),
+      source('website/zh/theme/index.mdx'),
+    ])
+
+    expect(english).toMatch(
+      /HTTP\(S\) nav links use ordinary\s+browser navigation in the current context\./,
+    )
+    expect(english).toMatch(
+      /MDX-authored\s+links can explicitly set `target="_blank"` and `rel="noopener noreferrer"`/,
+    )
+    expect(english).toMatch(
+      /The longest matching configured locale root\s+controls document and search language\./,
+    )
+    expect(english).toContain('Frontmatter `lang` does not override')
+    expect(chinese).toContain(
+      'HTTP(S) 导航链接会在当前上下文中按浏览器普通导航处理。',
+    )
+    expect(chinese).toContain(
+      'MDX 正文链接可显式设置 `target="_blank"` 与 `rel="noopener noreferrer"`',
+    )
+    expect(chinese).toContain(
+      '匹配长度最长的已配置 locale root 决定文档与搜索语言。',
+    )
+    expect(chinese).toContain('frontmatter `lang` 不会覆盖')
+  })
+
+  it('keeps homepage imports limited to rendered symbols', async () => {
+    const english = await source('website/index.mdx')
+
+    expect(english).not.toContain('FileTextIcon')
+  })
+
   it('keeps README as a concise npm quick reference with official links', async () => {
     const readme = await source('README.md')
 

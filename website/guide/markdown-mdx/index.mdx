@@ -25,8 +25,11 @@ ai: true
 
 `doc` is the default layout. `home` renders the configured hero before page
 MDX, and `page` keeps the application shell without documentation pagination.
-Use `draft: true` to keep a page out of production routes, or `ai: false` to
-exclude a public page from AI artifacts.
+`draft: true` excludes the page from AI-readable artifacts and indexes only.
+It does not stop route scanning, building, or publishing; `ai: false` has the
+same AI-output boundary for an otherwise public page. Never store private
+content in the content tree. Keep confidential material outside the site root
+and its build inputs.
 
 ## Links and headings
 

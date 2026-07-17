@@ -46,10 +46,13 @@ themeConfig: {
 }
 ```
 
-Internal theme links are resolved under `base`; external HTTP(S) links open in
-a new context with safe relationship attributes. Below 960px the persistent
-sidebar becomes a labelled modal sheet. At desktop widths, it remains visible
-beside the document.
+Internal theme links are resolved under `base`. HTTP(S) nav links use ordinary
+browser navigation in the current context. Nav items pass only `href`; they do
+not automatically add a new context or relationship attributes. MDX-authored
+links can explicitly set `target="_blank"` and `rel="noopener noreferrer"` when
+a new context is genuinely useful. Below 960px the persistent sidebar becomes
+a labelled modal sheet. At desktop widths, it remains visible beside the
+document.
 
 ## Search
 
@@ -62,8 +65,10 @@ language so results from the active locale are ranked and grouped correctly.
 
 Locale entries define a BCP 47 `lang`, label, and route `root`; they may
 override nav, sidebar, home, and UI messages. Mirrored routes let the language
-switch preserve the current page. A page-level `lang` frontmatter value remains
-available for exceptional content.
+switch preserve the current page. The longest matching configured locale root
+controls document and search language. Frontmatter `lang` does not override
+the resolved route locale; content requiring another language should live
+under the corresponding locale root.
 
 Customize visual values with [theme tokens](/silen/theme/tokens/) or compose
 React behavior through [theme extensions](/silen/theme/extensions-accessibility/).

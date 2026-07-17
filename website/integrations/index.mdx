@@ -56,10 +56,58 @@ themeConfig: {
 }
 ```
 
-The browser posts the current route, optional selected text, and user/assistant
-messages. Your server authenticates the request and streams NDJSON events of
-type `text`, `citation`, or `error`. Keep provider keys and raw upstream errors
-on the server. With no endpoint, Silen emits no Ask AI control or client bundle.
+## Ask AI request
+
+Silen sends an HTTP `POST` with `Content-Type: application/json`. The request
+contract is exactly:
+
+```ts
+interface AskAiRequest {
+  route: string
+  selectedText?: string
+  messages: Array<{
+    role: 'user' | 'assistant'
+    content: string
+  }>
+}
+```
+
+`selectedText` is optional; omit it when the reader has not selected content.
+Messages can include prior user and assistant turns. A concrete request is:
+
+```json
+{
+  "route": "/guide/",
+  "selectedText": "pnpm silen init docs",
+  "messages": [
+    { "role": "user", "content": "How do I start?" },
+    { "role": "assistant", "content": "Install the package first." }
+  ]
+}
+```
+
+## Ask AI response
+
+Return a successful streaming response with either
+`Content-Type: application/x-ndjson` or `Content-Type: application/ndjson`.
+This NDJSON response writes one JSON object per line. The event shapes are text
+`{ type: 'text', value: string }`, citation
+`{ type: 'citation', title: string, url: string }`, and error
+`{ type: 'error', message: string }`:
+
+```ndjson
+{"type":"text","value":"Install with pnpm."}
+{"type":"citation","title":"Quick start","url":"/guide/"}
+{"type":"error","message":"Unable to answer."}
+```
+
+Silen supplies an `AbortSignal` to the request and aborts a superseded stream
+or a stream whose dialog closes. Treat that signal and the disconnected HTTP
+request as cancellation: stop upstream provider work and release resources.
+
+Your endpoint owns server-side authentication. Keep provider keys and raw
+provider errors on the server, and return a safe public failure instead. With
+no endpoint, Silen emits no Ask AI control and no Ask AI client bundle.
 
 For deterministic, provider-free AI access, use the [generated artifacts](/silen/ai/)
 and [local MCP workspace](/silen/ai/local-workspace-mcp/).

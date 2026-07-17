@@ -56,4 +56,42 @@ describe('AI Alpha documentation contract', () => {
     expect(integrations).toContain('provider keys')
     expect(integrations).toMatch(/no endpoint.*no Ask AI.*bundle/is)
   })
+
+  it('documents the exact bilingual Ask AI request and streaming protocol', async () => {
+    const [english, chinese] = await Promise.all([
+      readFile('website/integrations/index.mdx', 'utf8'),
+      readFile('website/zh/integrations/index.mdx', 'utf8'),
+    ])
+
+    for (const documentation of [english, chinese]) {
+      for (const value of [
+        'Content-Type: application/json',
+        'route: string',
+        'selectedText?: string',
+        "role: 'user' | 'assistant'",
+        'content: string',
+        '"route": "/guide/"',
+        '"messages": [',
+        'application/x-ndjson',
+        'application/ndjson',
+        '{"type":"text","value":"Install with pnpm."}',
+        '{"type":"citation","title":"Quick start","url":"/guide/"}',
+        '{"type":"error","message":"Unable to answer."}',
+        'AbortSignal',
+      ]) {
+        expect(documentation).toContain(value)
+      }
+    }
+
+    expect(english).toContain('server-side authentication')
+    expect(english).toContain('provider keys')
+    expect(english).toMatch(/raw\s+provider errors/)
+    expect(english).toContain('cancellation')
+    expect(english).toMatch(/no endpoint.*no Ask AI control.*bundle/is)
+    expect(chinese).toContain('服务端鉴权')
+    expect(chinese).toContain('provider key')
+    expect(chinese).toContain('原始 provider 错误')
+    expect(chinese).toContain('取消')
+    expect(chinese).toMatch(/未配置端点.*Ask AI 控件.*bundle/is)
+  })
 })

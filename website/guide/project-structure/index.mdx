@@ -27,9 +27,10 @@ docs/
 
 ## Content becomes routes
 
-Both `.md` and `.mdx` files are scanned. `index.mdx` maps to `/`,
-`guide.mdx` maps to `/guide`, and `guide/index.mdx` maps to `/guide/`.
-Do not create both file forms for the same route; the build rejects duplicate
+Both `.md` and `.mdx` files are scanned. `index.mdx` has compiler route `/`;
+`guide.mdx` and `guide/index.mdx` both have compiler route `/guide`. The
+directory form emits `guide/index.html`, with the usual browser URL `/guide/`.
+Do not create both source forms for the same route; the build rejects duplicate
 routes instead of choosing one silently.
 
 Use directories for sections that will grow. This keeps nearby images,

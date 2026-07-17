@@ -25,7 +25,7 @@ docs/
 
 ## 内容如何形成路由
 
-Silen 扫描 `.md` 与 `.mdx`。`index.mdx` 对应 `/`，`guide.mdx` 对应 `/guide`，`guide/index.mdx` 对应 `/guide/`。不要同时创建两个指向同一路由的文件；构建会明确拒绝重复路由，而不是静默选一个。
+Silen 扫描 `.md` 与 `.mdx`。`index.mdx` 的编译器路由是 `/`；`guide.mdx` 与 `guide/index.mdx` 的编译器路由是 `/guide`。目录形式会生成 `guide/index.html`，通常以 `/guide/` 访问。不要同时创建两个指向同一路由的源文件；构建会明确拒绝重复路由，而不是静默选一个。
 
 会继续增长的栏目适合使用目录，这样相邻图片、示例与子页面更容易维护，公开 URL 也能保持稳定。
 

@@ -47,6 +47,46 @@ themeConfig: {
 }
 ```
 
-浏览器提交当前路由、可选选中文本与消息；你的服务负责鉴权，并流式返回 `text`、`citation`、`error` 三类 NDJSON 事件。密钥与原始上游错误都留在服务端。未配置端点时不会输出 Ask AI 控件与客户端 bundle。
+## Ask AI 请求
+
+Silen 通过 HTTP `POST` 发送 `Content-Type: application/json` 请求。请求契约严格如下：
+
+```ts
+interface AskAiRequest {
+  route: string
+  selectedText?: string
+  messages: Array<{
+    role: 'user' | 'assistant'
+    content: string
+  }>
+}
+```
+
+`selectedText` 是可选字段；读者未选择正文时应省略。`messages` 可以包含之前的 user 与 assistant 对话。具体请求示例：
+
+```json
+{
+  "route": "/guide/",
+  "selectedText": "pnpm silen init docs",
+  "messages": [
+    { "role": "user", "content": "如何开始？" },
+    { "role": "assistant", "content": "先安装依赖。" }
+  ]
+}
+```
+
+## Ask AI 响应
+
+成功的流式响应必须使用 `Content-Type: application/x-ndjson` 或 `Content-Type: application/ndjson`。每行写入一个 JSON 对象。事件形状分别是文本 `{ type: 'text', value: string }`、引用 `{ type: 'citation', title: string, url: string }` 与错误 `{ type: 'error', message: string }`：
+
+```ndjson
+{"type":"text","value":"Install with pnpm."}
+{"type":"citation","title":"Quick start","url":"/guide/"}
+{"type":"error","message":"Unable to answer."}
+```
+
+Silen 会向请求提供 `AbortSignal`，并在新请求取代旧请求或对话框关闭时触发 abort。把该信号与 HTTP 连接断开视为取消：停止上游 provider 工作并释放资源。
+
+端点负责服务端鉴权。provider key 与原始 provider 错误必须留在服务端，只返回安全的公开错误。未配置端点时，不会生成 Ask AI 控件，也不会生成 Ask AI 客户端 bundle。
 
 无需模型 provider 的确定性访问见[生成产物](/silen/zh/ai/)与[本地 MCP](/silen/zh/ai/local-workspace-mcp/)。

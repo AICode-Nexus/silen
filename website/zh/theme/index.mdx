@@ -39,7 +39,7 @@ themeConfig: {
 }
 ```
 
-内部主题链接会按 `base` 解析；外部 HTTP(S) 链接会带安全的关系属性。960px 以下，固定侧栏变成带标签的模态 Sheet；桌面宽度下，它持续显示在正文旁。
+内部主题链接会按 `base` 解析。HTTP(S) 导航链接会在当前上下文中按浏览器普通导航处理。nav 条目只传递 `href`，不会自动增加新上下文或关系属性。确实需要新上下文时，MDX 正文链接可显式设置 `target="_blank"` 与 `rel="noopener noreferrer"`。960px 以下，固定侧栏变成带标签的模态 Sheet；桌面宽度下，它持续显示在正文旁。
 
 ## 搜索
 
@@ -47,6 +47,6 @@ themeConfig: {
 
 ## 多语言
 
-locale 条目定义 BCP 47 `lang`、显示标签与路由 `root`，并可覆盖导航、侧栏、首页与界面消息。路由镜像后，语言切换会保留当前页面。个别页面仍可用 frontmatter `lang` 覆盖。
+locale 条目定义 BCP 47 `lang`、显示标签与路由 `root`，并可覆盖导航、侧栏、首页与界面消息。路由镜像后，语言切换会保留当前页面。匹配长度最长的已配置 locale root 决定文档与搜索语言。frontmatter `lang` 不会覆盖解析后的路由语言；需要另一种语言的内容应放在对应 locale root 下。
 
 视觉定制使用[主题令牌](/silen/zh/theme/tokens/)，React 行为使用[主题扩展](/silen/zh/theme/extensions-accessibility/)。
