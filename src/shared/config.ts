@@ -358,6 +358,7 @@ export interface UserConfig {
   description?: string
   lang?: string
   base?: string
+  siteUrl?: string
   outDir?: string
   onBrokenLinks?: 'error' | 'warn' | 'ignore'
   themeConfig?: ThemeConfig
@@ -367,8 +368,9 @@ export interface UserConfig {
 }
 
 export interface ResolvedConfig extends Required<
-  Omit<UserConfig, 'ai' | 'plugins'>
+  Omit<UserConfig, 'ai' | 'plugins' | 'siteUrl'>
 > {
+  siteUrl?: string
   ai: ResolvedAiConfig
   plugins?: readonly ResolvedSilenPlugin[]
   command: 'serve' | 'build'

@@ -19,6 +19,17 @@ export interface RenderAssets {
   modulePreloads?: readonly string[]
   assetPreloads?: readonly AssetPreload[]
   head?: readonly SilenHeadEntry[]
+  seo?: PageSeo
+}
+
+export interface SeoAlternate {
+  lang: string
+  url: string
+}
+
+export interface PageSeo {
+  canonicalUrl: string
+  alternates: readonly SeoAlternate[]
 }
 
 const htmlEscapes: Readonly<Record<string, string>> = {
@@ -89,6 +100,37 @@ function renderHeadEntry(entry: SilenHeadEntry): string {
   return `${opening}${content}</${entry.tag}>`
 }
 
+function renderSeo(page: RenderedPage, seo: PageSeo | undefined): string[] {
+  if (seo === undefined) return []
+
+  return [
+    `<link rel="canonical" href="${escapeHtml(seo.canonicalUrl)}">`,
+    ...seo.alternates.map(
+      ({ lang, url }) =>
+        `<link rel="alternate" hreflang="${escapeHtml(lang)}" href="${escapeHtml(url)}">`,
+    ),
+    '<meta property="og:type" content="website">',
+    ...(page.title
+      ? [`<meta property="og:title" content="${escapeHtml(page.title)}">`]
+      : []),
+    ...(page.description
+      ? [
+          `<meta property="og:description" content="${escapeHtml(page.description)}">`,
+        ]
+      : []),
+    `<meta property="og:url" content="${escapeHtml(seo.canonicalUrl)}">`,
+    '<meta name="twitter:card" content="summary">',
+    ...(page.title
+      ? [`<meta name="twitter:title" content="${escapeHtml(page.title)}">`]
+      : []),
+    ...(page.description
+      ? [
+          `<meta name="twitter:description" content="${escapeHtml(page.description)}">`,
+        ]
+      : []),
+  ]
+}
+
 export function renderDocument(
   page: RenderedPage,
   assets: RenderAssets,
@@ -116,6 +158,7 @@ export function renderDocument(
     : []
   const analytics = renderAnalyticsHead(page.publicData.analytics ?? [])
   const pluginHead = (assets.head ?? []).map(renderHeadEntry)
+  const seo = renderSeo(page, assets.seo)
 
   return [
     '<!doctype html>',
@@ -131,6 +174,7 @@ export function renderDocument(
     ...stylesheets,
     ...modulePreloads,
     ...assetPreloads,
+    ...seo,
     ...analytics,
     ...pluginHead,
     '</head>',

@@ -275,6 +275,7 @@ declare module 'virtual:silen/config' {
     description: string
     lang: string
     base: string
+    siteUrl?: string
     ai: AiArtifactConfig
     analytics: readonly AnalyticsProvider[]
     themeConfig: ThemeConfig

@@ -27,6 +27,33 @@ describe('example website homepage', () => {
     expect(chinese).toContain('<html lang="zh-CN">')
   })
 
+  it('publishes canonical bilingual metadata and the official sitemap', async () => {
+    const [english, chinese, sitemap] = await Promise.all([
+      readFile(path.join(result.outDir, 'guide/index.html'), 'utf8'),
+      readFile(path.join(result.outDir, 'zh/guide/index.html'), 'utf8'),
+      readFile(path.join(result.outDir, 'sitemap.xml'), 'utf8'),
+    ])
+
+    expect(english).toContain(
+      '<link rel="canonical" href="https://aicode-nexus.github.io/silen/guide/">',
+    )
+    expect(chinese).toContain(
+      '<link rel="canonical" href="https://aicode-nexus.github.io/silen/zh/guide/">',
+    )
+    for (const html of [english, chinese]) {
+      expect(html).toContain('hreflang="en-US"')
+      expect(html).toContain('hreflang="zh-CN"')
+      expect(html).toContain('hreflang="x-default"')
+    }
+    expect(sitemap).toContain(
+      '<loc>https://aicode-nexus.github.io/silen/guide/</loc>',
+    )
+    expect(sitemap).toContain(
+      '<loc>https://aicode-nexus.github.io/silen/zh/guide/</loc>',
+    )
+    expect(sitemap).not.toContain('404')
+  })
+
   it('uses the exact Node engine contract and base-contained guide links', async () => {
     const [englishGuide, chineseGuide, englishAi, chineseAi] =
       await Promise.all([

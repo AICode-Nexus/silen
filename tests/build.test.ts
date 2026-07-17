@@ -49,6 +49,18 @@ describe('static production build', () => {
     expect(assetFiles.some((file) => file.endsWith('.map'))).toBe(false)
   })
 
+  it('does not generate absolute SEO artifacts without siteUrl', async () => {
+    for (const html of [home, guide, about, notFound, chineseNotFound]) {
+      expect(html).not.toContain('rel="canonical"')
+      expect(html).not.toContain('rel="alternate" hreflang=')
+      expect(html).not.toContain('property="og:')
+      expect(html).not.toContain('name="twitter:')
+    }
+    await expect(
+      readFile(path.join(result.outDir, 'sitemap.xml'), 'utf8'),
+    ).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
   it('keeps root, nested-index, and no-trailing routes inside outDir', () => {
     expect(routeOutputFile('/tmp/silen-out', '/')).toBe(
       '/tmp/silen-out/index.html',

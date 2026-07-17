@@ -52,15 +52,17 @@ export async function resolveConfig(
   const configWithoutPlugins: UserConfig = { ...configured }
   delete configWithoutPlugins.plugins
   const parsed = userConfigSchema.parse(configWithoutPlugins)
+  const { siteUrl, ...parsedWithoutSiteUrl } = parsed
 
   const resolved: ResolvedConfig = {
-    ...parsed,
+    ...parsedWithoutSiteUrl,
+    ...(siteUrl === undefined ? {} : { siteUrl }),
     plugins: runner.plugins,
     command,
     root: absoluteRoot,
     configFile,
-    base: parsed.base,
-    outDir: path.resolve(absoluteRoot, parsed.outDir),
+    base: parsedWithoutSiteUrl.base,
+    outDir: path.resolve(absoluteRoot, parsedWithoutSiteUrl.outDir),
   }
   attachPluginRunner(resolved, runner)
   await runner.runConfigResolved(resolved)

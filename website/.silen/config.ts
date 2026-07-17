@@ -6,6 +6,7 @@ export default defineConfig({
     'A calm, React-first documentation engine powered by Vite, MDX, and AI-ready content.',
   lang: 'en-US',
   base: '/silen/',
+  siteUrl: 'https://aicode-nexus.github.io',
   onBrokenLinks: 'error',
   ai: {
     contract: {

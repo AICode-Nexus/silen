@@ -65,7 +65,7 @@ describe('Site Agent Contract', () => {
         url: '/handbook/.well-known/silen/tasks/summarize-site.md',
       }),
     )
-    expect(api.config.fields).toHaveLength(16)
+    expect(api.config.fields).toHaveLength(17)
     expect(api.cli.commands).toHaveLength(6)
     expect(api.mcp.tools).toHaveLength(10)
     expect(api.exports.length).toBeGreaterThan(100)

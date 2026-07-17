@@ -89,6 +89,41 @@ const baseSchema = z
     }
   })
   .describe('Normalized absolute URL pathname where the site is mounted.')
+const siteUrlError =
+  'siteUrl must be an absolute http:// or https:// origin without credentials, a deployment path, query, or fragment; configure the deployment path with base'
+const siteUrlSchema = z
+  .string()
+  .transform((value, context) => {
+    if (!/^https?:\/\/[^\s/?#]+\/?$/i.test(value)) {
+      context.addIssue({ code: 'custom', message: siteUrlError })
+      return z.NEVER
+    }
+
+    let parsed: URL
+    try {
+      parsed = new URL(value)
+    } catch {
+      context.addIssue({ code: 'custom', message: siteUrlError })
+      return z.NEVER
+    }
+
+    if (
+      (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
+      parsed.username !== '' ||
+      parsed.password !== '' ||
+      parsed.pathname !== '/' ||
+      value.includes('?') ||
+      value.includes('#')
+    ) {
+      context.addIssue({ code: 'custom', message: siteUrlError })
+      return z.NEVER
+    }
+    return parsed.origin
+  })
+  .optional()
+  .describe(
+    'Optional canonical HTTP(S) origin used for absolute discovery metadata.',
+  )
 const outDirSchema = z
   .string()
   .default('.silen/dist')
@@ -252,6 +287,7 @@ export const userConfigSchema = z
     description: descriptionSchema,
     lang: langSchema,
     base: baseSchema,
+    siteUrl: siteUrlSchema,
     outDir: outDirSchema,
     onBrokenLinks: brokenLinksSchema,
     themeConfig: themeConfigSchema,
@@ -277,6 +313,14 @@ export const configApiFieldSources: readonly ConfigApiFieldSource[] = [
     path: 'base',
     schema: baseSchema,
     constraints: ['normalized absolute URL pathname', 'no query or hash'],
+  },
+  {
+    path: 'siteUrl',
+    schema: siteUrlSchema,
+    constraints: [
+      'absolute HTTP(S) origin',
+      'no credentials, deployment path, query, or fragment',
+    ],
   },
   { path: 'outDir', schema: outDirSchema },
   { path: 'onBrokenLinks', schema: brokenLinksSchema },
@@ -325,6 +369,7 @@ export const publicConfigApiCoverage = {
   description: ['description'],
   lang: ['lang'],
   base: ['base'],
+  siteUrl: ['siteUrl'],
   outDir: ['outDir'],
   onBrokenLinks: ['onBrokenLinks'],
   themeConfig: ['themeConfig'],

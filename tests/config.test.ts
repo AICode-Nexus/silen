@@ -45,6 +45,10 @@ describe('resolveConfig', () => {
     return resolveInlineConfig({ base })
   }
 
+  async function resolveInlineSiteUrl(siteUrl: string) {
+    return resolveInlineConfig({ siteUrl })
+  }
+
   it('loads .silen/config.ts and normalizes base', async () => {
     const root = path.resolve('tests/fixtures/configured')
     const config = await resolveConfig(root, 'build')
@@ -72,6 +76,47 @@ describe('resolveConfig', () => {
       root,
       configFile: path.join(root, '.silen/config.ts'),
     })
+  })
+
+  it.each([
+    [
+      'canonical HTTPS origin',
+      'HTTPS://Docs.Example.COM:443/',
+      'https://docs.example.com',
+    ],
+    [
+      'HTTP origin with a custom port',
+      'http://localhost:8080',
+      'http://localhost:8080',
+    ],
+  ])('canonicalizes %s in siteUrl', async (_, siteUrl, expected) => {
+    await expect(resolveInlineSiteUrl(siteUrl)).resolves.toMatchObject({
+      siteUrl: expected,
+    })
+  })
+
+  it('keeps siteUrl absent when it is not configured', async () => {
+    const config = await resolveInlineConfig({ base: '/docs/' })
+
+    expect(Object.hasOwn(config, 'siteUrl')).toBe(false)
+  })
+
+  it.each([
+    ['a relative URL', 'docs.example.com'],
+    ['a scheme without an authority delimiter', 'https:docs.example.com'],
+    ['an empty authority', 'https:///docs.example.com'],
+    ['a non-HTTP protocol', 'ftp://docs.example.com'],
+    ['credentials', 'https://user:secret@docs.example.com'],
+    ['a deployment path', 'https://docs.example.com/project/'],
+    ['a dot deployment path', 'https://docs.example.com/.'],
+    ['a query', 'https://docs.example.com/?preview=true'],
+    ['an empty query', 'https://docs.example.com/?'],
+    ['a fragment', 'https://docs.example.com/#guide'],
+    ['an empty fragment', 'https://docs.example.com/#'],
+  ])('rejects siteUrl with %s actionably', async (_, siteUrl) => {
+    await expect(resolveInlineSiteUrl(siteUrl)).rejects.toThrow(
+      /siteUrl.*absolute http.*https.*origin.*base/i,
+    )
   })
 
   it('can disable only the Agent Contract while retaining AI artifacts', async () => {

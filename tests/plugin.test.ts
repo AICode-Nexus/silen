@@ -142,6 +142,7 @@ describe('virtual modules', () => {
     const config = resolvedConfig(root) as ResolvedConfig &
       Record<string, unknown>
     config.privateToken = 'do-not-bundle'
+    config.siteUrl = 'https://docs.example.com'
     config.analytics = [
       Object.assign(
         { provider: 'google' as const, id: 'G-PUBLIC' },
@@ -223,6 +224,7 @@ describe('virtual modules', () => {
       description: 'Project documentation',
       lang: 'en-US',
       base: '/project/',
+      siteUrl: 'https://docs.example.com',
       analytics: [
         { provider: 'google', id: 'G-PUBLIC' },
         {
@@ -276,6 +278,20 @@ describe('virtual modules', () => {
     expect(source).not.toContain(root)
     expect(source).not.toContain('configFile')
     expect(source).not.toContain('outDir')
+  })
+
+  it('keeps an omitted siteUrl absent from the public virtual config', async () => {
+    const root = path.resolve('tests/fixtures/ssr')
+    const source = createVirtualModules({
+      routes: [],
+      config: resolvedConfig(root),
+      publicConfigOnly: true,
+    }).config
+    const loaded = (await importGeneratedModule(source)) as {
+      default: Record<string, unknown>
+    }
+
+    expect(Object.hasOwn(loaded.default, 'siteUrl')).toBe(false)
   })
 
   it('omits analytics providers from the development browser config', async () => {

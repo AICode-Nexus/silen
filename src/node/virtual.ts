@@ -406,6 +406,7 @@ function serializeConfig(
         description: config.description,
         lang: config.lang,
         base: config.base,
+        ...(config.siteUrl === undefined ? {} : { siteUrl: config.siteUrl }),
         ai: {
           llmsTxt: config.ai.llmsTxt,
           llmsFullTxt: config.ai.llmsFullTxt,

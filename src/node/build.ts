@@ -40,6 +40,7 @@ import {
   createSearchIndex,
   serializeSearchIndex,
 } from './search.js'
+import { createPageSeo, emitSitemap } from './seo.js'
 
 export interface BuildRoute {
   path: string
@@ -561,6 +562,7 @@ async function renderRoutes(
   favicon: ResolvedFavicon,
 ): Promise<void> {
   const pagesByRoute = new Map(pages.map((page) => [page.route, page]))
+  const routes = outputs.map(({ route }) => route)
   for (const output of outputs) {
     const { route } = output
     try {
@@ -577,11 +579,13 @@ async function renderRoutes(
         file: page.file,
         source: page.source,
       })
+      const seo = createPageSeo(config, routes, route.path)
       const document = renderDocument(rendered, {
         ...assets,
         base: config.base,
         favicon,
         head,
+        ...(seo === undefined ? {} : { seo }),
       })
       const destination = path.resolve(outDir, output.relativeFile)
       await mkdir(path.dirname(destination), { recursive: true })
@@ -790,6 +794,7 @@ async function buildSite(root: string): Promise<BuildResult> {
       stagedOutDir,
       favicon,
     )
+    await emitSitemap(config, routes, stagedOutDir)
     await generateAiArtifacts({
       outDir: stagedOutDir,
       site: config,
