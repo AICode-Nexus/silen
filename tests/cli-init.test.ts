@@ -5,7 +5,9 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  rename,
   rm,
+  rmdir,
   symlink,
   writeFile,
 } from 'node:fs/promises'
@@ -249,6 +251,254 @@ describe('silen init', () => {
     )
     await expectMissing(path.join(root, 'index.mdx'))
     await expectNoStagingDirectory(root)
+  })
+
+  it('rejects a root identity swap before promotion without writing outside', async () => {
+    const root = path.join(parent, 'root-swap-site')
+    const displacedRoot = path.join(parent, 'root-swap-owned')
+    const outside = path.join(parent, 'root-swap-outside')
+    await mkdir(outside)
+    await writeFile(path.join(outside, 'keep.txt'), 'outside stays\n')
+    let swaps = 0
+
+    await expect(
+      initializeSite(root, {
+        async beforePromote() {
+          swaps += 1
+          await rename(root, displacedRoot)
+          await symlink(outside, root, 'dir')
+        },
+      }),
+    ).rejects.toThrow(/root.*replaced|parent.*replaced/i)
+
+    expect(swaps).toBe(1)
+    expect(await readFile(path.join(outside, 'keep.txt'), 'utf8')).toBe(
+      'outside stays\n',
+    )
+    await expectMissing(path.join(outside, '.silen/config.ts'))
+    await expectMissing(path.join(outside, 'index.mdx'))
+    await expectNoStagingDirectory(root)
+  })
+
+  it('rejects a .silen identity swap before promotion without writing outside', async () => {
+    const root = path.join(parent, 'silen-swap-site')
+    const displacedSilen = path.join(root, '.silen-owned')
+    const outside = path.join(parent, 'silen-swap-outside')
+    await mkdir(root)
+    await mkdir(outside)
+    await writeFile(path.join(outside, 'keep.txt'), 'outside stays\n')
+    let swaps = 0
+
+    await expect(
+      initializeSite(root, {
+        async beforePromote() {
+          swaps += 1
+          await rename(path.join(root, '.silen'), displacedSilen)
+          await symlink(outside, path.join(root, '.silen'), 'dir')
+        },
+      }),
+    ).rejects.toThrow(/\.silen.*replaced|parent.*replaced/i)
+
+    expect(swaps).toBe(1)
+    expect(await readFile(path.join(outside, 'keep.txt'), 'utf8')).toBe(
+      'outside stays\n',
+    )
+    await expectMissing(path.join(outside, 'config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectNoStagingDirectory(root)
+  })
+
+  it('rolls back its file when the root is swapped during promotion', async () => {
+    const root = path.join(parent, 'root-mid-promotion-site')
+    const displacedRoot = path.join(parent, 'root-mid-promotion-owned')
+    const outside = path.join(parent, 'root-mid-promotion-outside')
+    await mkdir(path.join(outside, '.silen'), { recursive: true })
+    await writeFile(path.join(outside, 'keep.txt'), 'outside stays\n')
+    let promotions = 0
+
+    await expect(
+      initializeSite(root, {
+        async promoteFile(stagedFile: string, targetFile: string) {
+          promotions += 1
+          if (promotions === 1) {
+            await rename(root, displacedRoot)
+            await symlink(outside, root, 'dir')
+          }
+          await link(stagedFile, targetFile)
+        },
+      }),
+    ).rejects.toThrow(/root.*replaced|parent.*replaced/i)
+
+    expect(promotions).toBe(1)
+    expect(await readFile(path.join(outside, 'keep.txt'), 'utf8')).toBe(
+      'outside stays\n',
+    )
+    await expectMissing(path.join(outside, '.silen/config.ts'))
+    await expectMissing(path.join(outside, 'index.mdx'))
+    await expectNoStagingDirectory(root)
+  })
+
+  it('rolls back its file when .silen is swapped during promotion', async () => {
+    const root = path.join(parent, 'silen-mid-promotion-site')
+    const displacedSilen = path.join(root, '.silen-owned')
+    const outside = path.join(parent, 'silen-mid-promotion-outside')
+    await mkdir(root)
+    await mkdir(outside)
+    await writeFile(path.join(outside, 'keep.txt'), 'outside stays\n')
+    let promotions = 0
+
+    await expect(
+      initializeSite(root, {
+        async promoteFile(stagedFile: string, targetFile: string) {
+          promotions += 1
+          if (promotions === 1) {
+            await rename(path.join(root, '.silen'), displacedSilen)
+            await symlink(outside, path.join(root, '.silen'), 'dir')
+          }
+          await link(stagedFile, targetFile)
+        },
+      }),
+    ).rejects.toThrow(/\.silen.*replaced|parent.*replaced/i)
+
+    expect(promotions).toBe(1)
+    expect(await readFile(path.join(outside, 'keep.txt'), 'utf8')).toBe(
+      'outside stays\n',
+    )
+    await expectMissing(path.join(outside, 'config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectNoStagingDirectory(root)
+  })
+
+  it('preserves an unrelated directory replacement after promotion', async () => {
+    const root = path.join(parent, 'directory-replacement-site')
+    const configDirectory = path.join(root, '.silen')
+    const configFile = path.join(configDirectory, 'config.ts')
+    const keepFile = path.join(configDirectory, 'keep.txt')
+    await mkdir(root)
+    let replacements = 0
+
+    await expect(
+      initializeSite(root, {
+        async afterPromote() {
+          replacements += 1
+          await rm(configFile)
+          await rmdir(configDirectory)
+          await mkdir(configDirectory)
+          await writeFile(keepFile, 'replacement stays\n')
+        },
+      }),
+    ).rejects.toThrow(/\.silen.*replaced|parent.*replaced/i)
+
+    expect(replacements).toBe(1)
+    expect(await readFile(keepFile, 'utf8')).toBe('replacement stays\n')
+    await expectMissing(configFile)
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectNoStagingDirectory(root)
+  })
+
+  it('recovers a created hard link when promotion reports a later failure', async () => {
+    const root = path.join(parent, 'bookkeeping-failure-site')
+    await mkdir(root)
+    let promotions = 0
+
+    await expect(
+      initializeSite(root, {
+        async promoteFile(stagedFile: string, targetFile: string) {
+          promotions += 1
+          await link(stagedFile, targetFile)
+          throw new Error('injected post-link failure')
+        },
+      }),
+    ).rejects.toThrow('injected post-link failure')
+
+    expect(promotions).toBe(1)
+    await expectMissing(path.join(root, '.silen/config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    expect(await readdir(root)).toEqual([])
+    await expectNoStagingDirectory(root)
+  })
+
+  it.each(['EXDEV', 'EOPNOTSUPP'])(
+    'falls back to exclusive file creation when hard links fail with %s',
+    async (code) => {
+      const root = path.join(parent, `fallback-${code.toLowerCase()}-site`)
+      let hardLinkAttempts = 0
+
+      const result = await initializeSite(root, {
+        promoteFile() {
+          hardLinkAttempts += 1
+          return Promise.reject(
+            Object.assign(new Error(`injected ${code}`), { code }),
+          )
+        },
+      })
+
+      expect(hardLinkAttempts).toBe(2)
+      expect(result.createdPaths).toEqual([
+        path.join(root, '.silen/config.ts'),
+        path.join(root, 'index.mdx'),
+      ])
+      expect(
+        await readFile(path.join(root, '.silen/config.ts'), 'utf8'),
+      ).toContain("title: 'My Silen Site'")
+      expect(await readFile(path.join(root, 'index.mdx'), 'utf8')).toContain(
+        'Start writing',
+      )
+      await expectNoStagingDirectory(root)
+    },
+  )
+
+  it('rolls back an exclusive fallback target after later failure', async () => {
+    const root = path.join(parent, 'fallback-rollback-site')
+    let hardLinkAttempts = 0
+
+    await expect(
+      initializeSite(root, {
+        promoteFile() {
+          hardLinkAttempts += 1
+          return Promise.reject(
+            Object.assign(new Error('injected EXDEV'), { code: 'EXDEV' }),
+          )
+        },
+        afterPromote() {
+          return Promise.reject(
+            new Error('injected fallback bookkeeping failure'),
+          )
+        },
+      }),
+    ).rejects.toThrow('injected fallback bookkeeping failure')
+
+    expect(hardLinkAttempts).toBe(1)
+    await expectMissing(path.join(root, '.silen/config.ts'))
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectMissing(root)
+    await expectNoStagingDirectory(root)
+  })
+
+  it('creates a new root beneath missing parent components', async () => {
+    const root = path.join(parent, 'nested', 'missing', 'site')
+
+    const result = await runInit(root)
+
+    expect(result.exitCode, result.all).toBe(0)
+    expect(await readdir(root)).toEqual(['.silen', 'index.mdx'])
+    expect(await readdir(path.join(root, '.silen'))).toEqual(['config.ts'])
+    await expectNoStagingDirectory(root)
+  })
+
+  it('removes command-created parent components after staged write failure', async () => {
+    const nestedParent = path.join(parent, 'failed-nested')
+    const root = path.join(nestedParent, 'missing', 'site')
+
+    await expect(
+      initializeSite(root, {
+        writeStagedFile() {
+          return Promise.reject(new Error('injected nested staging failure'))
+        },
+      }),
+    ).rejects.toThrow('injected nested staging failure')
+
+    await expectMissing(nestedParent)
   })
 
   it('does not touch the root when writing staged content fails', async () => {
