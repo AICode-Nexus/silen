@@ -10,6 +10,7 @@ import { hydrateRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ThemeConfig } from '../../src/shared/config'
+import { Link } from '../../src/client'
 import DefaultTheme, {
   CodeBlock,
   DocLayout,
@@ -31,6 +32,7 @@ describe('default content layouts', () => {
     expect(DefaultTheme.layouts.home).toBe(HomeLayout)
     expect(DefaultTheme.NotFound).toBe(NotFound)
     expect(DefaultTheme.components.pre).toBe(CodeBlock)
+    expect(DefaultTheme.components.a).toBe(Link)
   })
 
   it('renders a semantic, base-aware hero and complete feature cards', () => {

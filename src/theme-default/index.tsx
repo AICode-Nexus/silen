@@ -5,6 +5,7 @@ import { CodeBlock } from './components/code-copy.js'
 import { DocLayout, PageLayout } from './components/doc.js'
 import { HomeLayout } from './components/home.js'
 import { NotFound } from './components/not-found.js'
+import { Link } from '../client/router.js'
 
 export { CodeBlock, type CodeBlockProps } from './components/code-copy.js'
 export { DocLayout, PageLayout } from './components/doc.js'
@@ -125,6 +126,7 @@ export const layouts = {
 } as const
 
 export const components = {
+  a: Link,
   pre: CodeBlock,
   CodeBlock,
 }

@@ -1,12 +1,11 @@
 import { lstat, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
-const roots = process.argv.slice(2)
-
-if (roots.length === 0) {
-  console.error('Usage: jiti tooling/assert-no-source-maps.ts <dir> [...]')
-  process.exit(1)
-}
+const configuredRoots = process.argv.slice(2)
+const roots =
+  configuredRoots.length === 0
+    ? ['dist', 'website/.silen/dist']
+    : configuredRoots
 
 const sourceMaps: string[] = []
 

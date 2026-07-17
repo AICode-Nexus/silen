@@ -34,6 +34,42 @@ function page(links: string[]): CompiledPage {
 }
 
 describe('validateInternalLinks', () => {
+  it('accepts root-relative and idempotently base-prefixed documentation links', () => {
+    expect(
+      validateInternalLinks(
+        routes,
+        [
+          page([
+            '/guide/',
+            '/project/guide/',
+            '../about',
+            '#install',
+            '?mode=compact',
+            'mailto:docs@example.com',
+            'tel:+15555550100',
+            '//cdn.example.com/guide',
+            'data:text/plain,guide',
+            'blob:https://example.com/id',
+            'https://example.com/guide/',
+          ]),
+        ],
+        'error',
+        '/project/',
+      ),
+    ).toEqual([])
+  })
+
+  it('reports invalid root-relative links under a non-root base', () => {
+    expect(() =>
+      validateInternalLinks(
+        routes,
+        [page(['/missing-guide/'])],
+        'error',
+        '/project/',
+      ),
+    ).toThrow('Broken internal link /missing-guide/')
+  })
+
   it('normalizes base, relative, query, hash, encoded, and trailing aliases', () => {
     const diagnostics = validateInternalLinks(
       routes,

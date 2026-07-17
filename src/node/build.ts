@@ -25,6 +25,7 @@ import type { AiPage } from '../shared/ai.js'
 import type { ResolvedConfig } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
 import type { SilenPageData } from '../shared/plugin.js'
+import { resolveSiteLink } from '../shared/url.js'
 import { resolveConfig } from './config.js'
 import { ensureBuildFavicon, type ResolvedFavicon } from './favicon.js'
 import { validateInternalLinks } from './links.js'
@@ -597,6 +598,71 @@ async function renderRoutes(
   }
 }
 
+interface NotFoundOutput {
+  relativeFile: string
+  url: string
+}
+
+function notFoundOutputs(config: ResolvedConfig): readonly NotFoundOutput[] {
+  const roots = new Set<string>(['/'])
+  for (const locale of config.themeConfig.locales ?? []) {
+    if (typeof locale.root === 'string') roots.add(locale.root)
+  }
+
+  const outputs = new Map<string, NotFoundOutput>()
+  for (const root of roots) {
+    const absoluteRoot = root.startsWith('/') ? root : `/${root}`
+    const mounted = resolveSiteLink(absoluteRoot, config.base)
+    const pathname = new URL(mounted, 'https://silen.local').pathname
+    const baseWithoutSlash = config.base.slice(0, -1)
+    const route =
+      pathname === baseWithoutSlash || pathname === config.base
+        ? '/'
+        : pathname.startsWith(config.base)
+          ? `/${pathname.slice(config.base.length)}`
+          : undefined
+    if (route === undefined) continue
+
+    const normalizedRoute =
+      route === '/' || route.endsWith('/') ? route : `${route}/`
+    const segments = safeRouteSegments(normalizedRoute)
+    const relativeFile = path.join(...segments, '404.html')
+    outputs.set(relativeFile, {
+      relativeFile,
+      url: `${routeUrl(config.base, normalizedRoute)}__silen_not_found__`,
+    })
+  }
+  return [...outputs.values()]
+}
+
+async function renderNotFoundPages(
+  config: ResolvedConfig,
+  routes: readonly RouteRecord[],
+  renderer: RendererModule,
+  manifest: Manifest,
+  outDir: string,
+  favicon: ResolvedFavicon,
+): Promise<void> {
+  const assetRoute = routes.find((route) => route.path === '/') ?? routes[0]
+  if (!assetRoute) return
+  const assets = await manifestAssets(manifest, config.root, assetRoute)
+
+  for (const output of notFoundOutputs(config)) {
+    const rendered = await renderer.render(output.url)
+    if (rendered.status !== 404) {
+      throw new Error(`404 route rendered status ${rendered.status}`)
+    }
+    const document = renderDocument(rendered, {
+      ...assets,
+      base: config.base,
+      favicon,
+    })
+    const destination = path.resolve(outDir, output.relativeFile)
+    await mkdir(path.dirname(destination), { recursive: true })
+    await writeFile(destination, document, 'utf8')
+  }
+}
+
 async function emitSearchIndex(
   config: ResolvedConfig,
   pages: readonly CompiledPage[],
@@ -704,6 +770,14 @@ async function buildSite(root: string): Promise<BuildResult> {
       routeOutputs,
       pages,
       runner,
+      renderer,
+      manifest,
+      stagedOutDir,
+      favicon,
+    )
+    await renderNotFoundPages(
+      config,
+      routes,
       renderer,
       manifest,
       stagedOutDir,

@@ -103,6 +103,28 @@ describe('Link', () => {
     expect(router.go).toHaveBeenCalledWith(expected)
   })
 
+  it('mounts an authored root-relative documentation link inside the configured base', () => {
+    const router = createRouter()
+    renderLink(router, { href: '/guide/' })
+    const link = screen.getByRole('link', { name: 'Destination' })
+
+    expect(link.getAttribute('href')).toBe('/project/guide/')
+    fireEvent.focus(link)
+    fireEvent.click(link)
+
+    expect(router.prefetch).toHaveBeenCalledWith('/project/guide/')
+    expect(router.go).toHaveBeenCalledWith('/project/guide/')
+  })
+
+  it('keeps an already mounted documentation link idempotent', () => {
+    const router = createRouter()
+    renderLink(router, { href: '/project/guide/' })
+
+    expect(
+      screen.getByRole('link', { name: 'Destination' }).getAttribute('href'),
+    ).toBe('/project/guide/')
+  })
+
   it('matches a human-readable Unicode and space href against a canonical encoded base', () => {
     const base = '/%E6%96%87%E6%A1%A3%20docs/'
     window.history.replaceState(null, '', base)
@@ -165,8 +187,12 @@ describe('Link', () => {
 
   it.each([
     ['cross-origin HTTPS', 'https://example.com/project/guide', {}],
+    [
+      'same-origin complete URL outside the configured base',
+      `${window.location.origin}/other/guide`,
+      {},
+    ],
     ['same-origin protocol relative', '//localhost:3000/project/guide', {}],
-    ['outside the configured base', '/other/guide', {}],
     ['mailto', 'mailto:docs@example.com', {}],
     ['telephone', 'tel:+15555550100', {}],
     ['JavaScript', 'javascript:alert(1)', {}],

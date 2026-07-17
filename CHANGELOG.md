@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-07-17
+
+### Fixed
+
+- Kept authored documentation links inside the configured base across default
+  theme rendering, MDX content, and broken-link validation.
+- Added themed default and locale-specific 404 output plus base- and
+  locale-aware preview fallback responses.
+- Made clean-checkout tests regenerate the Agent Contract, aligned the website
+  with the exact Node.js engine contract, and repaired base-escaping Guide/AI
+  links.
+- Preserved the no-source-map release guard for package and website artifacts.
+
 ## [0.1.3] - 2026-07-15
 
 ### Documentation
@@ -104,7 +117,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Published Silen under the `@aicode-nexus` organization scope.
 
-[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.1.3...HEAD
+[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/AICode-Nexus/silen/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/AICode-Nexus/silen/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/AICode-Nexus/silen/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/AICode-Nexus/silen/compare/v0.1.0...v0.1.1
