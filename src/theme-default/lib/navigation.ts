@@ -1,6 +1,10 @@
 import type { ThemeLocaleItem } from '../../shared/config.js'
 import { resolveCurrentLocale } from '../../shared/config.js'
-import { resolveSiteLink, stripSiteBase } from '../../shared/url.js'
+import {
+  pathnameIdentity,
+  resolveSiteLink,
+  stripSiteBase,
+} from '../../shared/url.js'
 
 function pathname(value: string): string | undefined {
   try {
@@ -52,8 +56,13 @@ export function isActiveThemeLink(
   const target = normalizedPath(resolveThemeLink(link, base))
   const current = normalizedPath(currentRoute)
   if (target === undefined || current === undefined) return false
-  if (target === current) return true
-  return normalizedPath(resolveThemeLink(currentRoute, base)) === target
+  const targetIdentity = pathnameIdentity(target)
+  if (targetIdentity === pathnameIdentity(current)) return true
+  const resolvedCurrent = normalizedPath(resolveThemeLink(currentRoute, base))
+  return (
+    resolvedCurrent !== undefined &&
+    pathnameIdentity(resolvedCurrent) === targetIdentity
+  )
 }
 
 export interface ResolvedThemeLocaleLink {
@@ -74,8 +83,15 @@ function stripBasePath(path: string, base: string): string {
 
 function localeRelativePath(path: string, root: string): string {
   if (root === '/') return path === '/' ? '' : path.slice(1)
-  if (path === root || path === root.slice(0, -1)) return ''
-  if (path.startsWith(root)) return path.slice(root.length)
+  const pathIdentity = pathnameIdentity(path)
+  const rootIdentity = pathnameIdentity(root)
+  if (
+    pathIdentity === rootIdentity ||
+    pathIdentity === rootIdentity.slice(0, -1)
+  ) {
+    return ''
+  }
+  if (pathIdentity.startsWith(rootIdentity)) return path.slice(root.length)
   return path.startsWith('/') ? path.slice(1) : path
 }
 
@@ -107,7 +123,9 @@ export function resolveThemeLocaleLinks(
       return {
         locale,
         href: resolveThemeLink(target, base),
-        active: root === currentRoot && currentLocale.locale === locale,
+        active:
+          pathnameIdentity(root) === pathnameIdentity(currentRoot) &&
+          currentLocale.locale === locale,
       }
     }
 

@@ -17,6 +17,7 @@ import type { ResolvedConfig, ThemeLocaleItem } from '../shared/config.js'
 import type { SilenPageData } from '../shared/plugin.js'
 import {
   isSitePathWithinBase,
+  pathnameIdentity,
   resolveSiteLink,
   stripSiteBase,
 } from '../shared/url.js'
@@ -507,8 +508,12 @@ async function findPreviewNotFound(
       if (resolvedRoot === undefined) return undefined
       const mounted = new URL(resolvedRoot, 'https://silen.local').pathname
       const normalized = mounted.endsWith('/') ? mounted : `${mounted}/`
-      const withoutSlash = normalized.slice(0, -1)
-      if (pathname !== withoutSlash && !pathname.startsWith(normalized)) {
+      const pathnameKey = pathnameIdentity(pathname)
+      const normalizedKey = pathnameIdentity(normalized)
+      if (
+        pathnameKey !== normalizedKey.slice(0, -1) &&
+        !pathnameKey.startsWith(normalizedKey)
+      ) {
         return undefined
       }
       const relative = pathRelativeToBase(normalized, base)
