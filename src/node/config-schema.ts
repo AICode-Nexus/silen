@@ -91,10 +91,36 @@ const baseSchema = z
   .describe('Normalized absolute URL pathname where the site is mounted.')
 const siteUrlError =
   'siteUrl must be an absolute http:// or https:// origin without credentials, a deployment path, query, or fragment; configure the deployment path with base'
+
+function isAuthoredSiteOrigin(value: string): boolean {
+  const authority = /^https?:\/\/([^\s/?#]+)\/?$/i.exec(value)?.[1]
+  if (
+    authority === undefined ||
+    authority.includes('@') ||
+    authority.includes('\\')
+  ) {
+    return false
+  }
+
+  if (authority.startsWith('[')) {
+    const closingBracket = authority.indexOf(']')
+    if (closingBracket === -1) return false
+    const port = authority.slice(closingBracket + 1)
+    return port === '' || /^:\d+$/.test(port)
+  }
+
+  const portDelimiter = authority.lastIndexOf(':')
+  if (portDelimiter === -1) return true
+  return (
+    authority.indexOf(':') === portDelimiter &&
+    /^\d+$/.test(authority.slice(portDelimiter + 1))
+  )
+}
+
 const siteUrlSchema = z
   .string()
   .transform((value, context) => {
-    if (!/^https?:\/\/[^\s/?#]+\/?$/i.test(value)) {
+    if (!isAuthoredSiteOrigin(value)) {
       context.addIssue({ code: 'custom', message: siteUrlError })
       return z.NEVER
     }

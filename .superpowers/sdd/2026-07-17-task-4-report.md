@@ -248,3 +248,71 @@ Tests and fixtures:
 ## Concerns
 
 No unresolved implementation concerns. The official website does not currently provide a source `public/robots.txt`; passthrough compatibility is therefore verified with the dedicated SEO fixture rather than an official-site artifact.
+
+## Review fixes: strict authored origins and canonical reservation
+
+Two Important review findings were addressed in a separate TDD cycle.
+
+### RED evidence
+
+Tests were added before implementation for the exact malformed-authority cases, valid IPv4/IPv6/port regressions, case-insensitive plugin canonical detection, multi-token `rel`, unrelated plugin links, and omitted-`siteUrl` compatibility.
+
+```sh
+pnpm vitest run tests/config.test.ts tests/render.test.ts tests/plugin.test.ts tests/plugin-build.test.ts tests/seo.test.ts --maxWorkers=1 --no-file-parallelism
+```
+
+```text
+Test Files  3 failed | 2 passed (5)
+Tests       7 failed | 59 passed (66)
+```
+
+The seven intended failures were:
+
+- `https://@example.com` accepted;
+- `https://:@example.com` accepted;
+- `https://example.com\` accepted;
+- `https://example.com:` accepted;
+- `https://example.com:/` accepted;
+- direct rendering retained lower/mixed-case, multi-token plugin canonicals alongside core canonical;
+- production SEO/plugin integration retained plugin canonicals alongside core canonical.
+
+### GREEN evidence
+
+The validator now inspects the authored authority before `new URL()` canonicalization. It rejects any userinfo delimiter, backslash, unbracketed multi-colon authority, empty port, or nonnumeric port while retaining uppercase schemes, default/nondefault ports, localhost, IPv4, bracketed IPv6, and an optional single root slash.
+
+The renderer now reserves the canonical link relation only while core SEO is present. Plugin tag names, attribute names, and whitespace-separated `rel` tokens are matched case-insensitively. Unrelated plugin links and head entries remain, and all plugin canonicals remain unchanged when core SEO is omitted.
+
+Focused GREEN:
+
+```text
+Test Files  5 passed (5)
+Tests       66 passed (66)
+Duration    2.70s
+```
+
+Final full suite:
+
+```sh
+pnpm test
+```
+
+```text
+Test Files  63 passed (63)
+Tests       546 passed (546)
+Duration    60.15s
+```
+
+Final static and artifact gates:
+
+- `pnpm typecheck`: passed.
+- `pnpm lint`: passed.
+- `pnpm format:check`: passed after formatting `src/node/render.ts`.
+- `pnpm site:build`: `Silen built 8 routes to /Users/admin/Documents/reactpress/website/.silen/dist`.
+- Official English and Chinese guide pages each contain exactly one correct core canonical.
+- Both pages retain `en-US`, `zh-CN`, `x-default` ordering and localized social titles.
+- Official sitemap contains 8 unique, sorted content URLs and no 404 URL.
+- Official generated 404 pages contain no canonical, alternate, OG, or Twitter metadata.
+- `pnpm check:no-maps`: passed; official output contains zero `.map` files.
+- `git diff --check`: passed.
+
+Review-fix concerns: none unresolved.

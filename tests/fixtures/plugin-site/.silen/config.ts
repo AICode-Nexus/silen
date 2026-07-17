@@ -62,6 +62,13 @@ const fixturePlugin = definePlugin(
             tag: 'meta',
             attributes: { name: 'plugin-fixture', content: options.label },
           },
+          {
+            tag: 'LiNk',
+            attributes: {
+              ReL: 'alternate CANONICAL',
+              href: 'https://plugin.example.com/preserved-canonical',
+            },
+          },
         ]
       },
       async buildEnd({ outDir, routes, pages }) {

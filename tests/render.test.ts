@@ -13,6 +13,17 @@ function hydrationData(document: string): JsonObject {
   return JSON.parse(json) as JsonObject
 }
 
+function canonicalLinkTags(document: string): string[] {
+  return [...document.matchAll(/<link\b[^>]*>/gi)]
+    .map(([tag]) => tag)
+    .filter((tag) => {
+      const rel = /\brel="([^"]*)"/i.exec(tag)?.[1]
+      return rel
+        ?.split(/\s+/)
+        .some((token) => token.toLowerCase() === 'canonical')
+    })
+}
+
 describe('renderDocument', () => {
   it('escapes metadata and serializes inline data safely and prototype-safely', () => {
     const frontmatter: Record<string, unknown> = {
@@ -172,5 +183,103 @@ describe('renderDocument', () => {
     expect(document).toContain('<\\/script><script>unsafe()<\\/script>')
     expect(document).not.toContain('id=disabled')
     expect(document).not.toContain('</script><script>unsafe()')
+  })
+
+  it('reserves canonical links for core SEO while preserving unrelated plugin head entries', () => {
+    const document = renderDocument(
+      {
+        appHtml: '<main>SEO page</main>',
+        status: 200,
+        title: 'SEO page',
+        description: 'SEO description',
+        publicData: {
+          siteTitle: 'Fixture Docs',
+          lang: 'en-US',
+          base: '/project/',
+          route: '/guide/',
+        },
+      },
+      {
+        base: '/project/',
+        clientEntry: 'assets/client.js',
+        seo: {
+          canonicalUrl: 'https://docs.example.com/project/guide/',
+          alternates: [],
+        },
+        head: [
+          {
+            tag: 'link',
+            attributes: {
+              rel: 'canonical',
+              href: 'https://plugin.example.com/lowercase',
+            },
+          },
+          {
+            tag: 'LiNk',
+            attributes: {
+              ReL: 'stylesheet CANONICAL alternate',
+              href: 'https://plugin.example.com/multi-token',
+            },
+          },
+          {
+            tag: 'LINK',
+            attributes: { REL: 'stylesheet', href: '/plugin.css' },
+          },
+          {
+            tag: 'link',
+            attributes: {
+              rel: 'alternate canonicalish',
+              href: '/plugin-feed.xml',
+            },
+          },
+          {
+            tag: 'meta',
+            attributes: { name: 'canonical', content: 'unrelated meta' },
+          },
+        ],
+      },
+    )
+
+    expect(canonicalLinkTags(document)).toEqual([
+      '<link rel="canonical" href="https://docs.example.com/project/guide/">',
+    ])
+    expect(document).not.toContain('plugin.example.com/lowercase')
+    expect(document).not.toContain('plugin.example.com/multi-token')
+    expect(document).toContain('href="/plugin.css"')
+    expect(document).toContain('href="/plugin-feed.xml"')
+    expect(document).toContain('content="unrelated meta" name="canonical"')
+  })
+
+  it('preserves plugin canonical links when core SEO is omitted', () => {
+    const document = renderDocument(
+      {
+        appHtml: '<main>Plugin canonical page</main>',
+        status: 200,
+        title: 'Plugin canonical page',
+        description: '',
+        publicData: {
+          siteTitle: 'Fixture Docs',
+          lang: 'en-US',
+          base: '/',
+          route: '/',
+        },
+      },
+      {
+        base: '/',
+        clientEntry: 'assets/client.js',
+        head: [
+          {
+            tag: 'LiNk',
+            attributes: {
+              ReL: 'alternate CANONICAL',
+              href: 'https://plugin.example.com/preserved',
+            },
+          },
+        ],
+      },
+    )
+
+    expect(canonicalLinkTags(document)).toHaveLength(1)
+    expect(document).toContain('https://plugin.example.com/preserved')
   })
 })

@@ -100,6 +100,16 @@ function renderHeadEntry(entry: SilenHeadEntry): string {
   return `${opening}${content}</${entry.tag}>`
 }
 
+function isCanonicalLink(entry: SilenHeadEntry): boolean {
+  if (entry.tag.toLowerCase() !== 'link') return false
+  return Object.entries(entry.attributes ?? {}).some(
+    ([name, value]) =>
+      name.toLowerCase() === 'rel' &&
+      typeof value === 'string' &&
+      value.split(/\s+/).some((token) => token.toLowerCase() === 'canonical'),
+  )
+}
+
 function renderSeo(page: RenderedPage, seo: PageSeo | undefined): string[] {
   if (seo === undefined) return []
 
@@ -157,7 +167,9 @@ export function renderDocument(
       ]
     : []
   const analytics = renderAnalyticsHead(page.publicData.analytics ?? [])
-  const pluginHead = (assets.head ?? []).map(renderHeadEntry)
+  const pluginHead = (assets.head ?? [])
+    .filter((entry) => assets.seo === undefined || !isCanonicalLink(entry))
+    .map(renderHeadEntry)
   const seo = renderSeo(page, assets.seo)
 
   return [

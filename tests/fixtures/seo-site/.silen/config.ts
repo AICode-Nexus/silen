@@ -17,6 +17,27 @@ export default defineConfig({
             content: 'still-present',
           },
         },
+        {
+          tag: 'link',
+          attributes: {
+            rel: 'canonical',
+            href: 'https://plugin.example.com/wrong-canonical',
+          },
+        },
+        {
+          tag: 'LiNk',
+          attributes: {
+            ReL: 'alternate CANONICAL',
+            href: 'https://plugin.example.com/wrong-mixed-canonical',
+          },
+        },
+        {
+          tag: 'link',
+          attributes: {
+            rel: 'stylesheet',
+            href: 'https://plugin.example.com/preserved.css',
+          },
+        },
       ],
     }),
   ],

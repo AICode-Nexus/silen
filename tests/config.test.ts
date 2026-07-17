@@ -89,6 +89,26 @@ describe('resolveConfig', () => {
       'http://localhost:8080',
       'http://localhost:8080',
     ],
+    [
+      'IPv4 origin with a custom port and root slash',
+      'https://127.0.0.1:8443/',
+      'https://127.0.0.1:8443',
+    ],
+    [
+      'bracketed IPv6 origin with a custom port',
+      'http://[::1]:8080/',
+      'http://[::1]:8080',
+    ],
+    [
+      'bracketed IPv6 origin without a port',
+      'https://[2001:db8::1]/',
+      'https://[2001:db8::1]',
+    ],
+    [
+      'HTTP origin with its default port',
+      'http://example.com:80/',
+      'http://example.com',
+    ],
   ])('canonicalizes %s in siteUrl', async (_, siteUrl, expected) => {
     await expect(resolveInlineSiteUrl(siteUrl)).resolves.toMatchObject({
       siteUrl: expected,
@@ -107,6 +127,11 @@ describe('resolveConfig', () => {
     ['an empty authority', 'https:///docs.example.com'],
     ['a non-HTTP protocol', 'ftp://docs.example.com'],
     ['credentials', 'https://user:secret@docs.example.com'],
+    ['an empty userinfo delimiter', 'https://@example.com'],
+    ['empty userinfo with a password delimiter', 'https://:@example.com'],
+    ['a backslash root', 'https://example.com\\'],
+    ['an empty port delimiter', 'https://example.com:'],
+    ['an empty port delimiter before root', 'https://example.com:/'],
     ['a deployment path', 'https://docs.example.com/project/'],
     ['a dot deployment path', 'https://docs.example.com/.'],
     ['a query', 'https://docs.example.com/?preview=true'],

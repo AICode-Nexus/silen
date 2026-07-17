@@ -33,6 +33,7 @@ describe('plugin lifecycle build integration', () => {
     expect(html).toContain(
       '<meta content="community-ready" name="plugin-fixture">',
     )
+    expect(html).toContain('https://plugin.example.com/preserved-canonical')
     expect(html).toContain('fixtureLabel')
     expect(viteAsset).toBe('community-ready')
     expect(JSON.parse(buildEnd)).toEqual({

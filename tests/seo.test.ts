@@ -58,6 +58,12 @@ describe('configured absolute SEO artifacts', () => {
     expect(englishGuide).toContain(
       '<meta content="still-present" name="seo-fixture-plugin">',
     )
+    expect(englishGuide.match(/<link rel="canonical"/g)).toHaveLength(1)
+    expect(englishGuide).not.toContain('plugin.example.com/wrong-canonical')
+    expect(englishGuide).not.toContain(
+      'plugin.example.com/wrong-mixed-canonical',
+    )
+    expect(englishGuide).toContain('plugin.example.com/preserved.css')
   })
 
   it('emits only compiled locale counterparts in deterministic locale order', () => {
