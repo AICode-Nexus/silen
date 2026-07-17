@@ -241,13 +241,15 @@ describe('renderDocument', () => {
     )
 
     expect(canonicalLinkTags(document)).toEqual([
-      '<link rel="canonical" href="https://docs.example.com/project/guide/">',
+      '<link rel="canonical" href="https://docs.example.com/project/guide/" data-silen-seo>',
     ])
+    expect(document.match(/data-silen-seo/g)).toHaveLength(8)
     expect(document).not.toContain('plugin.example.com/lowercase')
     expect(document).not.toContain('plugin.example.com/multi-token')
     expect(document).toContain('href="/plugin.css"')
     expect(document).toContain('href="/plugin-feed.xml"')
     expect(document).toContain('content="unrelated meta" name="canonical"')
+    expect(document).not.toMatch(/href="\/plugin\.css"[^>]*data-silen-seo/)
   })
 
   it('preserves plugin canonical links when core SEO is omitted', () => {

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import {
   link,
   lstat,
@@ -7,7 +8,6 @@ import {
   readFile,
   readdir,
   realpath,
-  rm,
   rmdir,
   unlink,
   writeFile,
@@ -127,6 +127,10 @@ interface DirectoryIdentity extends FileIdentity {
 
 interface PromotedFile extends FileIdentity {
   readonly target: string
+  mode: number
+  size: number
+  mtimeMs: number
+  readonly contentHash: string
 }
 
 interface StagedFile extends FileIdentity {
@@ -176,6 +180,18 @@ function identityOf(stat: Stats): FileIdentity {
 
 function sameIdentity(stat: Stats, identity: FileIdentity): boolean {
   return stat.dev === identity.device && stat.ino === identity.inode
+}
+
+function hashContents(contents: Uint8Array): string {
+  return createHash('sha256').update(contents).digest('hex')
+}
+
+function samePromotedMetadata(stat: Stats, promoted: PromotedFile): boolean {
+  return (
+    stat.mode === promoted.mode &&
+    stat.size === promoted.size &&
+    stat.mtimeMs === promoted.mtimeMs
+  )
 }
 
 function replacedPath(label: string, target: string, cause?: unknown): Error {
@@ -347,11 +363,39 @@ async function rollback(
       failures.push(rollbackIdentityError('promoted file', file.target))
       continue
     }
+
+    let contents: Buffer
+    let checked: Stats
+    try {
+      contents = await readFile(file.target)
+      checked = await lstat(file.target)
+    } catch (error) {
+      if (errorCode(error) !== 'ENOENT') {
+        failures.push(
+          rollbackActionError('verify promoted file', file.target, error),
+        )
+      }
+      continue
+    }
+    if (
+      checked.isSymbolicLink() ||
+      !checked.isFile() ||
+      !sameIdentity(checked, file) ||
+      !samePromotedMetadata(current, file) ||
+      !samePromotedMetadata(checked, file) ||
+      hashContents(contents) !== file.contentHash
+    ) {
+      failures.push(rollbackContentError(file.target))
+      continue
+    }
     try {
       if (hooks.removeFile) {
         await hooks.removeFile(file.target)
       } else {
-        await rm(file.target, { force: true })
+        // Node exposes no portable unlinkat API. The read/stat verification is
+        // therefore immediate; the remaining pathname race can unlink at most
+        // this one non-recursive leaf and cannot traverse a replacement tree.
+        await unlink(file.target)
       }
     } catch (error) {
       if (errorCode(error) !== 'ENOENT') {
@@ -429,6 +473,12 @@ function rollbackActionError(
 function rollbackIdentityError(kind: string, target: string): Error {
   return new Error(
     `Silen init rollback identity mismatch for ${kind} ${target}; replacement preserved`,
+  )
+}
+
+function rollbackContentError(target: string): Error {
+  return new Error(
+    `Silen init rollback content or metadata mismatch for promoted file ${target}; edited file preserved`,
   )
 }
 
@@ -704,21 +754,64 @@ async function validatePromotedFile(
 }
 
 async function promoteExclusively(
-  stagedFile: string,
+  contents: Buffer,
   targetFile: string,
+  contentHash: string,
   promotedFiles: PromotedFile[],
 ): Promise<PromotedFile> {
-  const contents = await readFile(stagedFile)
   const handle = await open(targetFile, 'wx')
   try {
     const created = await handle.stat()
-    const promoted = { target: targetFile, ...identityOf(created) }
+    const promoted: PromotedFile = {
+      target: targetFile,
+      ...identityOf(created),
+      mode: created.mode,
+      size: contents.length,
+      mtimeMs: created.mtimeMs,
+      contentHash,
+    }
     promotedFiles.push(promoted)
     await handle.writeFile(contents)
     await handle.sync()
+    const completed = await handle.stat()
+    promoted.mode = completed.mode
+    promoted.size = completed.size
+    promoted.mtimeMs = completed.mtimeMs
     return promoted
   } finally {
     await handle.close()
+  }
+}
+
+async function snapshotStagedPromotion(
+  stagedFile: string,
+  targetFile: string,
+): Promise<{ readonly contents: Buffer; readonly promoted: PromotedFile }> {
+  const before = await lstat(stagedFile)
+  const contents = await readFile(stagedFile)
+  const after = await lstat(stagedFile)
+  if (
+    before.isSymbolicLink() ||
+    !before.isFile() ||
+    after.isSymbolicLink() ||
+    !after.isFile() ||
+    !sameIdentity(after, identityOf(before)) ||
+    before.mode !== after.mode ||
+    before.size !== after.size ||
+    before.mtimeMs !== after.mtimeMs
+  ) {
+    throw replacedPath('staged file', stagedFile)
+  }
+  return {
+    contents,
+    promoted: {
+      target: targetFile,
+      ...identityOf(after),
+      mode: after.mode,
+      size: after.size,
+      mtimeMs: after.mtimeMs,
+      contentHash: hashContents(contents),
+    },
   }
 }
 
@@ -728,15 +821,20 @@ async function promoteStagedFile(
   options: InitSiteOptions,
   promotedFiles: PromotedFile[],
 ): Promise<PromotedFile> {
-  const staged = await lstat(stagedFile)
-  const expected = { target: targetFile, ...identityOf(staged) }
+  const snapshot = await snapshotStagedPromotion(stagedFile, targetFile)
+  const expected = snapshot.promoted
   try {
     await (options.promoteFile ?? link)(stagedFile, targetFile)
     promotedFiles.push(expected)
     return expected
   } catch (error) {
     if (unsupportedHardLinkCodes.has(errorCode(error) ?? '')) {
-      return promoteExclusively(stagedFile, targetFile, promotedFiles)
+      return promoteExclusively(
+        snapshot.contents,
+        targetFile,
+        snapshot.promoted.contentHash,
+        promotedFiles,
+      )
     }
     if (errorCode(error) !== 'EEXIST') {
       const current = await optionalStat(targetFile)

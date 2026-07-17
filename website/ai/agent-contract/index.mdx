@@ -28,8 +28,9 @@ their definitions.
 Each enabled production build publishes a site-specific entry point at
 `/.well-known/silen/manifest.json`, resolved under `base`. This official site’s
 live contract is [the Silen manifest](/silen/.well-known/silen/manifest.json).
-It describes the deployed origin, base, language, resources, tasks, and public
-project guidance.
+The manifest schema has no deployment origin field. It describes the base,
+language, resources, tasks, and public project guidance. Resource and task URLs
+remain base-relative.
 
 ```ts
 ai: {

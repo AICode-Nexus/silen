@@ -40,7 +40,7 @@ import {
   createSearchIndex,
   serializeSearchIndex,
 } from './search.js'
-import { createPageSeo, emitSitemap } from './seo.js'
+import { createPageSeoResolver, emitSitemap } from './seo.js'
 
 export interface BuildRoute {
   path: string
@@ -563,6 +563,7 @@ async function renderRoutes(
 ): Promise<void> {
   const pagesByRoute = new Map(pages.map((page) => [page.route, page]))
   const routes = outputs.map(({ route }) => route)
+  const seoResolver = createPageSeoResolver(config, routes)
   for (const output of outputs) {
     const { route } = output
     try {
@@ -579,7 +580,7 @@ async function renderRoutes(
         file: page.file,
         source: page.source,
       })
-      const seo = createPageSeo(config, routes, route.path)
+      const seo = seoResolver.resolve(route.path)
       const document = renderDocument(rendered, {
         ...assets,
         base: config.base,

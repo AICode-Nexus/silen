@@ -40,7 +40,7 @@ export default defineConfig({
 })
 ```
 
-不要在 `siteUrl` 中重复 `/handbook/`。构建会组合 origin 与 base，用于 canonical、站点地图、语言替代、Markdown URL 与站点 Agent Contract。
+不要在 `siteUrl` 中重复 `/handbook/`。构建会组合 origin 与 base，用于 canonical、`hreflang` 与 `x-default` 语言替代、站点地图和基础 Open Graph/Twitter 元数据。Markdown 与 Agent Contract URL 仍是 base 相对路径。
 
 ## 上线前检查
 

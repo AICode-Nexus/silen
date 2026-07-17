@@ -2,6 +2,13 @@ import type { RenderedPage } from '../client/app.js'
 import { appearanceScript } from '../theme-default/appearance-script.js'
 import { renderAnalyticsHead } from './analytics.js'
 import type { SilenHeadEntry } from '../shared/plugin.js'
+import {
+  coreSeoAttribute,
+  createSeoHeadEntries,
+  type PageSeo,
+} from '../shared/seo.js'
+
+export type { PageSeo, SeoAlternate } from '../shared/seo.js'
 
 export interface AssetPreload {
   as: 'audio' | 'font' | 'image' | 'video'
@@ -20,16 +27,6 @@ export interface RenderAssets {
   assetPreloads?: readonly AssetPreload[]
   head?: readonly SilenHeadEntry[]
   seo?: PageSeo
-}
-
-export interface SeoAlternate {
-  lang: string
-  url: string
-}
-
-export interface PageSeo {
-  canonicalUrl: string
-  alternates: readonly SeoAlternate[]
 }
 
 const htmlEscapes: Readonly<Record<string, string>> = {
@@ -111,34 +108,12 @@ function isCanonicalLink(entry: SilenHeadEntry): boolean {
 }
 
 function renderSeo(page: RenderedPage, seo: PageSeo | undefined): string[] {
-  if (seo === undefined) return []
-
-  return [
-    `<link rel="canonical" href="${escapeHtml(seo.canonicalUrl)}">`,
-    ...seo.alternates.map(
-      ({ lang, url }) =>
-        `<link rel="alternate" hreflang="${escapeHtml(lang)}" href="${escapeHtml(url)}">`,
-    ),
-    '<meta property="og:type" content="website">',
-    ...(page.title
-      ? [`<meta property="og:title" content="${escapeHtml(page.title)}">`]
-      : []),
-    ...(page.description
-      ? [
-          `<meta property="og:description" content="${escapeHtml(page.description)}">`,
-        ]
-      : []),
-    `<meta property="og:url" content="${escapeHtml(seo.canonicalUrl)}">`,
-    '<meta name="twitter:card" content="summary">',
-    ...(page.title
-      ? [`<meta name="twitter:title" content="${escapeHtml(page.title)}">`]
-      : []),
-    ...(page.description
-      ? [
-          `<meta name="twitter:description" content="${escapeHtml(page.description)}">`,
-        ]
-      : []),
-  ]
+  return createSeoHeadEntries(page, seo).map(({ tag, attributes }) => {
+    const renderedAttributes = Object.entries(attributes).map(
+      ([name, value]) => `${name}="${escapeHtml(value)}"`,
+    )
+    return `<${tag} ${renderedAttributes.join(' ')} ${coreSeoAttribute}>`
+  })
 }
 
 export function renderDocument(

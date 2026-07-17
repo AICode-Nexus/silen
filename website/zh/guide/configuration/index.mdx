@@ -23,7 +23,7 @@ export default defineConfig({
 
 ## URL 与元数据
 
-`base` 是站点挂载位置的规范绝对路径；域名根路径使用 `/`，子路径可用 `/handbook/`。`siteUrl` 只能写 HTTP(S) 源，部署路径写在 `base` 中。两者共同生成 canonical、语言替代链接、站点地图与公开 Agent Contract URL。`lang` 使用 BCP 47 语言标签。
+`base` 是站点挂载位置的规范绝对路径；域名根路径使用 `/`，子路径可用 `/handbook/`。`siteUrl` 只能写 HTTP(S) 源，部署路径写在 `base` 中。两者共同生成 canonical、`hreflang` 与 `x-default` 语言替代、站点地图和基础 Open Graph/Twitter 元数据。Markdown 与 Agent Contract URL 仍是 base 相对路径。`lang` 使用 BCP 47 语言标签。
 
 ## 导航与多语言
 

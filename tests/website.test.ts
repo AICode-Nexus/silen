@@ -35,10 +35,10 @@ describe('example website homepage', () => {
     ])
 
     expect(english).toContain(
-      '<link rel="canonical" href="https://aicode-nexus.github.io/silen/guide/">',
+      '<link rel="canonical" href="https://aicode-nexus.github.io/silen/guide/" data-silen-seo>',
     )
     expect(chinese).toContain(
-      '<link rel="canonical" href="https://aicode-nexus.github.io/silen/zh/guide/">',
+      '<link rel="canonical" href="https://aicode-nexus.github.io/silen/zh/guide/" data-silen-seo>',
     )
     for (const html of [english, chinese]) {
       expect(html).toContain('hreflang="en-US"')

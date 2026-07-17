@@ -255,6 +255,7 @@ async function transformDevelopmentDocument(
       clientEntry: viteFileUrl(clientEntrySource()),
       favicon,
       head,
+      ...(page.seo === undefined ? {} : { seo: page.seo }),
     },
   )
   const transformed = await vite.transformIndexHtml(requestUrl, shell)

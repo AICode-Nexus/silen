@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { UserConfig } from '../shared/config.js'
+import { normalizeLocaleRoot, type UserConfig } from '../shared/config.js'
 import { hasExecutableUrlScheme } from '../shared/url.js'
 
 function invalidBase(reason: string): Error {
@@ -160,6 +160,34 @@ const brokenLinksSchema = z
   .describe('Policy applied when a documentation link cannot be resolved.')
 const themeConfigSchema = z
   .record(z.string(), z.json())
+  .superRefine((themeConfig, context) => {
+    const locales = themeConfig.locales
+    if (!Array.isArray(locales)) return
+
+    const owners = new Map<string, number>()
+    for (const [index, locale] of locales.entries()) {
+      if (
+        typeof locale !== 'object' ||
+        locale === null ||
+        Array.isArray(locale) ||
+        !('root' in locale) ||
+        typeof locale.root !== 'string'
+      ) {
+        continue
+      }
+      const root = normalizeLocaleRoot(locale.root)
+      const previous = owners.get(root)
+      if (previous !== undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['locales', index, 'root'],
+          message: `duplicate normalized locale root ${root}; it is already used by locales.${previous}.root`,
+        })
+        continue
+      }
+      owners.set(root, index)
+    }
+  })
   .default({})
   .describe('JSON-compatible configuration consumed by the active theme.')
 

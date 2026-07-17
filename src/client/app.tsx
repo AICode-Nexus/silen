@@ -15,6 +15,12 @@ import InitialTheme, { type Theme } from 'virtual:silen/theme'
 import clientExtensions from 'virtual:silen/client-extensions'
 import type { JsonObject } from '../shared/page.js'
 import { resolveCurrentLocale } from '../shared/config.js'
+import {
+  coreSeoAttribute,
+  createPageSeoResolver,
+  createSeoHeadEntries,
+  type PageSeo,
+} from '../shared/seo.js'
 import { stripSiteBase } from '../shared/url.js'
 import type { ThemeMdxComponents } from '../theme-default/index.js'
 import { resolveThemeMessages } from '../theme-default/lib/theme-config.js'
@@ -28,6 +34,10 @@ import { navigateDocument } from './navigation.js'
 import { resolveInternalUrl, RouterProvider, type Router } from './router.js'
 
 const analyticsProviders = config.analytics ?? []
+const seoResolver = createPageSeoResolver(
+  config,
+  Object.keys(routes).map((path) => ({ path })),
+)
 
 function pluginRoot(children: ReactNode): ReactNode {
   return [...clientExtensions]
@@ -47,6 +57,7 @@ export interface ResolvedPage {
   title: string
   description: string
   publicData: PagePublicData
+  seo?: PageSeo
   Component: ComponentType<MdxContentProps>
 }
 
@@ -65,6 +76,7 @@ export interface RenderedPage {
   title: string
   description: string
   publicData: PagePublicData
+  seo?: PageSeo
 }
 
 export interface AppProps {
@@ -181,12 +193,14 @@ function resolvedPage(route: string, module: PageModule): ResolvedPage {
     '/',
     stringField(module.frontmatter, 'lang', config.lang),
   ).lang
+  const seo = seoResolver.resolve(route)
   return {
     title:
       module.title || stringField(module.frontmatter, 'title', config.title),
     description:
       module.description ||
       stringField(module.frontmatter, 'description', config.description),
+    ...(seo === undefined ? {} : { seo }),
     publicData: {
       siteTitle: config.title,
       lang,
@@ -255,6 +269,23 @@ function setMetadata(page: ResolvedPage): void {
     document.head.append(description)
   }
   description.content = page.description
+
+  const owned = Array.from(
+    document.head.querySelectorAll(`[${coreSeoAttribute}]`),
+  )
+  const replacement = document.createDocumentFragment()
+  for (const entry of createSeoHeadEntries(page, page.seo)) {
+    const element = document.createElement(entry.tag)
+    element.setAttribute(coreSeoAttribute, '')
+    for (const [name, value] of Object.entries(entry.attributes)) {
+      element.setAttribute(name, value)
+    }
+    replacement.append(element)
+  }
+  const firstOwned = owned[0]
+  if (firstOwned) firstOwned.before(replacement)
+  else document.head.append(replacement)
+  for (const element of owned) element.remove()
 }
 
 function focusElement(element: HTMLElement): void {

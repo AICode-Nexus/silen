@@ -16,7 +16,7 @@ function localePathname(value: string): string | undefined {
   }
 }
 
-function normalizedLocaleRoot(root: string): string {
+export function normalizeLocaleRoot(root: string): string {
   const parsed = localePathname(root) ?? '/'
   if (parsed === '/') return '/'
   return parsed.endsWith('/') ? parsed : `${parsed}/`
@@ -42,7 +42,7 @@ export function resolveCurrentLocale(
     .flatMap((locale) =>
       locale.root === undefined
         ? []
-        : [{ locale, root: normalizedLocaleRoot(locale.root) }],
+        : [{ locale, root: normalizeLocaleRoot(locale.root) }],
     )
     .filter(({ root }) => routeWithinRoot(route, root))
     .sort((left, right) => right.root.length - left.root.length)[0]
@@ -69,7 +69,7 @@ export function resolveCurrentLocale(
     return {
       lang: linked.lang,
       label: linked.label,
-      root: normalizedLocaleRoot(linked.link ?? '/'),
+      root: normalizeLocaleRoot(linked.link ?? '/'),
       locale: linked,
     }
   }

@@ -1,5 +1,6 @@
 import {
   access,
+  chmod,
   link,
   lstat,
   mkdir,
@@ -296,6 +297,78 @@ describe('silen init', () => {
     expect(await readFile(configFile, 'utf8')).toBe(
       'concurrent unrelated content\n',
     )
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectNoStagingDirectory(root)
+  })
+
+  it('preserves an in-place content edit that keeps the promoted inode', async () => {
+    const root = path.join(parent, 'promotion-in-place-content-race-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    await mkdir(path.join(root, '.silen'), { recursive: true })
+    let promotions = 0
+    let promotedIdentity: Awaited<ReturnType<typeof lstat>> | undefined
+
+    const error = await initializeSite(root, {
+      async promoteFile(stagedFile: string, targetFile: string) {
+        promotions += 1
+        if (promotions === 1) {
+          await link(stagedFile, targetFile)
+          promotedIdentity = await lstat(targetFile)
+          return
+        }
+
+        await writeFile(configFile, 'concurrent in-place content\n')
+        const editedIdentity = await lstat(configFile)
+        expect(editedIdentity.dev).toBe(promotedIdentity?.dev)
+        expect(editedIdentity.ino).toBe(promotedIdentity?.ino)
+        throw new Error('injected in-place content race')
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toContain('injected in-place content race')
+    expect((error as Error).message).toMatch(
+      /rollback.*(?:content|metadata).*config\.ts/i,
+    )
+    expect(await readFile(configFile, 'utf8')).toBe(
+      'concurrent in-place content\n',
+    )
+    await expectMissing(path.join(root, 'index.mdx'))
+    await expectNoStagingDirectory(root)
+  })
+
+  it('preserves an in-place mode edit that keeps content and inode', async () => {
+    const root = path.join(parent, 'promotion-in-place-mode-race-site')
+    const configFile = path.join(root, '.silen/config.ts')
+    await mkdir(path.join(root, '.silen'), { recursive: true })
+    let promotions = 0
+    let promotedIdentity: Awaited<ReturnType<typeof lstat>> | undefined
+    let editedMode = 0
+
+    const error = await initializeSite(root, {
+      async promoteFile(stagedFile: string, targetFile: string) {
+        promotions += 1
+        if (promotions === 1) {
+          await link(stagedFile, targetFile)
+          promotedIdentity = await lstat(targetFile)
+          return
+        }
+
+        editedMode = (Number(promotedIdentity?.mode ?? 0) & 0o777) ^ 0o100
+        await chmod(configFile, editedMode)
+        const editedIdentity = await lstat(configFile)
+        expect(editedIdentity.dev).toBe(promotedIdentity?.dev)
+        expect(editedIdentity.ino).toBe(promotedIdentity?.ino)
+        throw new Error('injected in-place mode race')
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toContain('injected in-place mode race')
+    expect((error as Error).message).toMatch(
+      /rollback.*(?:content|metadata).*config\.ts/i,
+    )
+    expect((await lstat(configFile)).mode & 0o777).toBe(editedMode)
     await expectMissing(path.join(root, 'index.mdx'))
     await expectNoStagingDirectory(root)
   })

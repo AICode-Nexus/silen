@@ -121,6 +121,39 @@ describe('resolveConfig', () => {
     expect(Object.hasOwn(config, 'siteUrl')).toBe(false)
   })
 
+  it('rejects locale roots that normalize to the same pathname', async () => {
+    await expect(
+      resolveInlineConfig({
+        themeConfig: {
+          locales: [
+            { lang: 'en-US', label: 'English', root: '/en' },
+            { lang: 'fr-FR', label: 'Français', root: '/en/' },
+          ],
+        },
+      }),
+    ).rejects.toThrow(/duplicate.*locale.*root.*\/en\//i)
+  })
+
+  it('keeps distinct longest-prefix locale roots valid', async () => {
+    await expect(
+      resolveInlineConfig({
+        themeConfig: {
+          locales: [
+            { lang: 'en', label: 'English', root: '/en/' },
+            { lang: 'en-US', label: 'English (US)', root: '/en-us/' },
+          ],
+        },
+      }),
+    ).resolves.toMatchObject({
+      themeConfig: {
+        locales: [
+          { lang: 'en', root: '/en/' },
+          { lang: 'en-US', root: '/en-us/' },
+        ],
+      },
+    })
+  })
+
   it.each([
     ['a relative URL', 'docs.example.com'],
     ['a scheme without an authority delimiter', 'https:docs.example.com'],

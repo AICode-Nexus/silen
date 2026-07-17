@@ -199,6 +199,52 @@ describe('0.2.0 product documentation', () => {
     expect(chinese).toContain('frontmatter `lang` 不会覆盖')
   })
 
+  it('limits siteUrl claims to SEO and keeps AI artifact URLs base-relative', async () => {
+    const [
+      englishCli,
+      chineseCli,
+      englishConfig,
+      chineseConfig,
+      englishContract,
+      chineseContract,
+    ] = await Promise.all([
+      source('website/guide/cli-deployment/index.mdx'),
+      source('website/zh/guide/cli-deployment/index.mdx'),
+      source('website/guide/configuration/index.mdx'),
+      source('website/zh/guide/configuration/index.mdx'),
+      source('website/ai/agent-contract/index.mdx'),
+      source('website/zh/ai/agent-contract/index.mdx'),
+    ])
+
+    expect(englishCli).toMatch(
+      /Markdown and Agent Contract\s+URLs remain base-relative\./,
+    )
+    expect(chineseCli).toContain(
+      'Markdown 与 Agent Contract URL 仍是 base 相对路径。',
+    )
+    expect(englishConfig).toMatch(
+      /Markdown and Agent Contract URLs remain\s+base-relative\./,
+    )
+    expect(chineseConfig).toContain(
+      'Markdown 与 Agent Contract URL 仍是 base 相对路径。',
+    )
+    expect(englishContract).toContain(
+      'The manifest schema has no deployment origin field.',
+    )
+    expect(chineseContract).toContain(
+      'manifest schema 不包含部署 origin 字段。',
+    )
+
+    for (const content of [englishCli, englishConfig, englishContract]) {
+      expect(content).not.toMatch(/Agent Contract URLs?[^.]*siteUrl/i)
+      expect(content).not.toMatch(/manifest[^.]*deployed origin/i)
+    }
+    for (const content of [chineseCli, chineseConfig, chineseContract]) {
+      expect(content).not.toMatch(/Agent Contract URL[^。]*siteUrl/i)
+      expect(content).not.toMatch(/manifest[^。]*部署来源/i)
+    }
+  })
+
   it('keeps homepage imports limited to rendered symbols', async () => {
     const english = await source('website/index.mdx')
 

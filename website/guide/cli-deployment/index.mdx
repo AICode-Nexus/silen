@@ -49,8 +49,9 @@ export default defineConfig({
 ```
 
 Do not repeat `/handbook/` in `siteUrl`. The build combines the origin and
-base for canonical URLs, sitemap entries, locale alternates, generated
-Markdown URLs, and the site Agent Contract.
+base for canonical URLs, `hreflang` and `x-default` locale alternates, sitemap
+entries, and basic Open Graph/Twitter metadata. Markdown and Agent Contract
+URLs remain base-relative.
 
 ## Release check
 

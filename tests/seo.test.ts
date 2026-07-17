@@ -30,28 +30,28 @@ afterAll(async () => {
 describe('configured absolute SEO artifacts', () => {
   it('renders canonical and social metadata from escaped page data', () => {
     expect(englishGuide).toContain(
-      '<link rel="canonical" href="https://docs.example.com/handbook/guide/">',
+      '<link rel="canonical" href="https://docs.example.com/handbook/guide/" data-silen-seo>',
     )
     expect(englishGuide).toContain(
-      '<meta property="og:type" content="website">',
+      '<meta property="og:type" content="website" data-silen-seo>',
     )
     expect(englishGuide).toContain(
-      '<meta property="og:title" content="Guide &lt;Primary&gt; &amp; &quot;Safe&quot;">',
+      '<meta property="og:title" content="Guide &lt;Primary&gt; &amp; &quot;Safe&quot;" data-silen-seo>',
     )
     expect(englishGuide).toContain(
-      '<meta property="og:description" content="Learn &lt;fast&gt; &amp; safely.">',
+      '<meta property="og:description" content="Learn &lt;fast&gt; &amp; safely." data-silen-seo>',
     )
     expect(englishGuide).toContain(
-      '<meta property="og:url" content="https://docs.example.com/handbook/guide/">',
+      '<meta property="og:url" content="https://docs.example.com/handbook/guide/" data-silen-seo>',
     )
     expect(englishGuide).toContain(
-      '<meta name="twitter:card" content="summary">',
+      '<meta name="twitter:card" content="summary" data-silen-seo>',
     )
     expect(englishGuide).toContain(
-      '<meta name="twitter:title" content="Guide &lt;Primary&gt; &amp; &quot;Safe&quot;">',
+      '<meta name="twitter:title" content="Guide &lt;Primary&gt; &amp; &quot;Safe&quot;" data-silen-seo>',
     )
     expect(englishGuide).toContain(
-      '<meta name="twitter:description" content="Learn &lt;fast&gt; &amp; safely.">',
+      '<meta name="twitter:description" content="Learn &lt;fast&gt; &amp; safely." data-silen-seo>',
     )
     expect(englishGuide).not.toContain('og:image')
     expect(englishGuide).not.toContain('twitter:image')
@@ -68,14 +68,14 @@ describe('configured absolute SEO artifacts', () => {
 
   it('emits only compiled locale counterparts in deterministic locale order', () => {
     const expected = [
-      '<link rel="alternate" hreflang="en-US" href="https://docs.example.com/handbook/guide/">',
-      '<link rel="alternate" hreflang="zh-CN" href="https://docs.example.com/handbook/zh/guide/">',
-      '<link rel="alternate" hreflang="x-default" href="https://docs.example.com/handbook/guide/">',
+      '<link rel="alternate" hreflang="en-US" href="https://docs.example.com/handbook/guide/" data-silen-seo>',
+      '<link rel="alternate" hreflang="zh-CN" href="https://docs.example.com/handbook/zh/guide/" data-silen-seo>',
+      '<link rel="alternate" hreflang="x-default" href="https://docs.example.com/handbook/guide/" data-silen-seo>',
     ]
 
     for (const html of [englishGuide, chineseGuide]) {
       const alternates = html.match(
-        /<link rel="alternate" hreflang="[^"]+" href="[^"]+">/g,
+        /<link rel="alternate" hreflang="[^"]+" href="[^"]+" data-silen-seo>/g,
       )
       expect(alternates).toEqual(expected)
       expect(html).not.toContain('hreflang="fr-FR"')
@@ -84,7 +84,7 @@ describe('configured absolute SEO artifacts', () => {
 
   it('does not invent a default route or x-default for a locale-only page', () => {
     expect(chineseOnly).toContain(
-      '<link rel="canonical" href="https://docs.example.com/handbook/zh/only-zh">',
+      '<link rel="canonical" href="https://docs.example.com/handbook/zh/only-zh" data-silen-seo>',
     )
     expect(chineseOnly.match(/<link rel="alternate"/g)).toHaveLength(1)
     expect(chineseOnly).toContain('hreflang="zh-CN"')

@@ -28,8 +28,9 @@ export default defineConfig({
 `base` is the normalized absolute pathname where the site is mounted; use `/`
 for a domain root or `/handbook/` for a subpath. `siteUrl` is only the HTTP(S)
 origin—put the deployment path in `base`, not in `siteUrl`. Together they drive
-canonical links, alternate locales, the sitemap, and public Agent Contract
-URLs. `lang` is a BCP 47 language tag.
+canonical links, `hreflang` and `x-default` locale alternates, the sitemap, and
+basic Open Graph/Twitter metadata. Markdown and Agent Contract URLs remain
+base-relative. `lang` is a BCP 47 language tag.
 
 ## Navigation and locales
 

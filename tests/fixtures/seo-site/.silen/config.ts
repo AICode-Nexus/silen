@@ -44,7 +44,6 @@ export default defineConfig({
   themeConfig: {
     locales: [
       { lang: 'zh-CN', label: '中文', root: '/zh/' },
-      { lang: 'zh-CN', label: '中文重复项', root: '/zh/' },
       { lang: 'fr-FR', label: 'Français', root: '/fr/' },
       { lang: 'en-US', label: 'English', root: '/' },
     ],
