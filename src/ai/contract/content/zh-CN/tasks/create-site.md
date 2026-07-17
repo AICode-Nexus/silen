@@ -11,6 +11,7 @@ references:
   - config:base
   - config:ai
   - cli:dev
+  - cli:init
   - cli:build
   - cli:ai
 ---
@@ -24,8 +25,8 @@ references:
 ## 步骤
 
 1. 确认内容根目录以及用户已授权创建文件。
-2. 仅使用配置契约中存在的字段创建 .silen/config.ts。
-3. 创建 index.mdx 和最小但有用的内容层级。
+2. 运行 `pnpm silen init <root>`，以碰撞安全的方式创建起始文件。
+3. 扩展内容层级前先检查 .silen/config.ts 和 index.mdx。
 4. 保持普通 Markdown 或 MDX 为事实源。
 5. 只有需要交互预览时才启动开发服务。
 

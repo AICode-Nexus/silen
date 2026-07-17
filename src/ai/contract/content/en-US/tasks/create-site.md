@@ -11,6 +11,7 @@ references:
   - config:base
   - config:ai
   - cli:dev
+  - cli:init
   - cli:build
   - cli:ai
 ---
@@ -24,8 +25,8 @@ Create the smallest buildable Silen site from the installed package.
 ## Steps
 
 1. Confirm the content root and the user's authorization to create files.
-2. Create .silen/config.ts using only fields present in the config contract.
-3. Create index.mdx and the smallest useful content hierarchy.
+2. Run `pnpm silen init <root>` to create the collision-safe starter files.
+3. Review .silen/config.ts and index.mdx before extending the content hierarchy.
 4. Keep ordinary Markdown or MDX files as the source of truth.
 5. Run the development command only when an interactive preview is required.
 

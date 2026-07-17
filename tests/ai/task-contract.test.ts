@@ -175,4 +175,22 @@ describe('Agent task contract', () => {
     expect(english.guide).toContain('# Silen Agent Guide')
     expect(chinese.guide).toContain('# Silen AI 操作指南')
   })
+
+  it('guides agents to use the safe init command for new sites', async () => {
+    const [english, chinese] = await Promise.all([
+      loadBuiltInTaskPack('en-US'),
+      loadBuiltInTaskPack('zh-CN'),
+    ])
+    const englishTask = english.tasks.find(
+      (task) => task.metadata.id === 'create-site',
+    )
+    const chineseTask = chinese.tasks.find(
+      (task) => task.metadata.id === 'create-site',
+    )
+
+    expect(englishTask?.metadata.references).toContain('cli:init')
+    expect(englishTask?.markdown).toContain('pnpm silen init <root>')
+    expect(chineseTask?.metadata.references).toContain('cli:init')
+    expect(chineseTask?.markdown).toContain('pnpm silen init <root>')
+  })
 })

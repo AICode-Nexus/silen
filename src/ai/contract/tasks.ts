@@ -16,6 +16,7 @@ export const BUILT_IN_TASK_REFERENCES = new Set([
   'cli:ai',
   'cli:build',
   'cli:dev',
+  'cli:init',
   'cli:mcp',
   'cli:preview',
   'config:ai',

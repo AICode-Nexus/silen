@@ -66,7 +66,7 @@ describe('Site Agent Contract', () => {
       }),
     )
     expect(api.config.fields).toHaveLength(16)
-    expect(api.cli.commands).toHaveLength(5)
+    expect(api.cli.commands).toHaveLength(6)
     expect(api.mcp.tools).toHaveLength(10)
     expect(api.exports.length).toBeGreaterThan(100)
     expect(guide).toContain('# Public site instructions')

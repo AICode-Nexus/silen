@@ -30,6 +30,7 @@ describe('framework Agent Contract', () => {
     })
     expect(bundle.api.config.fields).toHaveLength(16)
     expect(bundle.api.cli.commands.map((command) => command.id)).toEqual([
+      'init',
       'dev',
       'build',
       'preview',

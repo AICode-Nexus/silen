@@ -10,6 +10,7 @@ const cli = path.resolve('src/node/cli.ts')
 describe('CLI Agent Contract registry', () => {
   it('describes every command once with its public side effect', () => {
     expect(commandDescriptors.map((command) => command.id)).toEqual([
+      'init',
       'dev',
       'build',
       'preview',
@@ -24,6 +25,7 @@ describe('CLI Agent Contract registry', () => {
         commandDescriptors.map((command) => [command.id, command.sideEffect]),
       ),
     ).toEqual({
+      init: 'write',
       dev: 'server',
       build: 'build',
       preview: 'server',
