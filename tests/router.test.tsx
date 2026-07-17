@@ -125,6 +125,22 @@ describe('Link', () => {
     ).toBe('/project/guide/')
   })
 
+  it.each([
+    ['/../outside/?mode=literal#top', '/project/outside/?mode=literal#top'],
+    ['/%2e%2e/outside/', '/project/outside/'],
+    ['/project/../outside/', '/project/outside/'],
+    ['/project/%2E%2E/outside/', '/project/outside/'],
+  ])('canonicalizes dot segments in authored href %s', (href, expected) => {
+    const router = createRouter()
+    renderLink(router, { href })
+    const link = screen.getByRole('link', { name: 'Destination' })
+
+    expect(link.getAttribute('href')).toBe(expected)
+    fireEvent.click(link)
+
+    expect(router.go).toHaveBeenCalledWith(expected)
+  })
+
   it('matches a human-readable Unicode and space href against a canonical encoded base', () => {
     const base = '/%E6%96%87%E6%A1%A3%20docs/'
     window.history.replaceState(null, '', base)

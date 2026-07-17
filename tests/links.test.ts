@@ -70,6 +70,17 @@ describe('validateInternalLinks', () => {
     ).toThrow('Broken internal link /missing-guide/')
   })
 
+  it.each([
+    ['literal root escape', '/../missing-literal/'],
+    ['encoded root escape', '/%2e%2e/missing-encoded/'],
+    ['literal prefixed escape', '/project/../missing-prefixed/'],
+    ['encoded prefixed escape', '/project/%2E%2E/missing-encoded-prefixed/'],
+  ])('reports an invalid %s beneath the documentation base', (_, link) => {
+    expect(() =>
+      validateInternalLinks(routes, [page([link])], 'error', '/project/'),
+    ).toThrow(`Broken internal link ${link}`)
+  })
+
   it('normalizes base, relative, query, hash, encoded, and trailing aliases', () => {
     const diagnostics = validateInternalLinks(
       routes,

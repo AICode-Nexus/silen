@@ -18,6 +18,18 @@ function canonicalPathname(value: string): string | undefined {
   }
 }
 
+function requiresCanonicalPathname(value: string): boolean {
+  if (value.includes('\\')) return true
+  return value.split('/').some((segment) => {
+    try {
+      const decoded = decodeURIComponent(segment)
+      return decoded === '.' || decoded === '..'
+    } catch {
+      return false
+    }
+  })
+}
+
 /** Resolve an authored documentation link without allowing a root path to escape the site base. */
 export function resolveSiteLink(
   href: string,
@@ -31,18 +43,22 @@ export function resolveSiteLink(
     return href
   }
 
-  const base = normalizedBase(configuredBase)
-  if (base === '/') return href
-
   const match = /^([^?#]*)(.*)$/.exec(href)
   const rawPathname = match?.[1] ?? href
   const suffix = match?.[2] ?? ''
   const pathname = canonicalPathname(rawPathname)
   if (pathname === undefined) return href
+  const canonicalize = requiresCanonicalPathname(rawPathname)
+  const safePathname = canonicalize ? pathname : rawPathname
+
+  const base = normalizedBase(configuredBase)
+  if (base === '/') return canonicalize ? `${safePathname}${suffix}` : href
 
   const baseWithoutSlash = base.slice(0, -1)
-  if (pathname === baseWithoutSlash || pathname.startsWith(base)) return href
-  return `${base}${rawPathname.replace(/^\/+/, '')}${suffix}`
+  if (pathname === baseWithoutSlash || pathname.startsWith(base)) {
+    return canonicalize ? `${safePathname}${suffix}` : href
+  }
+  return `${base}${safePathname.replace(/^\/+/, '')}${suffix}`
 }
 
 export function normalizedUrlScheme(value: string): string | undefined {
