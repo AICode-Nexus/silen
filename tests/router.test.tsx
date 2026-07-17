@@ -141,6 +141,35 @@ describe('Link', () => {
     expect(router.go).toHaveBeenCalledWith(expected)
   })
 
+  it.each([
+    ['/..\t/outside/', '/project/outside/'],
+    ['/.\n./outside/', '/project/outside/'],
+    ['/project/..\r/outside/', '/project/outside/'],
+    ['/project/%2e\r%2e/outside/', '/project/outside/'],
+    ['/guide\tname/?mode=full\n#top', '/project/guidename/?mode=full#top'],
+    ['\u000b /guide/', '/project/guide/'],
+    ['\u000b \\guide/', '/project/guide/'],
+    ['\u0000 \t/project/../outside/', '/project/outside/'],
+  ])(
+    'keeps WHATWG-normalized root-relative href %s inside the base',
+    (href, expected) => {
+      const router = createRouter()
+      renderLink(router, { href })
+      const link = screen.getByRole<HTMLAnchorElement>('link', {
+        name: 'Destination',
+      })
+
+      expect(link.getAttribute('href')).toBe(expected)
+      expect(new URL(link.href).pathname).toSatisfy(
+        (pathname: string) =>
+          pathname === '/project' || pathname.startsWith('/project/'),
+      )
+      fireEvent.click(link)
+
+      expect(router.go).toHaveBeenCalledWith(expected)
+    },
+  )
+
   it('matches a human-readable Unicode and space href against a canonical encoded base', () => {
     const base = '/%E6%96%87%E6%A1%A3%20docs/'
     window.history.replaceState(null, '', base)

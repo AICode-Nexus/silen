@@ -81,6 +81,17 @@ describe('validateInternalLinks', () => {
     ).toThrow(`Broken internal link ${link}`)
   })
 
+  it.each([
+    ['tab-obfuscated dot segment', '/..\t/missing-tab/'],
+    ['LF-obfuscated dot segment', '/.\n./missing-lf/'],
+    ['prefixed CR-obfuscated dot segment', '/project/..\r/missing-cr/'],
+    ['leading stripped control', '\u000b /missing-leading/'],
+  ])('reports an invalid %s', (_, link) => {
+    expect(() =>
+      validateInternalLinks(routes, [page([link])], 'error', '/project/'),
+    ).toThrow(`Broken internal link ${link}`)
+  })
+
   it('normalizes base, relative, query, hash, encoded, and trailing aliases', () => {
     const diagnostics = validateInternalLinks(
       routes,

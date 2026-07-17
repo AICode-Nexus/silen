@@ -18,6 +18,23 @@ function canonicalPathname(value: string): string | undefined {
   }
 }
 
+function normalizedWhatwgInput(value: string): string {
+  const normalized = value.replace(/[\t\n\r]/g, '')
+  let start = 0
+  let end = normalized.length
+  while (start < end && normalized.charCodeAt(start) <= 0x20) start += 1
+  while (end > start && normalized.charCodeAt(end - 1) <= 0x20) end -= 1
+  return normalized.slice(start, end)
+}
+
+function isNetworkPath(value: string): boolean {
+  const first = value[0]
+  const second = value[1]
+  return (
+    (first === '/' || first === '\\') && (second === '/' || second === '\\')
+  )
+}
+
 function requiresCanonicalPathname(value: string): boolean {
   if (value.includes('\\')) return true
   return value.split('/').some((segment) => {
@@ -35,20 +52,21 @@ export function resolveSiteLink(
   href: string,
   configuredBase: string | undefined = '/',
 ): string {
+  const parsedHref = normalizedWhatwgInput(href)
   if (
-    !href.startsWith('/') ||
-    href.startsWith('//') ||
-    href.startsWith('/\\')
+    (!parsedHref.startsWith('/') && !parsedHref.startsWith('\\')) ||
+    isNetworkPath(parsedHref)
   ) {
     return href
   }
 
-  const match = /^([^?#]*)(.*)$/.exec(href)
-  const rawPathname = match?.[1] ?? href
+  const match = /^([^?#]*)(.*)$/.exec(parsedHref)
+  const rawPathname = match?.[1] ?? parsedHref
   const suffix = match?.[2] ?? ''
   const pathname = canonicalPathname(rawPathname)
   if (pathname === undefined) return href
-  const canonicalize = requiresCanonicalPathname(rawPathname)
+  const canonicalize =
+    parsedHref !== href || requiresCanonicalPathname(rawPathname)
   const safePathname = canonicalize ? pathname : rawPathname
 
   const base = normalizedBase(configuredBase)
