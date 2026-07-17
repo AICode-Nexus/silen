@@ -1,6 +1,6 @@
 import type { CompiledPage } from './mdx.js'
 import type { RouteRecord } from '../shared/page.js'
-import { resolveSiteLink } from '../shared/url.js'
+import { resolveSiteLink, stripSiteBase } from '../shared/url.js'
 
 export interface LinkDiagnostic {
   file: string
@@ -34,12 +34,7 @@ function pageDirectory(route: string): string {
 }
 
 function stripBase(pathname: string, base: string): string {
-  if (base === '/') return pathname
-  const root = base.slice(0, -1)
-  if (pathname === root || pathname === base) return '/'
-  return pathname.startsWith(base)
-    ? `/${pathname.slice(base.length)}`
-    : pathname
+  return stripSiteBase(pathname, base) ?? pathname
 }
 
 function normalizePageExtension(pathname: string): string {
@@ -67,7 +62,11 @@ function internalPageTarget(
     return undefined
   }
 
-  const resolved = resolveSiteLink(trimmed, base)
+  const mountedPage = `${base}${pageDirectory(pageRoute).replace(/^\//, '')}`
+  const resolved = resolveSiteLink(trimmed, base, mountedPage)
+  if (resolved === undefined) {
+    return { route: trimmed, search: '', hash: '', malformed: true }
+  }
 
   if (resolved.startsWith('?') || resolved.startsWith('#')) {
     const current = new URL(
@@ -77,7 +76,6 @@ function internalPageTarget(
     return { route: pageRoute, search: current.search, hash: current.hash }
   }
 
-  const mountedPage = `${base}${pageDirectory(pageRoute).replace(/^\//, '')}`
   let url: URL
   try {
     url = new URL(resolved, `https://silen.local${mountedPage}`)

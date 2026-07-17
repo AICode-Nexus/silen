@@ -15,6 +15,7 @@ import InitialTheme, { type Theme } from 'virtual:silen/theme'
 import clientExtensions from 'virtual:silen/client-extensions'
 import type { JsonObject } from '../shared/page.js'
 import { resolveCurrentLocale } from '../shared/config.js'
+import { stripSiteBase } from '../shared/url.js'
 import type { ThemeMdxComponents } from '../theme-default/index.js'
 import { resolveThemeMessages } from '../theme-default/lib/theme-config.js'
 import { analyticsPagePath, trackAnalyticsPageview } from './analytics.js'
@@ -101,12 +102,11 @@ function routePathname(url: string): {
     return { pathname, route: decodePathname(pathname) }
   }
 
-  const baseWithoutSlash = config.base.slice(0, -1)
-  if (pathname === baseWithoutSlash) return { pathname, route: '/' }
-  if (!pathname.startsWith(config.base)) return { pathname, route: undefined }
-
-  const suffix = decodePathname(pathname.slice(config.base.length))
-  return { pathname, route: suffix === undefined ? undefined : `/${suffix}` }
+  const unmounted = stripSiteBase(pathname, config.base)
+  return {
+    pathname,
+    route: unmounted === undefined ? undefined : decodePathname(unmounted),
+  }
 }
 
 function browserPath(url: string): string {

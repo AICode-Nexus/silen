@@ -1,12 +1,6 @@
 import type { ThemeLocaleItem } from '../../shared/config.js'
 import { resolveCurrentLocale } from '../../shared/config.js'
-import { resolveSiteLink } from '../../shared/url.js'
-
-function normalizedBase(base: string): string {
-  if (!base || base === '/') return '/'
-  const leading = base.startsWith('/') ? base : `/${base}`
-  return leading.endsWith('/') ? leading : `${leading}/`
-}
+import { resolveSiteLink, stripSiteBase } from '../../shared/url.js'
 
 function pathname(value: string): string | undefined {
   try {
@@ -37,7 +31,7 @@ export function resolveThemeLink(link: string, base: string): string {
   ) {
     return link
   }
-  return resolveSiteLink(link.startsWith('/') ? link : `/${link}`, base)
+  return resolveSiteLink(link.startsWith('/') ? link : `/${link}`, base) ?? link
 }
 
 export function isActiveThemeLink(
@@ -75,14 +69,7 @@ function normalizedLocaleRoot(root: string): string {
 }
 
 function stripBasePath(path: string, base: string): string {
-  const resolvedBase = normalizedBase(base)
-  if (resolvedBase === '/') return path
-
-  const baseWithoutSlash = resolvedBase.slice(0, -1)
-  if (path === baseWithoutSlash) return '/'
-  if (path.startsWith(resolvedBase))
-    return `/${path.slice(resolvedBase.length)}`
-  return path
+  return stripSiteBase(path, base) ?? path
 }
 
 function localeRelativePath(path: string, root: string): string {

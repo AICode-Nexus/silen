@@ -74,6 +74,23 @@ function initializeSiteWithRollbackHooks(
   return initializeSite(root, options)
 }
 
+interface StagingCleanupTestHooks {
+  readonly beforeRemove: (target: string) => Promise<void>
+}
+
+interface InitSiteCleanupTestOptions extends NonNullable<
+  Parameters<typeof initializeSite>[1]
+> {
+  readonly cleanupHooks: StagingCleanupTestHooks
+}
+
+function initializeSiteWithCleanupHooks(
+  root: string,
+  options: InitSiteCleanupTestOptions,
+) {
+  return initializeSite(root, options)
+}
+
 beforeAll(async () => {
   const testTemp = path.resolve('.silen/.temp/tests')
   await mkdir(testTemp, { recursive: true })
@@ -840,7 +857,7 @@ describe('silen init', () => {
     ])
   })
 
-  it('safely removes a provisional staging directory after snapshot failure', async () => {
+  it('safely removes staging after the snapshot hook fails', async () => {
     const root = path.join(parent, 'staging-snapshot-failure-site')
     let stagingPath = ''
 
@@ -855,6 +872,31 @@ describe('silen init', () => {
 
     expect(stagingPath).not.toBe('')
     await expectMissing(stagingPath)
+    await expectMissing(root)
+  })
+
+  it('preserves an empty staging replacement swapped by the snapshot hook', async () => {
+    const root = path.join(parent, 'staging-provisional-replacement-site')
+    let stagingPath = ''
+    let displacedStaging = ''
+
+    const error = await initializeSite(root, {
+      async snapshotStaging(staging) {
+        stagingPath = staging
+        displacedStaging = `${staging}-owned`
+        await rename(staging, displacedStaging)
+        await mkdir(staging)
+        throw new Error('injected snapshot replacement failure')
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toContain(
+      'injected snapshot replacement failure',
+    )
+    expect((error as Error).message).toMatch(/staging.*replaced/i)
+    await access(stagingPath)
+    await access(displacedStaging)
     await expectMissing(root)
   })
 
@@ -882,6 +924,157 @@ describe('silen init', () => {
     await expectMissing(path.join(root, '.silen/config.ts'))
     await expectMissing(path.join(root, 'index.mdx'))
     await expectMissing(root)
+  })
+
+  it('preserves a non-empty staging replacement swapped immediately before removal', async () => {
+    const root = path.join(parent, 'staging-last-moment-replacement-site')
+    let stagingPath = ''
+    let displacedStaging = ''
+    let injected = false
+
+    const error = await initializeSiteWithCleanupHooks(root, {
+      snapshotStaging(staging) {
+        stagingPath = staging
+        return Promise.resolve()
+      },
+      cleanupHooks: {
+        async beforeRemove() {
+          if (injected) return
+          injected = true
+          displacedStaging = `${stagingPath}-owned`
+          await rename(stagingPath, displacedStaging)
+          await mkdir(path.join(stagingPath, 'replacement'), {
+            recursive: true,
+          })
+          await writeFile(
+            path.join(stagingPath, 'replacement/keep.txt'),
+            'replacement stays\n',
+          )
+        },
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toMatch(/staging.*replaced/i)
+    expect(
+      await readFile(path.join(stagingPath, 'replacement/keep.txt'), 'utf8'),
+    ).toBe('replacement stays\n')
+    await access(displacedStaging)
+    await expectMissing(root)
+  })
+
+  it('preserves an unexpected non-empty tree inserted immediately before removal', async () => {
+    const root = path.join(parent, 'staging-unexpected-tree-site')
+    let stagingPath = ''
+    let injected = false
+
+    const error = await initializeSiteWithCleanupHooks(root, {
+      snapshotStaging(staging) {
+        stagingPath = staging
+        return Promise.resolve()
+      },
+      cleanupHooks: {
+        async beforeRemove() {
+          if (injected) return
+          injected = true
+          await mkdir(path.join(stagingPath, 'unexpected/nested'), {
+            recursive: true,
+          })
+          await writeFile(
+            path.join(stagingPath, 'unexpected/nested/keep.txt'),
+            'unexpected stays\n',
+          )
+        },
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toMatch(/unexpected.*staging/i)
+    expect(
+      await readFile(
+        path.join(stagingPath, 'unexpected/nested/keep.txt'),
+        'utf8',
+      ),
+    ).toBe('unexpected stays\n')
+    await expectMissing(root)
+  })
+
+  it('preserves a known staged leaf replaced before cleanup', async () => {
+    const root = path.join(parent, 'staging-leaf-replacement-site')
+    let stagingPath = ''
+    let displacedConfig = ''
+
+    const error = await initializeSite(root, {
+      snapshotStaging(staging) {
+        stagingPath = staging
+        return Promise.resolve()
+      },
+      async beforeCleanupStaging() {
+        const config = path.join(stagingPath, '.silen/config.ts')
+        displacedConfig = `${config}.owned`
+        await rename(config, displacedConfig)
+        await writeFile(config, 'concurrent replacement\n')
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toMatch(/staged file.*replaced/i)
+    expect(
+      await readFile(path.join(stagingPath, '.silen/config.ts'), 'utf8'),
+    ).toBe('concurrent replacement\n')
+    await access(displacedConfig)
+    await expectMissing(root)
+  })
+
+  it('preserves a staged symlink created by a custom writer', async () => {
+    const root = path.join(parent, 'staging-writer-symlink-site')
+    const outside = path.join(parent, 'staging-writer-outside.txt')
+    let stagingPath = ''
+    await writeFile(outside, 'outside stays\n')
+
+    const error = await initializeSite(root, {
+      snapshotStaging(staging) {
+        stagingPath = staging
+        return Promise.resolve()
+      },
+      async writeStagedFile(file) {
+        await rm(file, { force: true })
+        await symlink(outside, file)
+        throw new Error('injected staged symlink failure')
+      },
+    }).catch((failure: unknown) => failure)
+
+    expect(error).toBeInstanceOf(AggregateError)
+    expect((error as Error).message).toContain(
+      'injected staged symlink failure',
+    )
+    expect((error as Error).message).toMatch(/staged file.*replaced|symlink/i)
+    expect(
+      (
+        await lstat(path.join(stagingPath, '.silen/config.ts'))
+      ).isSymbolicLink(),
+    ).toBe(true)
+    expect(await readFile(outside, 'utf8')).toBe('outside stays\n')
+    await expectMissing(root)
+  })
+
+  it('cleans a partial staged file when a custom writer throws after writing', async () => {
+    const root = path.join(parent, 'staging-partial-write-site')
+    let writes = 0
+
+    await expect(
+      initializeSite(root, {
+        async writeStagedFile(file, source) {
+          writes += 1
+          await writeFile(file, source, 'utf8')
+          throw new Error('injected failure after partial staged write')
+        },
+      }),
+    ).rejects.toThrow('injected failure after partial staged write')
+
+    expect(writes).toBe(1)
+    await expectMissing(root)
+    await expectNoStagingDirectory(root)
   })
 
   it('does not touch the root when writing staged content fails', async () => {

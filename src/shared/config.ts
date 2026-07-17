@@ -1,16 +1,11 @@
 import type { ResolvedSilenPlugin, SilenPluginEntry } from './plugin.js'
+import { stripSiteBase } from './url.js'
 
 export interface ResolvedThemeLocale {
   readonly lang: string
   readonly label: string
   readonly root: string
   readonly locale?: ThemeLocaleItem
-}
-
-function normalizedLocaleBase(base: string): string {
-  if (!base || base === '/') return '/'
-  const leading = base.startsWith('/') ? base : `/${base}`
-  return leading.endsWith('/') ? leading : `${leading}/`
 }
 
 function localePathname(value: string): string | undefined {
@@ -29,13 +24,7 @@ function normalizedLocaleRoot(root: string): string {
 
 function routeWithoutBase(route: string, base: string): string {
   const pathname = localePathname(route) ?? '/'
-  const normalizedBase = normalizedLocaleBase(base)
-  if (normalizedBase === '/') return pathname
-  const baseWithoutSlash = normalizedBase.slice(0, -1)
-  if (pathname === baseWithoutSlash) return '/'
-  return pathname.startsWith(normalizedBase)
-    ? `/${pathname.slice(normalizedBase.length)}`
-    : pathname
+  return stripSiteBase(pathname, base) ?? pathname
 }
 
 function routeWithinRoot(route: string, root: string): boolean {

@@ -84,6 +84,10 @@ describe('SSR entry', () => {
     expect(rendered.appHtml).toContain('class="shiki shiki-themes')
     expect(rendered.appHtml).toContain('data-language="sh"')
     expect(rendered.appHtml).toContain('aria-label="复制代码"')
+    expect(rendered.appHtml).toContain(
+      '<a href="../about?mode=full#team">Contained relative link</a>',
+    )
+    expect(rendered.appHtml).toContain('<a>Escaping relative link</a>')
   })
 
   it.each([

@@ -84,6 +84,20 @@ describe('theme message contract', () => {
     ).toMatchObject({ lang: 'zh-CN', label: '中文', root: '/zh/' })
   })
 
+  it('removes a site base when only percent-triplet hex case differs', () => {
+    expect(
+      sharedConfig.resolveCurrentLocale(
+        [
+          { lang: 'en-US', label: 'English', root: '/' },
+          { lang: 'zh-CN', label: '中文', root: '/zh/' },
+        ],
+        '/caf%c3%a9/zh/guide/',
+        '/caf%C3%A9/',
+        'en-US',
+      ),
+    ).toMatchObject({ lang: 'zh-CN', root: '/zh/' })
+  })
+
   it('falls back to the site language when no configured locale matches', () => {
     expect(
       sharedConfig.resolveCurrentLocale([], '/guide/', '/', 'fr-FR'),

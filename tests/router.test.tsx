@@ -125,6 +125,30 @@ describe('Link', () => {
     ).toBe('/project/guide/')
   })
 
+  it('renders an escaping relative reference as explicitly invalid', () => {
+    const router = createRouter({ path: '/project/guide/' })
+    renderLink(router, { href: '../../about/' })
+    const link = screen.getByText('Destination')
+
+    expect(link.getAttribute('href')).toBeNull()
+    fireEvent.focus(link)
+    fireEvent.click(link)
+
+    expect(router.prefetch).not.toHaveBeenCalled()
+    expect(router.go).not.toHaveBeenCalled()
+  })
+
+  it('keeps a base-contained parent reference route-relative', () => {
+    const router = createRouter({ path: '/project/guide/deep/' })
+    renderLink(router, { href: '../../about/?mode=full#team' })
+    const link = screen.getByRole('link', { name: 'Destination' })
+
+    expect(link.getAttribute('href')).toBe('../../about/?mode=full#team')
+    fireEvent.click(link)
+
+    expect(router.go).toHaveBeenCalledWith('../../about/?mode=full#team')
+  })
+
   it.each([
     ['/../outside/?mode=literal#top', '/project/outside/?mode=literal#top'],
     ['/%2e%2e/outside/', '/project/outside/'],
@@ -179,6 +203,17 @@ describe('Link', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Destination' }))
 
     expect(router.go).toHaveBeenCalledWith('/文档 docs/guide')
+  })
+
+  it('intercepts an already mounted href whose percent-triplet case differs from the base', () => {
+    const base = '/caf%C3%A9/'
+    window.history.replaceState(null, '', '/caf%c3%a9/')
+    const router = createRouter({ base, path: '/caf%c3%a9/' })
+    renderLink(router, { href: '/caf%c3%a9/guide/' })
+
+    fireEvent.click(screen.getByRole('link', { name: 'Destination' }))
+
+    expect(router.go).toHaveBeenCalledWith('/caf%c3%a9/guide/')
   })
 
   it('prefetches internal routes on focus and hover', () => {

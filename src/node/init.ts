@@ -5,9 +5,11 @@ import {
   mkdtemp,
   open,
   readFile,
+  readdir,
   realpath,
   rm,
   rmdir,
+  unlink,
   writeFile,
 } from 'node:fs/promises'
 import type { Stats } from 'node:fs'
@@ -109,6 +111,7 @@ export interface InitSiteOptions {
 }
 
 interface InternalInitSiteOptions extends InitSiteOptions {
+  readonly cleanupHooks?: StagingCleanupHooks
   readonly rollbackHooks?: RollbackHooks
 }
 
@@ -126,9 +129,19 @@ interface PromotedFile extends FileIdentity {
   readonly target: string
 }
 
+interface StagedFile extends FileIdentity {
+  readonly path: string
+}
+
 interface StagingState {
   readonly path: string
+  readonly files: StagedFile[]
   identity?: DirectoryIdentity
+  configDirectory?: DirectoryIdentity
+}
+
+interface StagingCleanupHooks {
+  readonly beforeRemove?: (target: string) => Promise<void>
 }
 
 const unsupportedHardLinkCodes = new Set([
@@ -426,10 +439,6 @@ function stagingCleanupError(stagingPath: string, cause: unknown): Error {
   )
 }
 
-async function removeStagingDirectory(stagingPath: string): Promise<void> {
-  await rm(stagingPath, { force: true, recursive: true })
-}
-
 async function verifyStagingAbsent(
   stagingPath: string,
   expected?: FileIdentity,
@@ -470,6 +479,150 @@ async function cleanupProvisionalStaging(stagingPath: string): Promise<void> {
   await verifyStagingAbsent(stagingPath)
 }
 
+function stagedFileAt(
+  staging: StagingState,
+  relativePath: string,
+): StagedFile | undefined {
+  const target = path.join(staging.path, relativePath)
+  return staging.files.find((file) => file.path === target)
+}
+
+async function validateKnownStagedFile(file: StagedFile): Promise<void> {
+  const current = await optionalStat(file.path)
+  if (!current) return
+  if (
+    current.isSymbolicLink() ||
+    !current.isFile() ||
+    !sameIdentity(current, file)
+  ) {
+    throw replacedPath('staged file', file.path)
+  }
+}
+
+async function validateExpectedEntries(
+  directory: DirectoryIdentity,
+  expected: ReadonlySet<string>,
+): Promise<void> {
+  await validateDirectory(directory, 'staging directory')
+  const entries = await readdir(directory.path)
+  await validateDirectory(directory, 'staging directory')
+  const unexpected = entries.find((entry) => !expected.has(entry))
+  if (unexpected !== undefined) {
+    throw new Error(
+      `Silen init unexpected staging entry was preserved: ${path.join(directory.path, unexpected)}`,
+    )
+  }
+}
+
+async function validateStagingTree(staging: StagingState): Promise<boolean> {
+  if (!staging.identity) return false
+  const current = await optionalStat(staging.path)
+  if (!current) return false
+  if (
+    current.isSymbolicLink() ||
+    !current.isDirectory() ||
+    !sameIdentity(current, staging.identity)
+  ) {
+    throw replacedPath('staging directory', staging.path)
+  }
+  await validateDirectory(staging.identity, 'staging directory')
+
+  if (staging.configDirectory) {
+    const configCurrent = await optionalStat(staging.configDirectory.path)
+    if (configCurrent) {
+      await validateDirectory(
+        staging.configDirectory,
+        'staging .silen directory',
+      )
+      assertDirectChild(
+        staging.identity,
+        staging.configDirectory,
+        'staging .silen directory',
+      )
+    }
+  }
+  for (const file of staging.files) await validateKnownStagedFile(file)
+
+  const rootEntries = new Set<string>()
+  if (staging.configDirectory) rootEntries.add('.silen')
+  if (stagedFileAt(staging, 'index.mdx')) rootEntries.add('index.mdx')
+  await validateExpectedEntries(staging.identity, rootEntries)
+
+  if (staging.configDirectory) {
+    const configCurrent = await optionalStat(staging.configDirectory.path)
+    if (configCurrent) {
+      const configEntries = new Set<string>()
+      if (stagedFileAt(staging, '.silen/config.ts')) {
+        configEntries.add('config.ts')
+      }
+      await validateExpectedEntries(staging.configDirectory, configEntries)
+    }
+  }
+  return true
+}
+
+async function removeKnownStagedFile(file: StagedFile): Promise<void> {
+  const current = await optionalStat(file.path)
+  if (!current) return
+  if (
+    current.isSymbolicLink() ||
+    !current.isFile() ||
+    !sameIdentity(current, file)
+  ) {
+    throw replacedPath('staged file', file.path)
+  }
+  // Node exposes no portable unlinkat API. The identity check is therefore
+  // immediate, and the remaining pathname race can unlink at most one leaf.
+  try {
+    await unlink(file.path)
+  } catch (error) {
+    if (errorCode(error) !== 'ENOENT') throw error
+  }
+}
+
+async function removeKnownStagingDirectory(
+  directory: DirectoryIdentity,
+  label: string,
+): Promise<void> {
+  const current = await optionalStat(directory.path)
+  if (!current) return
+  await validateDirectory(directory, label)
+  // A last-moment non-empty replacement is preserved by non-recursive rmdir.
+  // An empty-directory swap remains irreducible without portable unlinkat.
+  try {
+    await rmdir(directory.path)
+  } catch (error) {
+    if (errorCode(error) !== 'ENOENT') throw error
+  }
+}
+
+async function securelyRemoveStaging(
+  staging: StagingState,
+  hooks: StagingCleanupHooks = {},
+): Promise<void> {
+  if (!(await validateStagingTree(staging))) return
+
+  for (const file of staging.files) {
+    await hooks.beforeRemove?.(file.path)
+    if (!(await validateStagingTree(staging))) return
+    await removeKnownStagedFile(file)
+  }
+
+  if (staging.configDirectory) {
+    await hooks.beforeRemove?.(staging.configDirectory.path)
+    if (!(await validateStagingTree(staging))) return
+    await removeKnownStagingDirectory(
+      staging.configDirectory,
+      'staging .silen directory',
+    )
+  }
+
+  await hooks.beforeRemove?.(staging.path)
+  if (!(await validateStagingTree(staging))) return
+  await removeKnownStagingDirectory(staging.identity!, 'staging directory')
+  await verifyStagingAbsent(staging.path, staging.identity)
+}
+
 async function cleanupStaging(
   staging: StagingState | undefined,
   options: InitSiteOptions,
@@ -484,27 +637,27 @@ async function cleanupStaging(
     await cleanupProvisionalStaging(staging.path)
     return
   }
-
-  let current: Stats
-  try {
-    current = await lstat(staging.path)
-  } catch (error) {
-    if (errorCode(error) === 'ENOENT') return
-    throw stagingCleanupError(staging.path, error)
-  }
-  if (
-    current.isSymbolicLink() ||
-    !current.isDirectory() ||
-    !sameIdentity(current, staging.identity)
-  ) {
-    throw replacedPath('staging directory', staging.path)
+  if (options.removeStaging) {
+    await validateStagingTree(staging)
+    try {
+      await options.removeStaging(staging.path)
+    } catch (error) {
+      throw stagingCleanupError(staging.path, error)
+    }
+    await verifyStagingAbsent(staging.path, staging.identity)
+    return
   }
   try {
-    await (options.removeStaging ?? removeStagingDirectory)(staging.path)
+    await securelyRemoveStaging(
+      staging,
+      (options as InternalInitSiteOptions).cleanupHooks,
+    )
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Silen init ')) {
+      throw error
+    }
     throw stagingCleanupError(staging.path, error)
   }
-  await verifyStagingAbsent(staging.path, staging.identity)
 }
 
 function combinedFailure(
@@ -599,6 +752,45 @@ async function promoteStagedFile(
   }
 }
 
+async function prepareStagedFile(
+  staging: StagingState,
+  relativePath: string,
+): Promise<StagedFile> {
+  if (!staging.identity) {
+    throw new Error('Silen init staging identity is unavailable')
+  }
+  await validateDirectory(staging.identity, 'staging directory')
+  if (staging.configDirectory) {
+    await validateDirectory(staging.configDirectory, 'staging .silen directory')
+    assertDirectChild(
+      staging.identity,
+      staging.configDirectory,
+      'staging .silen directory',
+    )
+  }
+
+  const stagedPath = path.join(staging.path, relativePath)
+  const expectedParent = relativePath.startsWith('.silen/')
+    ? staging.configDirectory
+    : staging.identity
+  if (!expectedParent) {
+    throw new Error(`Silen init staging parent is unavailable: ${stagedPath}`)
+  }
+  const handle = await open(stagedPath, 'wx')
+  try {
+    const metadata = await handle.stat()
+    if (!metadata.isFile()) {
+      throw new Error(`Silen init staged path is not a file: ${stagedPath}`)
+    }
+    const staged = { path: stagedPath, ...identityOf(metadata) }
+    staging.files.push(staged)
+    await validateDirectory(expectedParent, 'staging file parent')
+    return staged
+  } finally {
+    await handle.close()
+  }
+}
+
 export async function initializeSite(
   inputRoot: string,
   options: InitSiteOptions = {},
@@ -621,20 +813,33 @@ export async function initializeSite(
     const stagingRoot = await mkdtemp(
       path.join(path.dirname(root), `.${path.basename(root)}.silen-init-`),
     )
-    staging = { path: stagingRoot }
-    await options.snapshotStaging?.(stagingRoot)
+    staging = { path: stagingRoot, files: [] }
     staging.identity = await snapshotDirectory(stagingRoot, 'staging directory')
+    await options.snapshotStaging?.(stagingRoot)
     await validateDirectory(rootParent, 'root parent')
     assertDirectChild(rootParent, staging.identity, 'staging directory')
 
-    await mkdir(path.join(staging.path, '.silen'))
+    const stagingConfigDirectory = path.join(staging.path, '.silen')
+    await mkdir(stagingConfigDirectory)
+    staging.configDirectory = await snapshotDirectory(
+      stagingConfigDirectory,
+      'staging .silen directory',
+    )
+    await validateDirectory(staging.identity, 'staging directory')
+    assertDirectChild(
+      staging.identity,
+      staging.configDirectory,
+      'staging .silen directory',
+    )
     for (const file of scaffoldFiles) {
-      const stagedFile = path.join(staging.path, file.relativePath)
+      const stagedFile = (await prepareStagedFile(staging, file.relativePath))
+        .path
       if (options.writeStagedFile) {
         await options.writeStagedFile(stagedFile, file.source)
       } else {
         await writeFile(stagedFile, file.source, 'utf8')
       }
+      await validateStagingTree(staging)
     }
 
     const collisions = await scaffoldCollisions(root)

@@ -59,6 +59,46 @@ describe('validateInternalLinks', () => {
     ).toEqual([])
   })
 
+  it('rejects an escaping relative link even when its outside target is a known route', () => {
+    expect(() =>
+      validateInternalLinks(
+        routes,
+        [page(['../../about'])],
+        'error',
+        '/project/',
+      ),
+    ).toThrow('Broken internal link ../../about')
+  })
+
+  it('accepts base-contained parent and bilingual relative links from a nested route', () => {
+    expect(
+      validateInternalLinks(
+        [
+          ...routes,
+          {
+            path: '/guide/deep/',
+            file: '/docs/guide/deep/index.mdx',
+            relativeFile: 'guide/deep/index.mdx',
+          },
+          {
+            path: '/zh/guide/',
+            file: '/docs/zh/guide/index.mdx',
+            relativeFile: 'zh/guide/index.mdx',
+          },
+        ],
+        [
+          {
+            ...page(['../../about', '../../zh/guide/?lang=zh#start']),
+            file: '/docs/guide/deep/index.mdx',
+            route: '/guide/deep/',
+          },
+        ],
+        'error',
+        '/project/',
+      ),
+    ).toEqual([])
+  })
+
   it('reports invalid root-relative links under a non-root base', () => {
     expect(() =>
       validateInternalLinks(

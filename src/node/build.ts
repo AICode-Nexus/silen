@@ -25,7 +25,7 @@ import type { AiPage } from '../shared/ai.js'
 import type { ResolvedConfig } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
 import type { SilenPageData } from '../shared/plugin.js'
-import { resolveSiteLink } from '../shared/url.js'
+import { resolveSiteLink, stripSiteBase } from '../shared/url.js'
 import { resolveConfig } from './config.js'
 import { ensureBuildFavicon, type ResolvedFavicon } from './favicon.js'
 import { validateInternalLinks } from './links.js'
@@ -617,14 +617,9 @@ function notFoundOutputs(config: ResolvedConfig): readonly NotFoundOutput[] {
   for (const root of roots) {
     const absoluteRoot = root.startsWith('/') ? root : `/${root}`
     const mounted = resolveSiteLink(absoluteRoot, config.base)
+    if (mounted === undefined) continue
     const pathname = new URL(mounted, 'https://silen.local').pathname
-    const baseWithoutSlash = config.base.slice(0, -1)
-    const route =
-      pathname === baseWithoutSlash || pathname === config.base
-        ? '/'
-        : pathname.startsWith(config.base)
-          ? `/${pathname.slice(config.base.length)}`
-          : undefined
+    const route = stripSiteBase(pathname, config.base)
     if (route === undefined) continue
 
     const normalizedRoute =
