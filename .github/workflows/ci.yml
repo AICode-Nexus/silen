@@ -70,7 +70,7 @@ jobs:
         run: pnpm check:no-maps dist
 
       - name: Run single-worker tests, built stdio, and package smoke
-        run: pnpm test --maxWorkers=1 --no-file-parallelism
+        run: pnpm test
 
       - name: Validate published package metadata
         run: pnpm exec publint
