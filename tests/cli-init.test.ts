@@ -532,7 +532,9 @@ describe('silen init', () => {
           await writeFile(keepFile, 'replacement stays\n')
         },
       }),
-    ).rejects.toThrow(/\.silen.*replaced|parent.*replaced/i)
+    ).rejects.toThrow(
+      /promoted target was replaced|\.silen.*replaced|parent.*replaced/i,
+    )
 
     expect(replacements).toBe(1)
     expect(await readFile(keepFile, 'utf8')).toBe('replacement stays\n')
