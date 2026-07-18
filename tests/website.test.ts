@@ -23,7 +23,7 @@ describe('example website homepage', () => {
     expect(workflow).toContain(
       'test -f website/.silen/dist/.well-known/silen/manifest.json',
     )
-    expect(workflow).toContain('uses: actions/upload-pages-artifact@v4')
+    expect(workflow).toContain('uses: actions/upload-pages-artifact@v5')
     expect(workflow).toContain('include-hidden-files: true')
   })
 
