@@ -11,6 +11,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Included the generated `.well-known` Agent Contract directory in the GitHub
   Pages upload artifact so its live discovery URLs no longer return 404.
+- Upgraded the GitHub Pages configuration and deployment actions to their
+  Node.js 24 majors so the workflow no longer relies on deprecated Node.js 20
+  action runtimes.
 
 ## [0.2.1] - 2026-07-18
 
