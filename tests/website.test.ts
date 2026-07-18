@@ -17,6 +17,16 @@ afterAll(async () => {
 })
 
 describe('example website homepage', () => {
+  it('includes the hidden Agent Contract directory in the Pages artifact', async () => {
+    const workflow = await readFile('.github/workflows/pages.yml', 'utf8')
+
+    expect(workflow).toContain(
+      'test -f website/.silen/dist/.well-known/silen/manifest.json',
+    )
+    expect(workflow).toContain('uses: actions/upload-pages-artifact@v4')
+    expect(workflow).toContain('include-hidden-files: true')
+  })
+
   it('derives each generated html lang from the resolved locale root', async () => {
     const [english, chinese] = await Promise.all([
       readFile(path.join(result.outDir, 'guide/index.html'), 'utf8'),
