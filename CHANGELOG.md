@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-18
+
+### Fixed
+
+- Documented React and React DOM as explicit direct project dependencies, plus
+  the esbuild dependency-script allowance, in every quick-start path so a
+  clean pnpm 11 consumer can install, resolve `react/jsx-runtime`, and complete
+  its first build.
+
 ## [0.2.0] - 2026-07-17
 
 ### Added
@@ -131,7 +140,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Published Silen under the `@aicode-nexus` organization scope.
 
-[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/AICode-Nexus/silen/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/AICode-Nexus/silen/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/AICode-Nexus/silen/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/AICode-Nexus/silen/compare/v0.1.2...v0.1.3

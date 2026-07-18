@@ -105,7 +105,12 @@ describe('0.2.0 product documentation', () => {
       )
       expect(positions, home.file).toEqual([...positions].sort((a, b) => a - b))
       expect(positions[0], home.file).toBeGreaterThan(-1)
-      expect(content, home.file).toContain('pnpm add -D @aicode-nexus/silen')
+      expect(content, home.file).toContain(
+        'pnpm add react@^19.2.7 react-dom@^19.2.7',
+      )
+      expect(content, home.file).toContain(
+        'pnpm add -D @aicode-nexus/silen --allow-build=esbuild',
+      )
       expect(content, home.file).toContain('pnpm silen init docs')
       expect(content, home.file).toContain('pnpm silen dev docs')
       expect(content, home.file).toContain(`href="${home.quickStart}"`)
@@ -256,7 +261,9 @@ describe('0.2.0 product documentation', () => {
 
     expect(readme.length).toBeLessThan(8_000)
     expect(readme).toContain('Node.js `^20.19.0 || >=22.12.0`')
+    expect(readme).toContain('pnpm add react@^19.2.7 react-dom@^19.2.7')
     expect(readme).toContain('pnpm silen init docs')
+    expect(readme).toContain('--allow-build=esbuild')
     expect(readme).toContain('pnpm silen dev docs')
     expect(readme).toContain('pnpm silen build docs')
     expect(readme).toContain('https://aicode-nexus.github.io/silen/guide/')
@@ -266,9 +273,29 @@ describe('0.2.0 product documentation', () => {
     expect(readme).toContain('Contributing')
   })
 
-  it('records the dated 0.2.0 documentation checkpoint', async () => {
+  it('keeps React peers explicit in both quick-start guides', async () => {
+    const guides = await Promise.all([
+      source('website/guide/index.mdx'),
+      source('website/zh/guide/index.mdx'),
+    ])
+
+    for (const guide of guides) {
+      const peers = guide.indexOf('pnpm add react@^19.2.7 react-dom@^19.2.7')
+      const silen = guide.indexOf(
+        'pnpm add -D @aicode-nexus/silen --allow-build=esbuild',
+      )
+
+      expect(peers).toBeGreaterThan(-1)
+      expect(silen).toBeGreaterThan(peers)
+      expect(guide).toContain('react/jsx-runtime')
+    }
+  })
+
+  it('records the dated 0.2.x documentation checkpoints', async () => {
     const changelog = await source('CHANGELOG.md')
 
+    expect(changelog).toContain('## [0.2.1] - 2026-07-18')
+    expect(changelog).toContain('react/jsx-runtime')
     expect(changelog).toContain('## [0.2.0] - 2026-07-17')
     expect(changelog).toContain('silen init')
     expect(changelog).toContain('search v2')

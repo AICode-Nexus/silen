@@ -10,12 +10,20 @@ local search, and deterministic AI-readable output. Use Node.js `^20.19.0 || >=2
 
 ## Install and activate
 
-From your project root, install the package and activate a `docs` directory:
+From your project root, install the React runtime peers and Silen, then
+activate a `docs` directory:
 
 ```sh
-pnpm add -D @aicode-nexus/silen
+pnpm add react@^19.2.7 react-dom@^19.2.7
+pnpm add -D @aicode-nexus/silen --allow-build=esbuild
 pnpm silen init docs
 ```
+
+Keep `react` and `react-dom` as direct project dependencies even when your
+package manager can auto-install peers. This keeps MDX's `react/jsx-runtime`
+resolution stable across pnpm versions. Existing React 19 projects only need
+to add Silen. The explicit `--allow-build=esbuild` keeps the required esbuild
+binary available when pnpm enforces its strict dependency-script policy.
 
 `init` creates `docs/.silen/config.ts` and `docs/index.mdx`. It is safe for a
 new or existing directory: if either target already exists, Silen reports the
