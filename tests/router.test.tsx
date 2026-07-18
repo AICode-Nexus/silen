@@ -103,6 +103,73 @@ describe('Link', () => {
     expect(router.go).toHaveBeenCalledWith(expected)
   })
 
+  it('mounts an authored root-relative documentation link inside the configured base', () => {
+    const router = createRouter()
+    renderLink(router, { href: '/guide/' })
+    const link = screen.getByRole('link', { name: 'Destination' })
+
+    expect(link.getAttribute('href')).toBe('/project/guide/')
+    fireEvent.focus(link)
+    fireEvent.click(link)
+
+    expect(router.prefetch).toHaveBeenCalledWith('/project/guide/')
+    expect(router.go).toHaveBeenCalledWith('/project/guide/')
+  })
+
+  it('keeps an already mounted documentation link idempotent', () => {
+    const router = createRouter()
+    renderLink(router, { href: '/project/guide/' })
+
+    expect(
+      screen.getByRole('link', { name: 'Destination' }).getAttribute('href'),
+    ).toBe('/project/guide/')
+  })
+
+  it.each([
+    ['/../outside/?mode=literal#top', '/project/outside/?mode=literal#top'],
+    ['/%2e%2e/outside/', '/project/outside/'],
+    ['/project/../outside/', '/project/outside/'],
+    ['/project/%2E%2E/outside/', '/project/outside/'],
+  ])('canonicalizes dot segments in authored href %s', (href, expected) => {
+    const router = createRouter()
+    renderLink(router, { href })
+    const link = screen.getByRole('link', { name: 'Destination' })
+
+    expect(link.getAttribute('href')).toBe(expected)
+    fireEvent.click(link)
+
+    expect(router.go).toHaveBeenCalledWith(expected)
+  })
+
+  it.each([
+    ['/..\t/outside/', '/project/outside/'],
+    ['/.\n./outside/', '/project/outside/'],
+    ['/project/..\r/outside/', '/project/outside/'],
+    ['/project/%2e\r%2e/outside/', '/project/outside/'],
+    ['/guide\tname/?mode=full\n#top', '/project/guidename/?mode=full#top'],
+    ['\u000b /guide/', '/project/guide/'],
+    ['\u000b \\guide/', '/project/guide/'],
+    ['\u0000 \t/project/../outside/', '/project/outside/'],
+  ])(
+    'keeps WHATWG-normalized root-relative href %s inside the base',
+    (href, expected) => {
+      const router = createRouter()
+      renderLink(router, { href })
+      const link = screen.getByRole<HTMLAnchorElement>('link', {
+        name: 'Destination',
+      })
+
+      expect(link.getAttribute('href')).toBe(expected)
+      expect(new URL(link.href).pathname).toSatisfy(
+        (pathname: string) =>
+          pathname === '/project' || pathname.startsWith('/project/'),
+      )
+      fireEvent.click(link)
+
+      expect(router.go).toHaveBeenCalledWith(expected)
+    },
+  )
+
   it('matches a human-readable Unicode and space href against a canonical encoded base', () => {
     const base = '/%E6%96%87%E6%A1%A3%20docs/'
     window.history.replaceState(null, '', base)
@@ -165,8 +232,12 @@ describe('Link', () => {
 
   it.each([
     ['cross-origin HTTPS', 'https://example.com/project/guide', {}],
+    [
+      'same-origin complete URL outside the configured base',
+      `${window.location.origin}/other/guide`,
+      {},
+    ],
     ['same-origin protocol relative', '//localhost:3000/project/guide', {}],
-    ['outside the configured base', '/other/guide', {}],
     ['mailto', 'mailto:docs@example.com', {}],
     ['telephone', 'tel:+15555550100', {}],
     ['JavaScript', 'javascript:alert(1)', {}],

@@ -5,6 +5,7 @@ import {
   type ReactNode,
 } from 'react'
 import { navigateDocument } from './navigation.js'
+import { resolveSiteLink } from '../shared/url.js'
 
 export interface Router {
   path: string
@@ -68,7 +69,7 @@ export function resolveInternalUrl(
   base: string | undefined,
 ): URL | undefined {
   if (typeof window === 'undefined') return undefined
-  const candidate = href.trimStart()
+  const candidate = resolveSiteLink(href.trimStart(), base)
   if (!candidate || candidate.startsWith('//')) return undefined
 
   let url: URL
@@ -98,34 +99,35 @@ export function Link({
   ...props
 }: LinkProps): React.JSX.Element {
   const router = useRouter()
+  const resolvedHref = resolveSiteLink(href, router.base)
   const downloadValue =
     typeof download === 'string' || download === true ? download : undefined
   const canHandle = (): boolean =>
     target === undefined &&
     downloadValue === undefined &&
-    resolveInternalUrl(href, router.base) !== undefined
+    resolveInternalUrl(resolvedHref, router.base) !== undefined
 
   return (
     <a
-      href={href}
+      href={resolvedHref}
       download={downloadValue}
       target={target}
       {...props}
       onFocus={(event) => {
         onFocus?.(event)
         if (!event.defaultPrevented && canHandle()) {
-          void router.prefetch(href).catch(() => undefined)
+          void router.prefetch(resolvedHref).catch(() => undefined)
         }
       }}
       onMouseEnter={(event) => {
         onMouseEnter?.(event)
         if (!event.defaultPrevented && canHandle()) {
-          void router.prefetch(href).catch(() => undefined)
+          void router.prefetch(resolvedHref).catch(() => undefined)
         }
       }}
       onClick={(event) => {
         onClick?.(event)
-        const url = resolveInternalUrl(href, router.base)
+        const url = resolveInternalUrl(resolvedHref, router.base)
         if (
           event.defaultPrevented ||
           event.button !== 0 ||
@@ -137,7 +139,7 @@ export function Link({
           return
         }
         event.preventDefault()
-        void router.go(href).catch(() => navigateDocument(url.href))
+        void router.go(resolvedHref).catch(() => navigateDocument(url.href))
       }}
     />
   )

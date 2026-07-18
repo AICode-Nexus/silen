@@ -1,4 +1,5 @@
 import type { ThemeLocaleItem } from '../../shared/config.js'
+import { resolveSiteLink } from '../../shared/url.js'
 
 function normalizedBase(base: string): string {
   if (!base || base === '/') return '/'
@@ -25,12 +26,6 @@ function hasScheme(link: string): boolean {
   return /^[a-z][a-z\d+.-]*:/i.test(link)
 }
 
-function isWithinBase(linkPath: string, base: string): boolean {
-  if (base === '/') return true
-  const baseWithoutSlash = base.slice(0, -1)
-  return linkPath === baseWithoutSlash || linkPath.startsWith(base)
-}
-
 export function resolveThemeLink(link: string, base: string): string {
   if (
     !link ||
@@ -41,15 +36,7 @@ export function resolveThemeLink(link: string, base: string): string {
   ) {
     return link
   }
-
-  const resolvedBase = normalizedBase(base)
-  const match = /^([^?#]*)(.*)$/.exec(link)
-  const linkPath = match?.[1] ?? link
-  const suffix = match?.[2] ?? ''
-  const absolutePath = linkPath.startsWith('/') ? linkPath : `/${linkPath}`
-  if (isWithinBase(absolutePath, resolvedBase))
-    return `${absolutePath}${suffix}`
-  return `${resolvedBase}${absolutePath.replace(/^\/+/, '')}${suffix}`
+  return resolveSiteLink(link.startsWith('/') ? link : `/${link}`, base)
 }
 
 export function isActiveThemeLink(

@@ -1,5 +1,6 @@
 import type { CompiledPage } from './mdx.js'
 import type { RouteRecord } from '../shared/page.js'
+import { resolveSiteLink } from '../shared/url.js'
 
 export interface LinkDiagnostic {
   file: string
@@ -66,9 +67,11 @@ function internalPageTarget(
     return undefined
   }
 
-  if (trimmed.startsWith('?') || trimmed.startsWith('#')) {
+  const resolved = resolveSiteLink(trimmed, base)
+
+  if (resolved.startsWith('?') || resolved.startsWith('#')) {
     const current = new URL(
-      trimmed,
+      resolved,
       `https://silen.local${base}${pageRoute.slice(1)}`,
     )
     return { route: pageRoute, search: current.search, hash: current.hash }
@@ -77,7 +80,7 @@ function internalPageTarget(
   const mountedPage = `${base}${pageDirectory(pageRoute).replace(/^\//, '')}`
   let url: URL
   try {
-    url = new URL(trimmed, `https://silen.local${mountedPage}`)
+    url = new URL(resolved, `https://silen.local${mountedPage}`)
   } catch {
     return { route: trimmed, search: '', hash: '', malformed: true }
   }

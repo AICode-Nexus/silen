@@ -17,6 +17,23 @@ afterAll(async () => {
 })
 
 describe('example website homepage', () => {
+  it('uses the exact Node engine contract and base-contained guide links', async () => {
+    const [englishGuide, chineseGuide, englishAi, chineseAi] =
+      await Promise.all([
+        readFile(path.resolve('website/guide/index.mdx'), 'utf8'),
+        readFile(path.resolve('website/zh/guide/index.mdx'), 'utf8'),
+        readFile(path.resolve('website/ai/index.mdx'), 'utf8'),
+        readFile(path.resolve('website/zh/ai/index.mdx'), 'utf8'),
+      ])
+
+    expect(englishGuide).toContain('Node.js `^20.19.0 || >=22.12.0`')
+    expect(chineseGuide).toContain('Node.js `^20.19.0 || >=22.12.0`')
+    expect(englishGuide).toContain('](/silen/ai/)')
+    expect(chineseGuide).toContain('](/silen/zh/ai/)')
+    expect(englishAi).toContain('](/silen/guide/)')
+    expect(chineseAi).toContain('](/silen/zh/guide/)')
+  })
+
   it('ships the generated workflow illustration as a compressed JPEG', async () => {
     const source = await readFile(
       path.resolve('website/public/silen-workflow.jpg'),

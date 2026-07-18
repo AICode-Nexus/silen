@@ -13,8 +13,9 @@ import { pipeline } from 'node:stream/promises'
 import react from '@vitejs/plugin-react'
 import { createServer as createViteServer, type ViteDevServer } from 'vite'
 import type { RenderedPage } from '../client/app.js'
-import type { ResolvedConfig } from '../shared/config.js'
+import type { ResolvedConfig, ThemeLocaleItem } from '../shared/config.js'
 import type { SilenPageData } from '../shared/plugin.js'
+import { resolveSiteLink } from '../shared/url.js'
 import { resolveConfig } from './config.js'
 import { createMdxPlugins } from './mdx.js'
 import { silenPlugin } from './plugin.js'
@@ -479,12 +480,79 @@ async function findPreviewFile(
   return undefined
 }
 
+async function findPreviewNotFound(
+  outDir: string,
+  pathname: string,
+  base: string,
+  locales: readonly ThemeLocaleItem[],
+): Promise<{ file: string; size: number } | undefined> {
+  const roots = new Set<string>(['/'])
+  for (const locale of locales) {
+    if (typeof locale.root === 'string') roots.add(locale.root)
+  }
+
+  const matches = [...roots]
+    .map((root) => {
+      const absoluteRoot = root.startsWith('/') ? root : `/${root}`
+      const mounted = new URL(
+        resolveSiteLink(absoluteRoot, base),
+        'https://silen.local',
+      ).pathname
+      const normalized = mounted.endsWith('/') ? mounted : `${mounted}/`
+      const withoutSlash = normalized.slice(0, -1)
+      if (pathname !== withoutSlash && !pathname.startsWith(normalized)) {
+        return undefined
+      }
+      const relative = pathRelativeToBase(normalized, base)
+      return {
+        pathname: normalized,
+        candidate: path.resolve(
+          outDir,
+          ...relative.split('/').filter(Boolean),
+          '404.html',
+        ),
+      }
+    })
+    .filter(
+      (entry): entry is { pathname: string; candidate: string } =>
+        entry !== undefined,
+    )
+    .sort((left, right) => right.pathname.length - left.pathname.length)
+
+  for (const match of matches) {
+    const found = await safeFile(outDir, match.candidate)
+    if (found) return found
+  }
+  return undefined
+}
+
+async function sendPreviewFile(
+  request: IncomingMessage,
+  response: ServerResponse,
+  found: { file: string; size: number },
+  status: number,
+): Promise<void> {
+  response.statusCode = status
+  response.setHeader(
+    'content-type',
+    mimeTypes[path.extname(found.file).toLowerCase()] ??
+      'application/octet-stream',
+  )
+  response.setHeader('content-length', String(found.size))
+  if (request.method === 'HEAD') {
+    response.end()
+    return
+  }
+  await pipeline(createReadStream(found.file), response)
+}
+
 async function servePreviewRequest(
   request: IncomingMessage,
   response: ServerResponse,
   outDir: string,
-  base: string,
+  config: ResolvedConfig,
 ): Promise<void> {
+  const { base } = config
   if (rejectUnsupportedMethod(request, response)) return
   const parsed = parseRequestPath(request.url)
   if (!parsed) {
@@ -508,21 +576,20 @@ async function servePreviewRequest(
   try {
     const found = await findPreviewFile(outDir, segments)
     if (!found) {
+      const notFound = await findPreviewNotFound(
+        outDir,
+        parsed.pathname,
+        base,
+        config.themeConfig.locales ?? [],
+      )
+      if (notFound) {
+        await sendPreviewFile(request, response, notFound, 404)
+        return
+      }
       sendText(request, response, 404, 'Not found\n')
       return
     }
-    response.statusCode = 200
-    response.setHeader(
-      'content-type',
-      mimeTypes[path.extname(found.file).toLowerCase()] ??
-        'application/octet-stream',
-    )
-    response.setHeader('content-length', String(found.size))
-    if (request.method === 'HEAD') {
-      response.end()
-      return
-    }
-    await pipeline(createReadStream(found.file), response)
+    await sendPreviewFile(request, response, found, 200)
   } catch (error) {
     if (!response.headersSent) {
       sendText(
@@ -680,7 +747,7 @@ export async function createPreviewServer(
   }
 
   const server = createHttpServer((request, response) => {
-    void servePreviewRequest(request, response, outDir, config.base)
+    void servePreviewRequest(request, response, outDir, config)
   })
   const address = await listen(server, resolvedListen)
   return serverLifecycle(server, address, resolvedListen.host, config.base)

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import {
   mkdir,
   lstat,
+  readdir,
   readFile,
   realpath,
   rename,
@@ -24,6 +25,7 @@ import type { AiPage } from '../shared/ai.js'
 import type { ResolvedConfig } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
 import type { SilenPageData } from '../shared/plugin.js'
+import { resolveSiteLink } from '../shared/url.js'
 import { resolveConfig } from './config.js'
 import { ensureBuildFavicon, type ResolvedFavicon } from './favicon.js'
 import { validateInternalLinks } from './links.js'
@@ -280,6 +282,30 @@ async function assertNoReservedContractPublicFiles(
   }
 }
 
+async function removeSourceMapFiles(directory: string): Promise<void> {
+  let entries: string[]
+  try {
+    entries = await readdir(directory)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+    throw error
+  }
+
+  await Promise.all(
+    entries.map(async (entry) => {
+      const file = path.join(directory, entry)
+      const stats = await lstat(file)
+      if (stats.isDirectory()) {
+        await removeSourceMapFiles(file)
+        return
+      }
+      if (stats.isFile() && entry.endsWith('.map')) {
+        await rm(file, { force: true })
+      }
+    }),
+  )
+}
+
 async function compilePages(
   routes: readonly RouteRecord[],
   runner: PluginRunner,
@@ -351,6 +377,7 @@ async function buildClient(
         emptyOutDir: true,
         manifest: true,
         outDir,
+        sourcemap: false,
         rolldownOptions: {
           input: { client: entrySource() },
         },
@@ -385,6 +412,7 @@ async function buildServerRenderer(
         assetsInlineLimit: 0,
         emptyOutDir: true,
         outDir,
+        sourcemap: false,
         ssr: ssrSource(),
         rolldownOptions: {
           output: { entryFileNames: 'ssr-entry.mjs' },
@@ -570,6 +598,71 @@ async function renderRoutes(
   }
 }
 
+interface NotFoundOutput {
+  relativeFile: string
+  url: string
+}
+
+function notFoundOutputs(config: ResolvedConfig): readonly NotFoundOutput[] {
+  const roots = new Set<string>(['/'])
+  for (const locale of config.themeConfig.locales ?? []) {
+    if (typeof locale.root === 'string') roots.add(locale.root)
+  }
+
+  const outputs = new Map<string, NotFoundOutput>()
+  for (const root of roots) {
+    const absoluteRoot = root.startsWith('/') ? root : `/${root}`
+    const mounted = resolveSiteLink(absoluteRoot, config.base)
+    const pathname = new URL(mounted, 'https://silen.local').pathname
+    const baseWithoutSlash = config.base.slice(0, -1)
+    const route =
+      pathname === baseWithoutSlash || pathname === config.base
+        ? '/'
+        : pathname.startsWith(config.base)
+          ? `/${pathname.slice(config.base.length)}`
+          : undefined
+    if (route === undefined) continue
+
+    const normalizedRoute =
+      route === '/' || route.endsWith('/') ? route : `${route}/`
+    const segments = safeRouteSegments(normalizedRoute)
+    const relativeFile = path.join(...segments, '404.html')
+    outputs.set(relativeFile, {
+      relativeFile,
+      url: `${routeUrl(config.base, normalizedRoute)}__silen_not_found__`,
+    })
+  }
+  return [...outputs.values()]
+}
+
+async function renderNotFoundPages(
+  config: ResolvedConfig,
+  routes: readonly RouteRecord[],
+  renderer: RendererModule,
+  manifest: Manifest,
+  outDir: string,
+  favicon: ResolvedFavicon,
+): Promise<void> {
+  const assetRoute = routes.find((route) => route.path === '/') ?? routes[0]
+  if (!assetRoute) return
+  const assets = await manifestAssets(manifest, config.root, assetRoute)
+
+  for (const output of notFoundOutputs(config)) {
+    const rendered = await renderer.render(output.url)
+    if (rendered.status !== 404) {
+      throw new Error(`404 route rendered status ${rendered.status}`)
+    }
+    const document = renderDocument(rendered, {
+      ...assets,
+      base: config.base,
+      favicon,
+    })
+    const destination = path.resolve(outDir, output.relativeFile)
+    await mkdir(path.dirname(destination), { recursive: true })
+    await writeFile(destination, document, 'utf8')
+  }
+}
+
 async function emitSearchIndex(
   config: ResolvedConfig,
   pages: readonly CompiledPage[],
@@ -682,6 +775,14 @@ async function buildSite(root: string): Promise<BuildResult> {
       stagedOutDir,
       favicon,
     )
+    await renderNotFoundPages(
+      config,
+      routes,
+      renderer,
+      manifest,
+      stagedOutDir,
+      favicon,
+    )
     await generateAiArtifacts({
       outDir: stagedOutDir,
       site: config,
@@ -695,6 +796,7 @@ async function buildSite(root: string): Promise<BuildResult> {
     validateInternalLinks(routes, pages, config.onBrokenLinks, config.base)
     await emitSearchIndex(config, pages, stagedOutDir)
     await rm(path.join(stagedOutDir, '.vite'), { force: true, recursive: true })
+    await removeSourceMapFiles(stagedOutDir)
     await installOutput(stagedOutDir, config.outDir, backupDir)
     installed = true
     try {
@@ -704,6 +806,7 @@ async function buildSite(root: string): Promise<BuildResult> {
         pages: pages.map(publicPageData),
         outDir: config.outDir,
       })
+      await removeSourceMapFiles(config.outDir)
     } catch (error) {
       throw new Error(
         `Silen installed the core output at ${config.outDir}, but ${errorDetail(error)}; plugin side effects were not rolled back`,

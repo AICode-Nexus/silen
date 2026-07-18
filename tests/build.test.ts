@@ -18,13 +18,17 @@ let result: BuildResult
 let home: string
 let guide: string
 let about: string
+let notFound: string
+let chineseNotFound: string
 
 beforeAll(async () => {
   result = await build(root)
-  ;[home, guide, about] = await Promise.all([
+  ;[home, guide, about, notFound, chineseNotFound] = await Promise.all([
     readFile(path.join(result.outDir, 'index.html'), 'utf8'),
     readFile(path.join(result.outDir, 'guide/index.html'), 'utf8'),
     readFile(path.join(result.outDir, 'about/index.html'), 'utf8'),
+    readFile(path.join(result.outDir, '404.html'), 'utf8'),
+    readFile(path.join(result.outDir, 'zh/404.html'), 'utf8'),
   ])
 })
 
@@ -38,6 +42,11 @@ describe('static production build', () => {
     await expect(
       readFile(path.join(result.outDir, '.vite/manifest.json'), 'utf8'),
     ).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it('does not ship source maps in the static output', async () => {
+    const assetFiles = await readdir(path.join(result.outDir, 'assets'))
+    expect(assetFiles.some((file) => file.endsWith('.map'))).toBe(false)
   })
 
   it('keeps root, nested-index, and no-trailing routes inside outDir', () => {
@@ -76,6 +85,15 @@ describe('static production build', () => {
     expect(home).toContain('data-custom-root=""')
     expect(about).toContain('data-demo=""')
     expect(about).toContain('Custom theme component')
+  })
+
+  it('emits themed default and configured-locale 404 pages', () => {
+    for (const html of [notFound, chineseNotFound]) {
+      expect(html).toContain('<h1>404</h1>')
+      expect(html).toContain('Page not found')
+      expect(html).toContain('href="/project/"')
+    }
+    expect(notFound).not.toBe(chineseNotFound)
   })
 
   it('uses manifest-resolved filenames without preloading non-critical assets', () => {

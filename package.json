@@ -1,6 +1,6 @@
 {
   "name": "@aicode-nexus/silen",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A lightweight documentation-first static site generator powered by React, TypeScript, Vite, and MDX.",
   "keywords": [
     "documentation",
@@ -60,10 +60,12 @@
     "build": "tsup && jiti tooling/build-agent-contract.ts",
     "site:build": "pnpm build && node dist/node/cli.js build website",
     "site:dev": "pnpm build && node dist/node/cli.js dev website",
-    "test": "vitest run",
+    "pretest": "jiti tooling/build-agent-contract.ts",
+    "test": "vitest run --maxWorkers=1 --no-file-parallelism",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "check:no-maps": "jiti tooling/assert-no-source-maps.ts"
   },
   "peerDependencies": {
     "react": "^19.2.7",

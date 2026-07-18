@@ -3,6 +3,7 @@ import { request } from 'node:http'
 import {
   mkdir,
   mkdtemp,
+  readFile,
   rename,
   rm,
   symlink,
@@ -108,6 +109,11 @@ export default defineConfig({
         image: { src: '/logo.svg', alt: 'Server fixture workflow' },
       },
     },
+    locales: [
+      { lang: 'en-US', label: 'English', root: '/' },
+      { lang: 'zh-CN', label: '中文', root: '/zh/' },
+      { lang: 'zh-Hant', label: '繁體', root: '/zh/hant/' },
+    ],
   },
 })
 `,
@@ -347,10 +353,37 @@ describe('preview server', () => {
     })
     runningServers.push(server)
 
-    expect((await fetch(new URL('missing', server.url))).status).toBe(404)
+    const [default404, chinese404, traditionalChinese404] = await Promise.all([
+      readFile(path.join(root, 'output/404.html'), 'utf8'),
+      readFile(path.join(root, 'output/zh/404.html'), 'utf8'),
+      readFile(path.join(root, 'output/zh/hant/404.html'), 'utf8'),
+    ])
+    expect(new Set([default404, chinese404, traditionalChinese404]).size).toBe(
+      3,
+    )
+
+    const missing = await fetch(new URL('missing', server.url))
+    expect(missing.status).toBe(404)
+    expect(await missing.text()).toBe(default404)
+
+    const chineseMissing = await fetch(new URL('zh/missing', server.url))
+    expect(chineseMissing.status).toBe(404)
+    expect(await chineseMissing.text()).toBe(chinese404)
+
+    const traditionalChineseMissing = await fetch(
+      new URL('zh/hant/missing', server.url),
+    )
+    expect(traditionalChineseMissing.status).toBe(404)
+    expect(await traditionalChineseMissing.text()).toBe(traditionalChinese404)
+
     expect(
       (await fetch(`http://127.0.0.1:${server.port}/output/index.html`)).status,
     ).toBe(404)
+    expect(
+      await (
+        await fetch(`http://127.0.0.1:${server.port}/output/index.html`)
+      ).text(),
+    ).toBe('Not found\n')
     expect((await fetch(new URL('leak.txt', server.url))).status).toBe(404)
     expect(
       await rawStatus(new URL(server.url), '/docs/%2e%2e/secret.txt'),

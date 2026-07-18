@@ -34,6 +34,64 @@ function page(links: string[]): CompiledPage {
 }
 
 describe('validateInternalLinks', () => {
+  it('accepts root-relative and idempotently base-prefixed documentation links', () => {
+    expect(
+      validateInternalLinks(
+        routes,
+        [
+          page([
+            '/guide/',
+            '/project/guide/',
+            '../about',
+            '#install',
+            '?mode=compact',
+            'mailto:docs@example.com',
+            'tel:+15555550100',
+            '//cdn.example.com/guide',
+            'data:text/plain,guide',
+            'blob:https://example.com/id',
+            'https://example.com/guide/',
+          ]),
+        ],
+        'error',
+        '/project/',
+      ),
+    ).toEqual([])
+  })
+
+  it('reports invalid root-relative links under a non-root base', () => {
+    expect(() =>
+      validateInternalLinks(
+        routes,
+        [page(['/missing-guide/'])],
+        'error',
+        '/project/',
+      ),
+    ).toThrow('Broken internal link /missing-guide/')
+  })
+
+  it.each([
+    ['literal root escape', '/../missing-literal/'],
+    ['encoded root escape', '/%2e%2e/missing-encoded/'],
+    ['literal prefixed escape', '/project/../missing-prefixed/'],
+    ['encoded prefixed escape', '/project/%2E%2E/missing-encoded-prefixed/'],
+  ])('reports an invalid %s beneath the documentation base', (_, link) => {
+    expect(() =>
+      validateInternalLinks(routes, [page([link])], 'error', '/project/'),
+    ).toThrow(`Broken internal link ${link}`)
+  })
+
+  it.each([
+    ['tab-obfuscated dot segment', '/..\t/missing-tab/'],
+    ['LF-obfuscated dot segment', '/.\n./missing-lf/'],
+    ['prefixed CR-obfuscated dot segment', '/project/..\r/missing-cr/'],
+    ['leading stripped control', '\u000b /missing-leading/'],
+  ])('reports an invalid %s', (_, link) => {
+    expect(() =>
+      validateInternalLinks(routes, [page([link])], 'error', '/project/'),
+    ).toThrow(`Broken internal link ${link}`)
+  })
+
   it('normalizes base, relative, query, hash, encoded, and trailing aliases', () => {
     const diagnostics = validateInternalLinks(
       routes,
