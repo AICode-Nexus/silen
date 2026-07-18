@@ -11,11 +11,16 @@ and an optional local MCP workspace for AI clients.
 
 ## Requirements
 
-Use Node.js `^20.19.0 || >=22.12.0` and pnpm.
+Use Node.js `^20.19.0 || >=22.12.0` and pnpm. Install the React runtime peers
+as direct project dependencies, then add Silen:
 
 ```sh
-pnpm add -D @aicode-nexus/silen
+pnpm add react@^19.2.7 react-dom@^19.2.7
+pnpm add -D @aicode-nexus/silen --allow-build=esbuild
 ```
+
+The explicit build allowance keeps esbuild usable under pnpm's strict
+dependency-script policy.
 
 ## Quick reference
 
