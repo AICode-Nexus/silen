@@ -23,8 +23,10 @@ describe('example website homepage', () => {
     expect(workflow).toContain(
       'test -f website/.silen/dist/.well-known/silen/manifest.json',
     )
+    expect(workflow).toContain('uses: actions/configure-pages@v6')
     expect(workflow).toContain('uses: actions/upload-pages-artifact@v5')
     expect(workflow).toContain('include-hidden-files: true')
+    expect(workflow).toContain('uses: actions/deploy-pages@v5')
   })
 
   it('derives each generated html lang from the resolved locale root', async () => {
