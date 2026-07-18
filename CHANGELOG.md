@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+
+- Included the generated `.well-known` Agent Contract directory in the GitHub
+  Pages upload artifact so its live discovery URLs no longer return 404.
+
 ## [0.2.1] - 2026-07-18
 
 ### Fixed

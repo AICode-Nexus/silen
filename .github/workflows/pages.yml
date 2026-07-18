@@ -49,6 +49,9 @@ jobs:
       - name: Assert upload artifact has no source maps
         run: pnpm check:no-maps dist website/.silen/dist
 
+      - name: Assert public Agent Contract is present
+        run: test -f website/.silen/dist/.well-known/silen/manifest.json
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
@@ -56,6 +59,7 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: website/.silen/dist
+          include-hidden-files: true
 
   deploy:
     name: Deploy GitHub Pages
