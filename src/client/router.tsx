@@ -5,7 +5,7 @@ import {
   type ReactNode,
 } from 'react'
 import { navigateDocument } from './navigation.js'
-import { resolveSiteLink } from '../shared/url.js'
+import { isSitePathWithinBase, resolveSiteLink } from '../shared/url.js'
 
 export interface Router {
   path: string
@@ -45,43 +45,35 @@ export function useRouter(): Router {
   return router
 }
 
+export function useOptionalRouter(): Router | undefined {
+  return useContext(RouterContext) ?? undefined
+}
+
 export function useRoute(): string {
   return useRouter().path
 }
 
-function normalizedBase(base: string | undefined): string {
-  if (!base || base === '/') return '/'
-  const withLeadingSlash = base.startsWith('/') ? base : `/${base}`
-  return withLeadingSlash.endsWith('/')
-    ? withLeadingSlash
-    : `${withLeadingSlash}/`
-}
-
-function isWithinBase(pathname: string, base: string | undefined): boolean {
-  const normalized = normalizedBase(base)
-  if (normalized === '/') return true
-  return pathname === normalized.slice(0, -1) || pathname.startsWith(normalized)
-}
-
 /** @internal Shared by Link and the browser-backed App router. */
 export function resolveInternalUrl(
-  href: string,
+  href: string | undefined,
   base: string | undefined,
+  currentUrl?: string,
 ): URL | undefined {
-  if (typeof window === 'undefined') return undefined
-  const candidate = resolveSiteLink(href.trimStart(), base)
+  if (typeof window === 'undefined' || href === undefined) return undefined
+  const resolutionBase = currentUrl ?? window.location.href
+  const candidate = resolveSiteLink(href.trimStart(), base, resolutionBase)
   if (!candidate || candidate.startsWith('//')) return undefined
 
   let url: URL
   try {
-    url = new URL(candidate, window.location.href)
+    url = new URL(candidate, new URL(resolutionBase, window.location.origin))
   } catch {
     return undefined
   }
 
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined
   if (url.origin !== window.location.origin) return undefined
-  if (!isWithinBase(url.pathname, base)) return undefined
+  if (!isSitePathWithinBase(url.pathname, base)) return undefined
   return url
 }
 
@@ -99,13 +91,13 @@ export function Link({
   ...props
 }: LinkProps): React.JSX.Element {
   const router = useRouter()
-  const resolvedHref = resolveSiteLink(href, router.base)
+  const resolvedHref = resolveSiteLink(href, router.base, router.path)
   const downloadValue =
     typeof download === 'string' || download === true ? download : undefined
   const canHandle = (): boolean =>
     target === undefined &&
     downloadValue === undefined &&
-    resolveInternalUrl(resolvedHref, router.base) !== undefined
+    resolveInternalUrl(resolvedHref, router.base, router.path) !== undefined
 
   return (
     <a
@@ -115,19 +107,27 @@ export function Link({
       {...props}
       onFocus={(event) => {
         onFocus?.(event)
-        if (!event.defaultPrevented && canHandle()) {
+        if (
+          resolvedHref !== undefined &&
+          !event.defaultPrevented &&
+          canHandle()
+        ) {
           void router.prefetch(resolvedHref).catch(() => undefined)
         }
       }}
       onMouseEnter={(event) => {
         onMouseEnter?.(event)
-        if (!event.defaultPrevented && canHandle()) {
+        if (
+          resolvedHref !== undefined &&
+          !event.defaultPrevented &&
+          canHandle()
+        ) {
           void router.prefetch(resolvedHref).catch(() => undefined)
         }
       }}
       onClick={(event) => {
         onClick?.(event)
-        const url = resolveInternalUrl(resolvedHref, router.base)
+        const url = resolveInternalUrl(resolvedHref, router.base, router.path)
         if (
           event.defaultPrevented ||
           event.button !== 0 ||
@@ -139,7 +139,9 @@ export function Link({
           return
         }
         event.preventDefault()
-        void router.go(resolvedHref).catch(() => navigateDocument(url.href))
+        if (resolvedHref !== undefined) {
+          void router.go(resolvedHref).catch(() => navigateDocument(url.href))
+        }
       }}
     />
   )

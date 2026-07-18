@@ -5,6 +5,7 @@ import type {
   AnalyticsScript,
   ResolvedConfig,
   ThemeConfig,
+  ThemeMessagesOverrides,
 } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
 
@@ -185,6 +186,116 @@ function publicHome(
   }
 }
 
+function publicMessageGroup<T extends Readonly<Record<string, string>>>(
+  group: Partial<T> | undefined,
+  keys: readonly (keyof T)[],
+): Partial<T> | undefined {
+  if (group === undefined) return undefined
+  return Object.fromEntries(
+    keys.flatMap((key) =>
+      typeof group[key] === 'string' ? [[key, group[key]]] : [],
+    ),
+  ) as Partial<T>
+}
+
+function publicThemeMessages(
+  messages: ThemeMessagesOverrides,
+): ThemeMessagesOverrides {
+  const navigation = publicMessageGroup(messages.navigation, [
+    'skipToContent',
+    'mainNavigation',
+    'language',
+    'languageCurrent',
+    'close',
+    'features',
+    'featureLink',
+  ])
+  const search = publicMessageGroup(messages.search, [
+    'button',
+    'commandPalette',
+    'commandDescription',
+    'dialogTitle',
+    'dialogDescription',
+    'placeholder',
+    'prompt',
+    'searching',
+    'noResults',
+    'unavailable',
+    'unableToOpen',
+    'documentation',
+    'otherLanguages',
+    'home',
+  ])
+  const appearance = publicMessageGroup(messages.appearance, [
+    'label',
+    'option',
+    'system',
+    'light',
+    'dark',
+  ])
+  const sidebar = publicMessageGroup(messages.sidebar, [
+    'main',
+    'documentation',
+    'openNavigation',
+    'dialogTitle',
+    'dialogDescription',
+    'mobileNavigation',
+  ])
+  const outline = publicMessageGroup(messages.outline, ['onThisPage'])
+  const pagination = publicMessageGroup(messages.pagination, [
+    'navigation',
+    'previous',
+    'next',
+    'linkLabel',
+    'pageLabel',
+  ])
+  const copy = publicMessageGroup(messages.copy, [
+    'group',
+    'copy',
+    'copyThisPage',
+    'copyMarkdown',
+    'copyForAi',
+    'preparingAi',
+    'copyingMarkdown',
+    'aiCopied',
+    'markdownCopied',
+    'fetchError',
+    'clipboardError',
+    'copyCode',
+    'codeCopied',
+    'copied',
+    'copyFailed',
+  ])
+  const notFound = publicMessageGroup(messages.notFound, [
+    'title',
+    'description',
+    'returnHome',
+  ])
+  const askAi = publicMessageGroup(messages.askAi, [
+    'button',
+    'loading',
+    'title',
+    'description',
+    'question',
+    'submit',
+    'unableToAnswer',
+    'providerFailure',
+    'generating',
+    'ready',
+  ])
+  return {
+    ...(navigation === undefined ? {} : { navigation }),
+    ...(search === undefined ? {} : { search }),
+    ...(appearance === undefined ? {} : { appearance }),
+    ...(sidebar === undefined ? {} : { sidebar }),
+    ...(outline === undefined ? {} : { outline }),
+    ...(pagination === undefined ? {} : { pagination }),
+    ...(copy === undefined ? {} : { copy }),
+    ...(notFound === undefined ? {} : { notFound }),
+    ...(askAi === undefined ? {} : { askAi }),
+  }
+}
+
 function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
   const askAiEndpoint = themeConfig.ai?.endpoint
   return {
@@ -226,11 +337,14 @@ function publicThemeConfig(themeConfig: ThemeConfig): ThemeConfig {
       ? {}
       : {
           locales: themeConfig.locales.map(
-            ({ lang, label, root, link, nav, sidebar, home }) => ({
+            ({ lang, label, root, link, messages, nav, sidebar, home }) => ({
               lang,
               label,
               ...(root === undefined ? {} : { root }),
               ...(link === undefined ? {} : { link }),
+              ...(messages === undefined
+                ? {}
+                : { messages: publicThemeMessages(messages) }),
               ...(nav === undefined ? {} : { nav: publicNav(nav) }),
               ...(sidebar === undefined
                 ? {}
@@ -293,6 +407,7 @@ function serializeConfig(
         description: config.description,
         lang: config.lang,
         base: config.base,
+        ...(config.siteUrl === undefined ? {} : { siteUrl: config.siteUrl }),
         ai: {
           llmsTxt: config.ai.llmsTxt,
           llmsFullTxt: config.ai.llmsFullTxt,

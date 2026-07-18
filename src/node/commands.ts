@@ -6,6 +6,7 @@ import type {
   SilenCliOptionContract,
 } from '../shared/ai-contract.js'
 import { build, type BuildResult } from './build.js'
+import { initializeSite } from './init.js'
 import {
   createDevServer,
   createPreviewServer,
@@ -27,6 +28,7 @@ interface CommandDependencies {
   createDevServer: ServerFactory
   createPreviewServer: ServerFactory
   createWorkspace(root: string): Promise<Workspace>
+  initializeSite: typeof initializeSite
   serveMcp: typeof serveMcp
   output(message: string): void
   setExitCode(code: number): void
@@ -92,6 +94,7 @@ const defaultDependencies: CommandDependencies = {
   createDevServer,
   createPreviewServer,
   createWorkspace,
+  initializeSite,
   serveMcp,
   output(message) {
     console.log(message)
@@ -144,6 +147,30 @@ export function createCommandDescriptors(
   dependencies: CommandDependencies = defaultDependencies,
 ): readonly SilenCommandDescriptor[] {
   return [
+    {
+      id: 'init',
+      syntax: 'init <root>',
+      description: 'Create a starter Silen site in a new or existing directory',
+      sideEffect: 'write',
+      arguments: [
+        {
+          name: 'root',
+          required: true,
+          description: 'Directory to activate as a Silen site.',
+        },
+      ],
+      options: [],
+      async execute(root: unknown) {
+        if (typeof root !== 'string') {
+          throw new TypeError('Silen init requires a root path')
+        }
+        const result = await dependencies.initializeSite(root)
+        for (const file of result.createdPaths) {
+          dependencies.output('Created ' + file)
+        }
+        dependencies.output('Next: pnpm silen dev ' + root)
+      },
+    },
     {
       id: 'dev',
       syntax: 'dev [root]',

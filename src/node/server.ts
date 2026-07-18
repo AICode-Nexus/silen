@@ -15,7 +15,12 @@ import { createServer as createViteServer, type ViteDevServer } from 'vite'
 import type { RenderedPage } from '../client/app.js'
 import type { ResolvedConfig, ThemeLocaleItem } from '../shared/config.js'
 import type { SilenPageData } from '../shared/plugin.js'
-import { resolveSiteLink } from '../shared/url.js'
+import {
+  isSitePathWithinBase,
+  pathnameIdentity,
+  resolveSiteLink,
+  stripSiteBase,
+} from '../shared/url.js'
 import { resolveConfig } from './config.js'
 import { createMdxPlugins } from './mdx.js'
 import { silenPlugin } from './plugin.js'
@@ -162,12 +167,15 @@ function parseRequestPath(
 }
 
 function pathWithinBase(pathname: string, base: string): boolean {
-  if (base === '/') return pathname.startsWith('/')
-  return pathname.startsWith(base)
+  return pathname.startsWith('/') && isSitePathWithinBase(pathname, base)
 }
 
 function baseRedirect(pathname: string, base: string): boolean {
-  return base !== '/' && pathname === base.slice(0, -1)
+  return (
+    base !== '/' &&
+    !pathname.endsWith('/') &&
+    stripSiteBase(pathname, base) === '/'
+  )
 }
 
 function sendRedirect(
@@ -248,6 +256,7 @@ async function transformDevelopmentDocument(
       clientEntry: viteFileUrl(clientEntrySource()),
       favicon,
       head,
+      ...(page.seo === undefined ? {} : { seo: page.seo }),
     },
   )
   const transformed = await vite.transformIndexHtml(requestUrl, shell)
@@ -321,7 +330,8 @@ async function renderDevelopmentRequest(
 }
 
 function pathRelativeToBase(pathname: string, base: string): string {
-  return base === '/' ? pathname.slice(1) : pathname.slice(base.length)
+  const relative = stripSiteBase(pathname, base)
+  return relative?.replace(/^\//, '') ?? pathname
 }
 
 function isDefaultFaviconRequest(
@@ -409,8 +419,8 @@ function containsPath(directory: string, target: string): boolean {
 }
 
 function previewSegments(pathname: string, base: string): string[] | undefined {
-  const relative =
-    base === '/' ? pathname.slice(1) : pathname.slice(base.length)
+  const relative = stripSiteBase(pathname, base)?.replace(/^\//, '')
+  if (relative === undefined) return undefined
   const rawSegments = relative.split('/')
   if (rawSegments.at(-1) === '') rawSegments.pop()
 
@@ -494,13 +504,16 @@ async function findPreviewNotFound(
   const matches = [...roots]
     .map((root) => {
       const absoluteRoot = root.startsWith('/') ? root : `/${root}`
-      const mounted = new URL(
-        resolveSiteLink(absoluteRoot, base),
-        'https://silen.local',
-      ).pathname
+      const resolvedRoot = resolveSiteLink(absoluteRoot, base)
+      if (resolvedRoot === undefined) return undefined
+      const mounted = new URL(resolvedRoot, 'https://silen.local').pathname
       const normalized = mounted.endsWith('/') ? mounted : `${mounted}/`
-      const withoutSlash = normalized.slice(0, -1)
-      if (pathname !== withoutSlash && !pathname.startsWith(normalized)) {
+      const pathnameKey = pathnameIdentity(pathname)
+      const normalizedKey = pathnameIdentity(normalized)
+      if (
+        pathnameKey !== normalizedKey.slice(0, -1) &&
+        !pathnameKey.startsWith(normalizedKey)
+      ) {
         return undefined
       }
       const relative = pathRelativeToBase(normalized, base)

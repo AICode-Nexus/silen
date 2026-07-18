@@ -1,79 +1,50 @@
 ---
-lang: zh-CN
 title: 快速开始
-description: 创建并发布你的第一个 Silen 文档站点。
+description: 激活、运行并构建一个 Silen 文档站点。
 ---
 
 # 快速开始
 
-Silen 可以把 Markdown 和 MDX 文件夹转换成完整的静态网站。它用 React 提供
-组件模型，用 Vite 提供开发与构建流水线，用 MDX 让内容在需要时超越普通
-Markdown。
+Silen 将 Markdown 与 MDX 目录构建为服务端渲染的静态站点、本地搜索与确定性的 AI 可读产物。请使用 Node.js `^20.19.0 || >=22.12.0`。
 
-## 安装
+## 安装并激活
 
-使用 Node.js `^20.19.0 || >=22.12.0`，然后把 Silen 加入项目：
+在项目根目录安装依赖，并激活 `docs` 目录：
 
 ```sh
 pnpm add -D @aicode-nexus/silen
+pnpm silen init docs
 ```
 
-## 创建站点
+`init` 会创建 `docs/.silen/config.ts` 和 `docs/index.mdx`。它既适用于新目录，也适用于已有内容：只要目标文件已存在，Silen 就会报告冲突，不会覆盖你的内容。
 
-添加 `docs/.silen/config.ts`：
-
-```ts
-import { defineConfig } from '@aicode-nexus/silen'
-
-export default defineConfig({
-  title: '我的文档',
-})
-```
-
-然后添加 `docs/index.mdx`：
-
-```mdx
-# Hello, Silen
-
-你的文档从这里开始。
-```
-
-AI 也可以沿用同一条受支持的路径，不需要猜测 Silen API。让它先读取已安装包中的
-`@aicode-nexus/silen/agent/manifest.json`，再执行
-`agent/locales/zh-CN/tasks/create-site.md`。任务手册会链接回当前版本的配置与 CLI
-契约，不在这里复制一份容易过期的定义。
-
-## 开发与构建
+## 本地开发
 
 ```sh
 pnpm silen dev docs
+```
+
+编辑 `docs/index.mdx`，或增加 `.md`、`.mdx` 文件。目录树会直接形成路由，客户端导航无需整页刷新。本地搜索完全随站点运行，不需要托管搜索账号。
+
+## 构建并检查
+
+```sh
 pnpm silen build docs
 pnpm silen preview docs
 ```
 
-生产输出默认写入 `docs/.silen/dist`。如果站点部署在子路径下，例如 GitHub
-Pages 项目站点，请配置 `base`。
+默认输出到 `docs/.silen/dist`。构建结果包括完整 HTML，以及 `llms.txt`、`llms-full.txt`、`ai-index.json` 和干净 Markdown 路由。草稿页与设置了 `ai: false` 的页面不会进入 AI 产物。
 
-## 接入站点统计
+## 明确部署边界
 
-统计是站点级能力，因此默认主题和自定义主题都可以使用。可以同时配置 Google
-Analytics 与百度统计：
+站点部署在子路径时设置 `base`；需要规范链接与站点地图时，将 `siteUrl` 设置为域名源：
 
 ```ts
 export default defineConfig({
-  analytics: [
-    { provider: 'google', id: 'G-XXXXXXXXXX' },
-    { provider: 'baidu', id: '你的百度统计站点 ID' },
-  ],
+  base: '/handbook/',
+  siteUrl: 'https://docs.example.com',
+  onBrokenLinks: 'error',
 })
 ```
 
-统计脚本只会进入生产构建。Silen 会上报首次访问和客户端路由切换，页内锚点切换
-不会重复计算。使用 Google Analytics 时，需要在增强型衡量中关闭“根据浏览器
-历史记录事件进行网页更改”的自动网页浏览，避免重复上报。其他服务可以使用
-`custom` 配置外链或内联脚本，并监听统一的 `silen:pageview` 事件。
-
-## 下一步
-
-继续阅读 [AI-ready 文档](/silen/zh/ai/)，或者查看
-[源码仓库](https://github.com/AICode-Nexus/silen)。
+下一步阅读[项目结构](/silen/zh/guide/project-structure/)、[配置](/silen/zh/guide/configuration/)，或直接检查[真实 AI 产物](/silen/zh/ai/)。

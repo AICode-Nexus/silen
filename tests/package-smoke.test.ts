@@ -60,7 +60,11 @@ describe('published package smoke test', () => {
       ),
     ])
 
-    const packageBuild = await execa('pnpm', ['build'], {
+    await expect(stat(path.join(packageSource, 'dist'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+
+    const packagePretest = await execa('pnpm', ['run', 'pretest'], {
       cwd: packageSource,
       reject: false,
       all: true,
@@ -69,7 +73,7 @@ describe('published package smoke test', () => {
         SILEN_PACK_SCAN_SECRET: 'silen-env-value-must-not-ship',
       },
     })
-    expect(packageBuild.exitCode, packageBuild.all).toBe(0)
+    expect(packagePretest.exitCode, packagePretest.all).toBe(0)
 
     const pack = await execa(
       'pnpm',

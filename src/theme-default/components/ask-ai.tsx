@@ -28,6 +28,7 @@ import {
 } from './ui/input-group.js'
 import { ScrollArea } from './ui/scroll-area.js'
 import { Skeleton } from './ui/skeleton.js'
+import { useThemeMessages } from '../lib/theme-config.js'
 
 export interface AskAiDialogProps {
   readonly adapter: AskAiAdapter
@@ -40,8 +41,6 @@ export interface EndpointAskAiDialogProps {
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
 }
-
-const PROVIDER_FAILURE = 'The AI provider could not complete this request.'
 
 function hasControlCharacter(value: string): boolean {
   for (const character of value) {
@@ -72,7 +71,15 @@ function citationUrl(value: string): string | undefined {
   }
 }
 
-function AskAiEventView({ event }: { readonly event: AskAiEvent }) {
+function AskAiEventView({
+  event,
+  unableToAnswer,
+  providerFailure,
+}: {
+  readonly event: AskAiEvent
+  readonly unableToAnswer: string
+  readonly providerFailure: string
+}) {
   if (event.type === 'citation') {
     const safeUrl = citationUrl(event.url)
     return safeUrl ? (
@@ -86,8 +93,8 @@ function AskAiEventView({ event }: { readonly event: AskAiEvent }) {
   if (event.type === 'error') {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Unable to answer</AlertTitle>
-        <AlertDescription>{PROVIDER_FAILURE}</AlertDescription>
+        <AlertTitle>{unableToAnswer}</AlertTitle>
+        <AlertDescription>{providerFailure}</AlertDescription>
       </Alert>
     )
   }
@@ -96,8 +103,12 @@ function AskAiEventView({ event }: { readonly event: AskAiEvent }) {
 
 function AskAiInput({
   onSubmit,
+  questionLabel,
+  submitLabel,
 }: {
   readonly onSubmit: (value: string) => Promise<void>
+  readonly questionLabel: string
+  readonly submitLabel: string
 }) {
   const [value, setValue] = useState('')
   const inputId = useId()
@@ -113,7 +124,7 @@ function AskAiInput({
   return (
     <form onSubmit={submit}>
       <label className="sr-only" htmlFor={inputId}>
-        Question
+        {questionLabel}
       </label>
       <InputGroup>
         <InputGroupInput
@@ -124,7 +135,7 @@ function AskAiInput({
         />
         <InputGroupAddon align="inline-end">
           <Button type="submit" size="sm" disabled={!value.trim()}>
-            Ask
+            {submitLabel}
           </Button>
         </InputGroupAddon>
       </InputGroup>
@@ -138,6 +149,7 @@ export function AskAiDialog({
   onOpenChange,
 }: AskAiDialogProps): React.JSX.Element {
   const route = useRoute()
+  const messages = useThemeMessages()
   const [events, setEvents] = useState<AskAiEvent[]>([])
   const [pending, setPending] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
@@ -194,7 +206,7 @@ export function AskAiDialog({
       ) {
         return
       }
-      setEvents([{ type: 'error', message: PROVIDER_FAILURE }])
+      setEvents([{ type: 'error', message: messages.askAi.providerFailure }])
     } finally {
       if (mounted.current && sequence === requestSequence.current) {
         setPending(false)
@@ -213,12 +225,13 @@ export function AskAiDialog({
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        closeLabel={messages.navigation.close}
+      >
         <DialogHeader>
-          <DialogTitle>Ask AI</DialogTitle>
-          <DialogDescription>
-            Answers use the current documentation and include source links.
-          </DialogDescription>
+          <DialogTitle>{messages.askAi.title}</DialogTitle>
+          <DialogDescription>{messages.askAi.description}</DialogDescription>
         </DialogHeader>
         <ScrollArea
           role="log"
@@ -228,7 +241,12 @@ export function AskAiDialog({
         >
           <div className="flex flex-col gap-3 pr-4">
             {events.map((event, index) => (
-              <AskAiEventView key={index} event={event} />
+              <AskAiEventView
+                key={index}
+                event={event}
+                unableToAnswer={messages.askAi.unableToAnswer}
+                providerFailure={messages.askAi.providerFailure}
+              />
             ))}
             {pending ? (
               <Skeleton className="h-16 w-full" aria-hidden="true" />
@@ -236,9 +254,13 @@ export function AskAiDialog({
           </div>
         </ScrollArea>
         <span role="status" className="sr-only">
-          {pending ? 'Generating answer…' : 'Answer ready.'}
+          {pending ? messages.askAi.generating : messages.askAi.ready}
         </span>
-        <AskAiInput onSubmit={submit} />
+        <AskAiInput
+          onSubmit={submit}
+          questionLabel={messages.askAi.question}
+          submitLabel={messages.askAi.submit}
+        />
       </DialogContent>
     </Dialog>
   )

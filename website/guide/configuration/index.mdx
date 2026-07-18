@@ -1,0 +1,73 @@
+---
+title: Configuration
+description: Configure routes, metadata, navigation, integrations, and AI output.
+---
+
+# Configuration
+
+Create `.silen/config.ts` in the content root and export `defineConfig(...)`.
+The file is trusted project code; keep secrets out because values can affect
+public HTML and build artifacts.
+
+```ts
+import { defineConfig } from '@aicode-nexus/silen'
+
+export default defineConfig({
+  title: 'Engineering handbook',
+  description: 'Operating knowledge for the product team.',
+  lang: 'en-US',
+  base: '/handbook/',
+  siteUrl: 'https://docs.example.com',
+  outDir: '.silen/dist',
+  onBrokenLinks: 'error',
+})
+```
+
+## URL and metadata fields
+
+`base` is the normalized absolute pathname where the site is mounted; use `/`
+for a domain root or `/handbook/` for a subpath. `siteUrl` is only the HTTP(S)
+origin—put the deployment path in `base`, not in `siteUrl`. Together they drive
+canonical links, `hreflang` and `x-default` locale alternates, the sitemap, and
+basic Open Graph/Twitter metadata. Markdown and Agent Contract URLs remain
+base-relative. `lang` is a BCP 47 language tag.
+
+## Navigation and locales
+
+`themeConfig.nav` and `themeConfig.sidebar` accept `{ text, link }` entries.
+Root-relative theme links are resolved under `base`. Locale entries can provide
+a `root`, translated navigation, sidebar, home hero, and message overrides:
+
+```ts
+themeConfig: {
+  locales: [
+    { lang: 'en-US', label: 'English', root: '/' },
+    { lang: 'zh-CN', label: '中文', root: '/zh/' },
+  ],
+  search: true,
+}
+```
+
+Keep locale route trees mirrored so the language switch can preserve the
+current route rather than returning to a homepage.
+
+## Integrations and AI
+
+`analytics` configures Google, Baidu, or custom scripts. `plugins` is an ordered
+array of trusted plugin factories. The `ai` booleans control `llms.txt`,
+`llms-full.txt`, Markdown routes, and `ai-index.json`; all default to enabled.
+The Agent Contract is also enabled by default and can include explicit public
+instructions and tasks.
+
+```ts
+ai: {
+  llmsTxt: true,
+  llmsFullTxt: true,
+  markdownRoutes: true,
+  index: true,
+  contract: { enabled: true, instructions: '.silen/ai-public.md' },
+}
+```
+
+See the complete field table in [Reference](/silen/reference/) and integration
+examples in [Integrations](/silen/integrations/).

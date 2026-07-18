@@ -10,6 +10,43 @@ function normalizedBase(base: string | undefined): string {
     : `${withLeadingSlash}/`
 }
 
+export function pathnameIdentity(pathname: string): string {
+  return pathname.replace(/%[\da-f]{2}/gi, (triplet) => triplet.toUpperCase())
+}
+
+export function isSitePathWithinBase(
+  pathname: string,
+  configuredBase: string | undefined = '/',
+): boolean {
+  const base = normalizedBase(configuredBase)
+  if (base === '/') return true
+  const comparedPathname = pathnameIdentity(pathname)
+  const comparedBase = pathnameIdentity(base)
+  return (
+    comparedPathname === comparedBase.slice(0, -1) ||
+    comparedPathname.startsWith(comparedBase)
+  )
+}
+
+export function stripSiteBase(
+  pathname: string,
+  configuredBase: string | undefined = '/',
+): string | undefined {
+  const base = normalizedBase(configuredBase)
+  if (!isSitePathWithinBase(pathname, base)) return undefined
+  if (base === '/') return pathname
+
+  const comparedPathname = pathnameIdentity(pathname)
+  const comparedBase = pathnameIdentity(base)
+  if (
+    comparedPathname === comparedBase ||
+    comparedPathname === comparedBase.slice(0, -1)
+  ) {
+    return '/'
+  }
+  return `/${pathname.slice(base.length)}`
+}
+
 function canonicalPathname(value: string): string | undefined {
   try {
     return new URL(value, 'https://silen.local').pathname
@@ -51,13 +88,32 @@ function requiresCanonicalPathname(value: string): boolean {
 export function resolveSiteLink(
   href: string,
   configuredBase: string | undefined = '/',
-): string {
+  currentUrl?: string,
+): string | undefined {
   const parsedHref = normalizedWhatwgInput(href)
-  if (
-    (!parsedHref.startsWith('/') && !parsedHref.startsWith('\\')) ||
-    isNetworkPath(parsedHref)
-  ) {
-    return href
+  if (isNetworkPath(parsedHref)) return href
+
+  const isRootPath = parsedHref.startsWith('/') || parsedHref.startsWith('\\')
+  if (!isRootPath) {
+    if (
+      currentUrl === undefined ||
+      parsedHref.startsWith('?') ||
+      parsedHref.startsWith('#') ||
+      /^[a-z][a-z\d+.-]*:/i.test(parsedHref)
+    ) {
+      return href
+    }
+
+    let resolved: URL
+    try {
+      resolved = new URL(parsedHref, new URL(currentUrl, 'https://silen.local'))
+    } catch {
+      return undefined
+    }
+    if (!isSitePathWithinBase(resolved.pathname, configuredBase)) {
+      return undefined
+    }
+    return parsedHref === href ? href : parsedHref
   }
 
   const match = /^([^?#]*)(.*)$/.exec(parsedHref)
@@ -72,8 +128,7 @@ export function resolveSiteLink(
   const base = normalizedBase(configuredBase)
   if (base === '/') return canonicalize ? `${safePathname}${suffix}` : href
 
-  const baseWithoutSlash = base.slice(0, -1)
-  if (pathname === baseWithoutSlash || pathname.startsWith(base)) {
+  if (isSitePathWithinBase(pathname, base)) {
     return canonicalize ? `${safePathname}${suffix}` : href
   }
   return `${base}${safePathname.replace(/^\/+/, '')}${suffix}`

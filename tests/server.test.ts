@@ -113,6 +113,8 @@ export default defineConfig({
       { lang: 'en-US', label: 'English', root: '/' },
       { lang: 'zh-CN', label: '中文', root: '/zh/' },
       { lang: 'zh-Hant', label: '繁體', root: '/zh/hant/' },
+      { lang: 'fr-FR', label: 'Français', root: '/caf%C3%A9/' },
+      { lang: 'de-DE', label: 'Deutsch', root: '/EN/' },
     ],
   },
 })
@@ -353,10 +355,18 @@ describe('preview server', () => {
     })
     runningServers.push(server)
 
-    const [default404, chinese404, traditionalChinese404] = await Promise.all([
+    const [
+      default404,
+      chinese404,
+      traditionalChinese404,
+      french404,
+      german404,
+    ] = await Promise.all([
       readFile(path.join(root, 'output/404.html'), 'utf8'),
       readFile(path.join(root, 'output/zh/404.html'), 'utf8'),
       readFile(path.join(root, 'output/zh/hant/404.html'), 'utf8'),
+      readFile(path.join(root, 'output/caf%C3%A9/404.html'), 'utf8'),
+      readFile(path.join(root, 'output/EN/404.html'), 'utf8'),
     ])
     expect(new Set([default404, chinese404, traditionalChinese404]).size).toBe(
       3,
@@ -375,6 +385,24 @@ describe('preview server', () => {
     )
     expect(traditionalChineseMissing.status).toBe(404)
     expect(await traditionalChineseMissing.text()).toBe(traditionalChinese404)
+
+    const percentCaseMissing = await fetch(
+      `http://127.0.0.1:${server.port}/docs/caf%c3%a9/missing`,
+    )
+    expect(percentCaseMissing.status).toBe(404)
+    expect(await percentCaseMissing.text()).toBe(french404)
+
+    const uppercaseMissing = await fetch(
+      `http://127.0.0.1:${server.port}/docs/EN/missing`,
+    )
+    expect(uppercaseMissing.status).toBe(404)
+    expect(await uppercaseMissing.text()).toBe(german404)
+
+    const lowercaseMissing = await fetch(
+      `http://127.0.0.1:${server.port}/docs/en/missing`,
+    )
+    expect(lowercaseMissing.status).toBe(404)
+    expect(await lowercaseMissing.text()).toBe(default404)
 
     expect(
       (await fetch(`http://127.0.0.1:${server.port}/output/index.html`)).status,

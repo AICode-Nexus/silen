@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import type { UserConfig } from '../shared/config.js'
-import { hasExecutableUrlScheme } from '../shared/url.js'
+import { normalizeLocaleRoot, type UserConfig } from '../shared/config.js'
+import { hasExecutableUrlScheme, pathnameIdentity } from '../shared/url.js'
 
 function invalidBase(reason: string): Error {
   return new Error(`base must be a normalized absolute pathname: ${reason}`)
@@ -89,6 +89,67 @@ const baseSchema = z
     }
   })
   .describe('Normalized absolute URL pathname where the site is mounted.')
+const siteUrlError =
+  'siteUrl must be an absolute http:// or https:// origin without credentials, a deployment path, query, or fragment; configure the deployment path with base'
+
+function isAuthoredSiteOrigin(value: string): boolean {
+  const authority = /^https?:\/\/([^\s/?#]+)\/?$/i.exec(value)?.[1]
+  if (
+    authority === undefined ||
+    authority.includes('@') ||
+    authority.includes('\\')
+  ) {
+    return false
+  }
+
+  if (authority.startsWith('[')) {
+    const closingBracket = authority.indexOf(']')
+    if (closingBracket === -1) return false
+    const port = authority.slice(closingBracket + 1)
+    return port === '' || /^:\d+$/.test(port)
+  }
+
+  const portDelimiter = authority.lastIndexOf(':')
+  if (portDelimiter === -1) return true
+  return (
+    authority.indexOf(':') === portDelimiter &&
+    /^\d+$/.test(authority.slice(portDelimiter + 1))
+  )
+}
+
+const siteUrlSchema = z
+  .string()
+  .transform((value, context) => {
+    if (!isAuthoredSiteOrigin(value)) {
+      context.addIssue({ code: 'custom', message: siteUrlError })
+      return z.NEVER
+    }
+
+    let parsed: URL
+    try {
+      parsed = new URL(value)
+    } catch {
+      context.addIssue({ code: 'custom', message: siteUrlError })
+      return z.NEVER
+    }
+
+    if (
+      (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
+      parsed.username !== '' ||
+      parsed.password !== '' ||
+      parsed.pathname !== '/' ||
+      value.includes('?') ||
+      value.includes('#')
+    ) {
+      context.addIssue({ code: 'custom', message: siteUrlError })
+      return z.NEVER
+    }
+    return parsed.origin
+  })
+  .optional()
+  .describe(
+    'Optional canonical HTTP(S) origin used for absolute discovery metadata.',
+  )
 const outDirSchema = z
   .string()
   .default('.silen/dist')
@@ -99,6 +160,35 @@ const brokenLinksSchema = z
   .describe('Policy applied when a documentation link cannot be resolved.')
 const themeConfigSchema = z
   .record(z.string(), z.json())
+  .superRefine((themeConfig, context) => {
+    const locales = themeConfig.locales
+    if (!Array.isArray(locales)) return
+
+    const owners = new Map<string, number>()
+    for (const [index, locale] of locales.entries()) {
+      if (
+        typeof locale !== 'object' ||
+        locale === null ||
+        Array.isArray(locale) ||
+        !('root' in locale) ||
+        typeof locale.root !== 'string'
+      ) {
+        continue
+      }
+      const root = normalizeLocaleRoot(locale.root)
+      const identity = pathnameIdentity(root)
+      const previous = owners.get(identity)
+      if (previous !== undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['locales', index, 'root'],
+          message: `duplicate normalized locale root ${identity}; it is already used by locales.${previous}.root`,
+        })
+        continue
+      }
+      owners.set(identity, index)
+    }
+  })
   .default({})
   .describe('JSON-compatible configuration consumed by the active theme.')
 
@@ -252,6 +342,7 @@ export const userConfigSchema = z
     description: descriptionSchema,
     lang: langSchema,
     base: baseSchema,
+    siteUrl: siteUrlSchema,
     outDir: outDirSchema,
     onBrokenLinks: brokenLinksSchema,
     themeConfig: themeConfigSchema,
@@ -277,6 +368,14 @@ export const configApiFieldSources: readonly ConfigApiFieldSource[] = [
     path: 'base',
     schema: baseSchema,
     constraints: ['normalized absolute URL pathname', 'no query or hash'],
+  },
+  {
+    path: 'siteUrl',
+    schema: siteUrlSchema,
+    constraints: [
+      'absolute HTTP(S) origin',
+      'no credentials, deployment path, query, or fragment',
+    ],
   },
   { path: 'outDir', schema: outDirSchema },
   { path: 'onBrokenLinks', schema: brokenLinksSchema },
@@ -325,6 +424,7 @@ export const publicConfigApiCoverage = {
   description: ['description'],
   lang: ['lang'],
   base: ['base'],
+  siteUrl: ['siteUrl'],
   outDir: ['outDir'],
   onBrokenLinks: ['onBrokenLinks'],
   themeConfig: ['themeConfig'],

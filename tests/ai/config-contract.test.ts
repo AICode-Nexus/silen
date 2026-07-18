@@ -94,6 +94,7 @@ describe('configuration Agent Contract', () => {
       'onBrokenLinks',
       'outDir',
       'plugins',
+      'siteUrl',
       'themeConfig',
       'title',
     ])
@@ -106,6 +107,7 @@ describe('configuration Agent Contract', () => {
       'onBrokenLinks',
       'outDir',
       'plugins',
+      'siteUrl',
       'themeConfig',
       'title',
     ])

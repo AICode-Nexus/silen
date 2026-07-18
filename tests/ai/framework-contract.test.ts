@@ -28,8 +28,9 @@ describe('framework Agent Contract', () => {
       kind: 'silen-framework',
       generator: { name: 'Silen', version: packageManifest.version },
     })
-    expect(bundle.api.config.fields).toHaveLength(16)
+    expect(bundle.api.config.fields).toHaveLength(17)
     expect(bundle.api.cli.commands.map((command) => command.id)).toEqual([
+      'init',
       'dev',
       'build',
       'preview',

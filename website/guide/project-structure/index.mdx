@@ -1,0 +1,60 @@
+---
+title: Project structure
+description: Organize Silen content, configuration, assets, and generated output.
+---
+
+# Project structure
+
+A Silen site is a content root. Keep content and its site configuration
+together so local development, production builds, and AI tools all resolve the
+same boundary.
+
+```text
+docs/
+├── .silen/
+│   ├── config.ts
+│   ├── theme.tsx          # optional theme extension
+│   ├── ai-public.md       # optional public agent instructions
+│   └── dist/              # generated; do not author here
+├── public/
+│   └── logo.svg
+├── assets/
+│   └── architecture.png
+├── guide/
+│   └── index.mdx
+└── index.mdx
+```
+
+## Content becomes routes
+
+Both `.md` and `.mdx` files are scanned. `index.mdx` has compiler route `/`;
+`guide.mdx` and `guide/index.mdx` both have compiler route `/guide`. The
+directory form emits `guide/index.html`, with the usual browser URL `/guide/`.
+Do not create both source forms for the same route; the build rejects duplicate
+routes instead of choosing one silently.
+
+Use directories for sections that will grow. This keeps nearby images,
+examples, and future child pages easy to locate while preserving stable URLs.
+
+## Configuration and theme
+
+`.silen/config.ts` is executable, trusted project configuration. It defines the
+site title, base, locales, navigation, integrations, and generated AI output.
+`.silen/theme.tsx` is optional and should extend the default theme when only a
+component, layout, or wrapper needs to change.
+
+## Static and imported assets
+
+Place files that must keep a public filename under `public/` and reference them
+from the site root, for example `/logo.svg` in configuration. Silen resolves
+theme links and images against the configured `base`. Import content-owned
+images from MDX when they should participate in the Vite asset pipeline.
+
+## Generated state
+
+`.silen/dist` is the default production output and `.silen/.temp` is temporary
+build state. Treat both as disposable. The local AI workspace uses `wiki/` for
+authored Markdown and `.silen/ai/` for its generated index; review the
+[workspace boundary](/silen/ai/local-workspace-mcp/) before enabling writes.
+
+Next, define the site in [configuration](/silen/guide/configuration/).

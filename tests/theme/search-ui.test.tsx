@@ -16,6 +16,7 @@ import {
   type SearchClient,
 } from '../../src/theme-default/components/search'
 import type { SearchResult } from '../../src/theme-default/search'
+import type { ThemeConfig } from '../../src/shared/config'
 
 const originalScrollIntoView = Object.getOwnPropertyDescriptor(
   Element.prototype,
@@ -53,24 +54,30 @@ function Providers({
   children,
   go = vi.fn(() => Promise.resolve()),
   search = true,
+  lang = 'en-US',
+  path = '/knowledge/guide/',
+  themeConfig,
 }: {
   children: React.ReactNode
   go?: Router['go']
   search?: boolean
+  lang?: string
+  path?: string
+  themeConfig?: ThemeConfig
 }): React.JSX.Element {
   return (
     <DataProvider
       value={{
         siteTitle: 'Silen Docs',
-        lang: 'en-US',
+        lang,
         base: '/knowledge/',
-        route: '/guide/',
-        themeConfig: { search },
+        route: path,
+        themeConfig: themeConfig ?? { search },
       }}
     >
       <RouterProvider
         value={{
-          path: '/knowledge/guide/',
+          path,
           base: '/knowledge/',
           go,
           prefetch: () => Promise.resolve(),
@@ -111,6 +118,79 @@ const guideResult: SearchResult = {
 }
 
 describe('SearchDialog', () => {
+  it('groups v2 results by current language with configured locale labels', async () => {
+    const user = userEvent.setup()
+    const searchClient: SearchClient = vi.fn(() =>
+      Promise.resolve([
+        {
+          ...guideResult,
+          id: '/guide',
+          lang: 'en-US',
+          title: 'English guide',
+        },
+        {
+          ...guideResult,
+          id: '/zh/guide',
+          lang: 'zh-CN',
+          title: '中文指南',
+          route: '/zh/guide',
+        },
+      ]),
+    )
+    render(
+      <Providers
+        lang="zh-CN"
+        path="/knowledge/zh/guide/"
+        themeConfig={{
+          locales: [
+            { lang: 'en-US', label: 'English', root: '/' },
+            { lang: 'zh-CN', label: '中文', root: '/zh/' },
+          ],
+        }}
+      >
+        <SearchDialog
+          open
+          onOpenChange={() => undefined}
+          searchClient={searchClient}
+        />
+      </Providers>,
+    )
+
+    await user.type(screen.getByRole('combobox', { name: '搜索文档' }), 'guide')
+    expect(await screen.findByText('中文指南')).not.toBeNull()
+    expect(screen.getByText('文档')).not.toBeNull()
+    expect(screen.getByText('其他语言')).not.toBeNull()
+    expect(screen.getByText('English')).not.toBeNull()
+    expect(
+      screen.getAllByRole('option').map((option) => option.textContent),
+    ).toEqual([
+      expect.stringContaining('中文指南'),
+      expect.stringContaining('English guide'),
+    ])
+    expect(searchClient).toHaveBeenCalledWith(
+      'guide',
+      expect.objectContaining({ base: '/knowledge/', lang: 'zh-CN' }),
+    )
+  })
+
+  it('keeps v1 results in one flat documentation group', async () => {
+    const user = userEvent.setup()
+    render(
+      <Providers lang="zh-CN">
+        <SearchDialog
+          open
+          onOpenChange={() => undefined}
+          searchClient={() => Promise.resolve([guideResult])}
+        />
+      </Providers>,
+    )
+
+    await user.type(screen.getByRole('combobox', { name: '搜索文档' }), 'guide')
+    expect(await screen.findByText('Configuration guide')).not.toBeNull()
+    expect(screen.getByText('文档')).not.toBeNull()
+    expect(screen.queryByText('其他语言')).toBeNull()
+  })
+
   it('is titled and described, supports keyboard selection, and restores focus', async () => {
     const user = userEvent.setup()
     const go = vi.fn(() => Promise.resolve())

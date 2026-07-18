@@ -48,14 +48,14 @@ jobs:
       - name: Build package
         run: pnpm build
 
-      - name: Assert package has no source maps
-        run: pnpm check:no-maps dist
-
       - name: Run release tests
         run: pnpm test
 
       - name: Validate package metadata
         run: pnpm exec publint
+
+      - name: Assert package has no source maps
+        run: pnpm check:no-maps dist
 
       - name: Publish package to npm
         run: npm publish --access public --tag latest

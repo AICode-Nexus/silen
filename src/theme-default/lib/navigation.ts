@@ -1,11 +1,10 @@
 import type { ThemeLocaleItem } from '../../shared/config.js'
-import { resolveSiteLink } from '../../shared/url.js'
-
-function normalizedBase(base: string): string {
-  if (!base || base === '/') return '/'
-  const leading = base.startsWith('/') ? base : `/${base}`
-  return leading.endsWith('/') ? leading : `${leading}/`
-}
+import { resolveCurrentLocale } from '../../shared/config.js'
+import {
+  pathnameIdentity,
+  resolveSiteLink,
+  stripSiteBase,
+} from '../../shared/url.js'
 
 function pathname(value: string): string | undefined {
   try {
@@ -36,7 +35,7 @@ export function resolveThemeLink(link: string, base: string): string {
   ) {
     return link
   }
-  return resolveSiteLink(link.startsWith('/') ? link : `/${link}`, base)
+  return resolveSiteLink(link.startsWith('/') ? link : `/${link}`, base) ?? link
 }
 
 export function isActiveThemeLink(
@@ -57,8 +56,13 @@ export function isActiveThemeLink(
   const target = normalizedPath(resolveThemeLink(link, base))
   const current = normalizedPath(currentRoute)
   if (target === undefined || current === undefined) return false
-  if (target === current) return true
-  return normalizedPath(resolveThemeLink(currentRoute, base)) === target
+  const targetIdentity = pathnameIdentity(target)
+  if (targetIdentity === pathnameIdentity(current)) return true
+  const resolvedCurrent = normalizedPath(resolveThemeLink(currentRoute, base))
+  return (
+    resolvedCurrent !== undefined &&
+    pathnameIdentity(resolvedCurrent) === targetIdentity
+  )
 }
 
 export interface ResolvedThemeLocaleLink {
@@ -74,25 +78,20 @@ function normalizedLocaleRoot(root: string): string {
 }
 
 function stripBasePath(path: string, base: string): string {
-  const resolvedBase = normalizedBase(base)
-  if (resolvedBase === '/') return path
-
-  const baseWithoutSlash = resolvedBase.slice(0, -1)
-  if (path === baseWithoutSlash) return '/'
-  if (path.startsWith(resolvedBase))
-    return `/${path.slice(resolvedBase.length)}`
-  return path
-}
-
-function isWithinLocaleRoot(path: string, root: string): boolean {
-  if (root === '/') return true
-  return path === root.slice(0, -1) || path.startsWith(root)
+  return stripSiteBase(path, base) ?? path
 }
 
 function localeRelativePath(path: string, root: string): string {
   if (root === '/') return path === '/' ? '' : path.slice(1)
-  if (path === root || path === root.slice(0, -1)) return ''
-  if (path.startsWith(root)) return path.slice(root.length)
+  const pathIdentity = pathnameIdentity(path)
+  const rootIdentity = pathnameIdentity(root)
+  if (
+    pathIdentity === rootIdentity ||
+    pathIdentity === rootIdentity.slice(0, -1)
+  ) {
+    return ''
+  }
+  if (pathIdentity.startsWith(rootIdentity)) return path.slice(root.length)
   return path.startsWith('/') ? path.slice(1) : path
 }
 
@@ -107,23 +106,13 @@ export function resolveThemeLocaleLinks(
 ): readonly ResolvedThemeLocaleLink[] {
   const currentUrl = new URL(currentRoute, 'https://silen.local')
   const currentPath = stripBasePath(currentUrl.pathname, base)
-  const localeRoots = locales
-    .map((locale) => ({
-      locale,
-      root:
-        locale.root === undefined
-          ? undefined
-          : normalizedLocaleRoot(locale.root),
-    }))
-    .filter(
-      (entry): entry is { locale: ThemeLocaleItem; root: string } =>
-        entry.root !== undefined,
-    )
-  const currentRoot =
-    localeRoots
-      .filter(({ root }) => isWithinLocaleRoot(currentPath, root))
-      .sort((left, right) => right.root.length - left.root.length)[0]?.root ??
-    '/'
+  const currentLocale = resolveCurrentLocale(
+    locales,
+    currentRoute,
+    base,
+    locales[0]?.lang ?? 'en-US',
+  )
+  const currentRoot = currentLocale.root
   const relativePath = localeRelativePath(currentPath, currentRoot)
   const suffix = `${currentUrl.search}${currentUrl.hash}`
 
@@ -134,7 +123,9 @@ export function resolveThemeLocaleLinks(
       return {
         locale,
         href: resolveThemeLink(target, base),
-        active: root === currentRoot,
+        active:
+          pathnameIdentity(root) === pathnameIdentity(currentRoot) &&
+          currentLocale.locale === locale,
       }
     }
 
@@ -142,7 +133,7 @@ export function resolveThemeLocaleLinks(
     return {
       locale,
       href: resolveThemeLink(link, base),
-      active: isActiveThemeLink(currentRoute, link, base),
+      active: currentLocale.locale === locale,
     }
   })
 }

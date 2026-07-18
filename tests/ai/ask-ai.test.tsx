@@ -65,6 +65,25 @@ describe('Ask AI launcher', () => {
 })
 
 describe('AskAiDialog', () => {
+  it('localizes dialog, close, form, and live status labels', () => {
+    const adapter: AskAiAdapter = {
+      async *ask() {
+        yield await Promise.resolve({ type: 'text' as const, value: '回答' })
+      },
+    }
+    render(
+      <TestSiteProvider lang="zh-CN">
+        <AskAiDialog adapter={adapter} open onOpenChange={() => undefined} />
+      </TestSiteProvider>,
+    )
+
+    expect(screen.getByRole('dialog', { name: '询问 AI' })).not.toBeNull()
+    expect(screen.getByRole('textbox', { name: '问题' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: '提问' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: '关闭' })).not.toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('回答已就绪。')
+  })
+
   it('streams text, errors, and only link-safe citations with live status', async () => {
     const user = userEvent.setup()
     const continueStream = deferred()

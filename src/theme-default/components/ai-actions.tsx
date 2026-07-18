@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { BotIcon, ChevronDownIcon, CopyIcon } from 'lucide-react'
 import { cn } from '../lib/cn.js'
+import { useThemeMessages } from '../lib/theme-config.js'
 import { Button } from './ui/button.js'
 import {
   DropdownMenu,
@@ -40,17 +41,22 @@ function canonicalSource(value: string): string {
   return url.href
 }
 
-function feedback(status: CopyStatus): string {
+function feedback(
+  status: CopyStatus,
+  messages: ReturnType<typeof useThemeMessages>['copy'],
+): string {
   if (status.phase === 'loading') {
-    return status.kind === 'ai' ? 'Preparing AI context' : 'Copying Markdown'
+    return status.kind === 'ai'
+      ? messages.preparingAi
+      : messages.copyingMarkdown
   }
   if (status.phase === 'copied') {
-    return status.kind === 'ai' ? 'AI context copied' : 'Markdown copied'
+    return status.kind === 'ai' ? messages.aiCopied : messages.markdownCopied
   }
   if (status.phase === 'error') {
     return status.kind === 'fetch'
-      ? 'Could not fetch page Markdown. Please try again.'
-      : 'Could not access the clipboard. Please try again.'
+      ? messages.fetchError
+      : messages.clipboardError
   }
   return ''
 }
@@ -61,6 +67,7 @@ export function AiPageActions({
   canonicalUrl,
 }: AiPageActionsProps): React.JSX.Element {
   const [status, setStatus] = useState<CopyStatus>({ phase: 'idle' })
+  const messages = useThemeMessages()
   const inFlight = useRef(false)
   const loading = status.phase === 'loading'
 
@@ -94,11 +101,11 @@ export function AiPageActions({
     }
   }
 
-  const message = feedback(status)
+  const message = feedback(status, messages.copy)
   return (
     <div
       role="group"
-      aria-label="Page copy actions"
+      aria-label={messages.copy.group}
       className="not-prose mt-8 flex flex-wrap items-center gap-2"
     >
       <TooltipProvider>
@@ -113,22 +120,22 @@ export function AiPageActions({
                   disabled={loading}
                   aria-busy={loading}
                 >
-                  Copy
+                  {messages.copy.copy}
                   <ChevronDownIcon data-icon="inline-end" aria-hidden="true" />
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
-            <TooltipContent>Copy this page</TooltipContent>
+            <TooltipContent>{messages.copy.copyThisPage}</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="start">
             <DropdownMenuGroup>
               <DropdownMenuItem onSelect={() => void copy('markdown')}>
                 <CopyIcon aria-hidden="true" />
-                Copy Markdown
+                {messages.copy.copyMarkdown}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void copy('ai')}>
                 <BotIcon aria-hidden="true" />
-                Copy for AI
+                {messages.copy.copyForAi}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>

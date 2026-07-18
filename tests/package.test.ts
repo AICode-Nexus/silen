@@ -4,6 +4,8 @@ import type {
   AnalyticsProvider,
   ThemeConfig,
   ThemeLocaleItem,
+  ThemeMessages,
+  ThemeMessagesOverrides,
   ThemeSocialLink,
 } from '../src/index'
 
@@ -66,10 +68,14 @@ describe('public package contract', () => {
   })
 
   it('exposes typed locale switch entries through themeConfig', () => {
+    const messages: ThemeMessagesOverrides = {
+      search: { noResults: '这里没有内容。' },
+    }
     const locale: ThemeLocaleItem = {
       lang: 'zh-CN',
       label: '中文',
       root: '/zh/',
+      messages,
       nav: [{ text: '指南', link: '/zh/guide/' }],
       sidebar: [
         {
@@ -89,6 +95,22 @@ describe('public package contract', () => {
     }
 
     expect(defineConfig({ themeConfig })).toEqual({ themeConfig })
+  })
+
+  it('exports the complete grouped theme message contract', () => {
+    const groupNames: readonly (keyof ThemeMessages)[] = [
+      'navigation',
+      'search',
+      'appearance',
+      'sidebar',
+      'outline',
+      'pagination',
+      'copy',
+      'notFound',
+      'askAi',
+    ]
+
+    expect(groupNames).toHaveLength(9)
   })
 
   it('exposes a strict typed home-page configuration', () => {

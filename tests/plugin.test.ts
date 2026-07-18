@@ -142,6 +142,7 @@ describe('virtual modules', () => {
     const config = resolvedConfig(root) as ResolvedConfig &
       Record<string, unknown>
     config.privateToken = 'do-not-bundle'
+    config.siteUrl = 'https://docs.example.com'
     config.analytics = [
       Object.assign(
         { provider: 'google' as const, id: 'G-PUBLIC' },
@@ -223,6 +224,7 @@ describe('virtual modules', () => {
       description: 'Project documentation',
       lang: 'en-US',
       base: '/project/',
+      siteUrl: 'https://docs.example.com',
       analytics: [
         { provider: 'google', id: 'G-PUBLIC' },
         {
@@ -278,6 +280,20 @@ describe('virtual modules', () => {
     expect(source).not.toContain('outDir')
   })
 
+  it('keeps an omitted siteUrl absent from the public virtual config', async () => {
+    const root = path.resolve('tests/fixtures/ssr')
+    const source = createVirtualModules({
+      routes: [],
+      config: resolvedConfig(root),
+      publicConfigOnly: true,
+    }).config
+    const loaded = (await importGeneratedModule(source)) as {
+      default: Record<string, unknown>
+    }
+
+    expect(Object.hasOwn(loaded.default, 'siteUrl')).toBe(false)
+  })
+
   it('omits analytics providers from the development browser config', async () => {
     const root = path.resolve('tests/fixtures/ssr')
     const config = resolvedConfig(root)
@@ -295,6 +311,47 @@ describe('virtual modules', () => {
 
     expect(loaded.default.analytics).toEqual([])
     expect(source).not.toContain('G-DEVELOPMENT')
+  })
+
+  it('serializes public locale message overrides into the virtual config', async () => {
+    const root = path.resolve('tests/fixtures/ssr')
+    const config = resolvedConfig(root)
+    config.themeConfig = {
+      locales: [
+        {
+          lang: 'zh-CN',
+          label: '中文',
+          root: '/zh/',
+          messages: {
+            navigation: { featureLink: '继续了解{title}' },
+            search: { noResults: '这里没有内容。' },
+            copy: { copied: '复制好了' },
+          },
+        },
+      ],
+    }
+
+    const source = createVirtualModules({
+      routes: [],
+      config,
+      publicConfigOnly: true,
+    }).config
+    const loaded = (await importGeneratedModule(source)) as {
+      default: { themeConfig: { locales: unknown[] } }
+    }
+
+    expect(loaded.default.themeConfig.locales).toEqual([
+      {
+        lang: 'zh-CN',
+        label: '中文',
+        root: '/zh/',
+        messages: {
+          navigation: { featureLink: '继续了解{title}' },
+          search: { noResults: '这里没有内容。' },
+          copy: { copied: '复制好了' },
+        },
+      },
+    ])
   })
 
   it('discovers the project theme without recursively aliasing public theme imports', async () => {

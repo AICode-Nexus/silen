@@ -1,0 +1,63 @@
+---
+title: Markdown and MDX
+description: Author trusted content, metadata, links, code, and React components.
+---
+
+# Markdown and MDX
+
+Use Markdown for durable prose and MDX when a page benefits from a typed React
+component. Both produce the same route, SSR HTML, search record, and optional
+AI-readable Markdown.
+
+## Frontmatter
+
+Frontmatter supplies page metadata and layout decisions:
+
+```md
+---
+title: Service runbook
+description: Diagnose and recover the checkout service.
+layout: doc
+lang: en-US
+ai: true
+---
+```
+
+`doc` is the default layout. `home` renders the configured hero before page
+MDX, and `page` keeps the application shell without documentation pagination.
+`draft: true` excludes the page from AI-readable artifacts and indexes only.
+It does not stop route scanning, building, or publishing; `ai: false` has the
+same AI-output boundary for an otherwise public page. Never store private
+content in the content tree. Keep confidential material outside the site root
+and its build inputs.
+
+## Links and headings
+
+Prefer stable site routes and descriptive link text. Under a non-root `base`,
+theme-config links are base-aware automatically; authored root-relative links
+must point at the mounted site path. During build, Silen validates internal page
+targets and can fail, warn, or ignore according to `onBrokenLinks`.
+
+Headings create the document outline. Keep one `#` title, then descend without
+skipping levels so the outline remains useful to keyboard and screen-reader
+users.
+
+## Code and components
+
+Fenced code blocks receive syntax highlighting and a keyboard-accessible copy
+button. MDX can import components and use expressions:
+
+```mdx
+import Status from './components/status.tsx'
+
+## Current status
+
+<Status service="checkout" />
+```
+
+MDX executes during the build and can import project code. Treat every MDX file
+and component as trusted source; Silen is not a sandbox for untrusted user
+submissions. Keep browser-only access inside effects or client setup so server
+rendering remains deterministic.
+
+For site-wide components, extend the [default theme](/silen/theme/extensions-accessibility/).

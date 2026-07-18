@@ -25,7 +25,7 @@ import type { AiPage } from '../shared/ai.js'
 import type { ResolvedConfig } from '../shared/config.js'
 import type { RouteRecord } from '../shared/page.js'
 import type { SilenPageData } from '../shared/plugin.js'
-import { resolveSiteLink } from '../shared/url.js'
+import { resolveSiteLink, stripSiteBase } from '../shared/url.js'
 import { resolveConfig } from './config.js'
 import { ensureBuildFavicon, type ResolvedFavicon } from './favicon.js'
 import { validateInternalLinks } from './links.js'
@@ -40,6 +40,7 @@ import {
   createSearchIndex,
   serializeSearchIndex,
 } from './search.js'
+import { createPageSeoResolver, emitSitemap } from './seo.js'
 
 export interface BuildRoute {
   path: string
@@ -561,6 +562,8 @@ async function renderRoutes(
   favicon: ResolvedFavicon,
 ): Promise<void> {
   const pagesByRoute = new Map(pages.map((page) => [page.route, page]))
+  const routes = outputs.map(({ route }) => route)
+  const seoResolver = createPageSeoResolver(config, routes)
   for (const output of outputs) {
     const { route } = output
     try {
@@ -577,11 +580,13 @@ async function renderRoutes(
         file: page.file,
         source: page.source,
       })
+      const seo = seoResolver.resolve(route.path)
       const document = renderDocument(rendered, {
         ...assets,
         base: config.base,
         favicon,
         head,
+        ...(seo === undefined ? {} : { seo }),
       })
       const destination = path.resolve(outDir, output.relativeFile)
       await mkdir(path.dirname(destination), { recursive: true })
@@ -613,14 +618,9 @@ function notFoundOutputs(config: ResolvedConfig): readonly NotFoundOutput[] {
   for (const root of roots) {
     const absoluteRoot = root.startsWith('/') ? root : `/${root}`
     const mounted = resolveSiteLink(absoluteRoot, config.base)
+    if (mounted === undefined) continue
     const pathname = new URL(mounted, 'https://silen.local').pathname
-    const baseWithoutSlash = config.base.slice(0, -1)
-    const route =
-      pathname === baseWithoutSlash || pathname === config.base
-        ? '/'
-        : pathname.startsWith(config.base)
-          ? `/${pathname.slice(config.base.length)}`
-          : undefined
+    const route = stripSiteBase(pathname, config.base)
     if (route === undefined) continue
 
     const normalizedRoute =
@@ -673,7 +673,14 @@ async function emitSearchIndex(
   const destination = path.join(outDir, 'search-index.json')
   const temporary = path.join(outDir, `.search-index-${randomUUID()}.tmp`)
   const serialized = serializeSearchIndex(
-    createSearchIndex(createPageSearchDocuments(pages)),
+    createSearchIndex(
+      createPageSearchDocuments(pages, {
+        lang: config.lang,
+        ...(config.themeConfig.locales === undefined
+          ? {}
+          : { locales: config.themeConfig.locales }),
+      }),
+    ),
   )
   try {
     await writeFile(temporary, serialized, 'utf8')
@@ -783,6 +790,7 @@ async function buildSite(root: string): Promise<BuildResult> {
       stagedOutDir,
       favicon,
     )
+    await emitSitemap(config, routes, stagedOutDir)
     await generateAiArtifacts({
       outDir: stagedOutDir,
       site: config,

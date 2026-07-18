@@ -25,5 +25,15 @@ describe('npm publish workflow', () => {
     expect(workflow).toContain('npm publish --access public --tag latest')
     expect(workflow).not.toContain('NODE_AUTH_TOKEN')
     expect(workflow).not.toContain('NPM_TOKEN')
+
+    const releaseTests = workflow.indexOf('run: pnpm test')
+    const publint = workflow.indexOf('pnpm exec publint')
+    const noMaps = workflow.indexOf('pnpm check:no-maps')
+    const publish = workflow.indexOf('npm publish --access public --tag latest')
+
+    expect(noMaps).toBeGreaterThan(releaseTests)
+    expect(noMaps).toBeGreaterThan(publint)
+    expect(noMaps).toBeLessThan(publish)
+    expect(workflow.match(/pnpm check:no-maps/g)).toHaveLength(1)
   })
 })

@@ -1,0 +1,56 @@
+---
+title: 配置
+description: 配置路由元数据、导航、集成与 AI 产物。
+---
+
+# 配置
+
+在内容根目录创建 `.silen/config.ts`，并导出 `defineConfig(...)`。该文件是可信的项目代码；不要放入密钥，因为配置可能影响公开 HTML 与构建产物。
+
+```ts
+import { defineConfig } from '@aicode-nexus/silen'
+
+export default defineConfig({
+  title: '工程手册',
+  description: '产品团队的运行知识。',
+  lang: 'zh-CN',
+  base: '/handbook/',
+  siteUrl: 'https://docs.example.com',
+  outDir: '.silen/dist',
+  onBrokenLinks: 'error',
+})
+```
+
+## URL 与元数据
+
+`base` 是站点挂载位置的规范绝对路径；域名根路径使用 `/`，子路径可用 `/handbook/`。`siteUrl` 只能写 HTTP(S) 源，部署路径写在 `base` 中。两者共同生成 canonical、`hreflang` 与 `x-default` 语言替代、站点地图和基础 Open Graph/Twitter 元数据。Markdown 与 Agent Contract URL 仍是 base 相对路径。`lang` 使用 BCP 47 语言标签。
+
+## 导航与多语言
+
+`themeConfig.nav` 和 `themeConfig.sidebar` 使用 `{ text, link }`。主题里的根相对链接会自动加上 `base`。locale 可设置 `root`，并覆盖导航、侧栏、首页与界面消息：
+
+```ts
+themeConfig: {
+  locales: [
+    { lang: 'en-US', label: 'English', root: '/' },
+    { lang: 'zh-CN', label: '中文', root: '/zh/' },
+  ],
+  search: true,
+}
+```
+
+保持语言路由镜像，语言切换器才能保留当前页面，而不是把读者送回首页。
+
+## 集成与 AI
+
+`analytics` 支持 Google、百度与自定义脚本；`plugins` 是有序的可信插件工厂数组。`ai` 可控制 `llms.txt`、`llms-full.txt`、Markdown 路由与 `ai-index.json`，默认全部开启。Agent Contract 默认开启，也可显式加入公开指令和任务。
+
+```ts
+ai: {
+  markdownRoutes: true,
+  index: true,
+  contract: { enabled: true, instructions: '.silen/ai-public.md' },
+}
+```
+
+完整字段见[参考手册](/silen/zh/reference/)，集成示例见[集成](/silen/zh/integrations/)。

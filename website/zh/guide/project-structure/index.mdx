@@ -1,0 +1,44 @@
+---
+title: 项目结构
+description: 组织 Silen 内容、配置、资源与生成产物。
+---
+
+# 项目结构
+
+一个 Silen 站点就是一个内容根目录。把内容与站点配置放在同一边界内，本地开发、生产构建和 AI 工具就会解析同一套文件。
+
+```text
+docs/
+├── .silen/
+│   ├── config.ts
+│   ├── theme.tsx          # 可选主题扩展
+│   ├── ai-public.md       # 可选公开 Agent 指令
+│   └── dist/              # 生成目录，不要手工编辑
+├── public/
+│   └── logo.svg
+├── assets/
+│   └── architecture.png
+├── guide/
+│   └── index.mdx
+└── index.mdx
+```
+
+## 内容如何形成路由
+
+Silen 扫描 `.md` 与 `.mdx`。`index.mdx` 的编译器路由是 `/`；`guide.mdx` 与 `guide/index.mdx` 的编译器路由是 `/guide`。目录形式会生成 `guide/index.html`，通常以 `/guide/` 访问。不要同时创建两个指向同一路由的源文件；构建会明确拒绝重复路由，而不是静默选一个。
+
+会继续增长的栏目适合使用目录，这样相邻图片、示例与子页面更容易维护，公开 URL 也能保持稳定。
+
+## 配置与主题
+
+`.silen/config.ts` 是可信、可执行的项目配置，定义标题、base、多语言、导航、集成与 AI 产物。`.silen/theme.tsx` 是可选项；仅替换组件、布局或根包装器时，应扩展默认主题。
+
+## 静态资源与导入资源
+
+必须保留公开文件名的资源放到 `public/`，例如在配置中使用 `/logo.svg`。Silen 会按配置的 `base` 解析主题链接与图片。与内容强关联、需要进入 Vite 资源管线的图片，可从 MDX 中导入。
+
+## 生成状态
+
+`.silen/dist` 是默认生产输出，`.silen/.temp` 是临时构建状态，都应视为可重新生成。本地 AI 工作区使用 `wiki/` 保存内容，并用 `.silen/ai/` 保存索引。启用写入前请阅读[工作区边界](/silen/zh/ai/local-workspace-mcp/)。
+
+下一步配置[站点选项](/silen/zh/guide/configuration/)。

@@ -13,6 +13,7 @@ export async function render(url: string): Promise<RenderedPage> {
     title: match.page.title,
     description: match.page.description,
     publicData: match.page.publicData,
+    ...(match.page.seo === undefined ? {} : { seo: match.page.seo }),
   }
 }
 

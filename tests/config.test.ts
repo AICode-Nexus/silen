@@ -45,6 +45,10 @@ describe('resolveConfig', () => {
     return resolveInlineConfig({ base })
   }
 
+  async function resolveInlineSiteUrl(siteUrl: string) {
+    return resolveInlineConfig({ siteUrl })
+  }
+
   it('loads .silen/config.ts and normalizes base', async () => {
     const root = path.resolve('tests/fixtures/configured')
     const config = await resolveConfig(root, 'build')
@@ -72,6 +76,138 @@ describe('resolveConfig', () => {
       root,
       configFile: path.join(root, '.silen/config.ts'),
     })
+  })
+
+  it.each([
+    [
+      'canonical HTTPS origin',
+      'HTTPS://Docs.Example.COM:443/',
+      'https://docs.example.com',
+    ],
+    [
+      'HTTP origin with a custom port',
+      'http://localhost:8080',
+      'http://localhost:8080',
+    ],
+    [
+      'IPv4 origin with a custom port and root slash',
+      'https://127.0.0.1:8443/',
+      'https://127.0.0.1:8443',
+    ],
+    [
+      'bracketed IPv6 origin with a custom port',
+      'http://[::1]:8080/',
+      'http://[::1]:8080',
+    ],
+    [
+      'bracketed IPv6 origin without a port',
+      'https://[2001:db8::1]/',
+      'https://[2001:db8::1]',
+    ],
+    [
+      'HTTP origin with its default port',
+      'http://example.com:80/',
+      'http://example.com',
+    ],
+  ])('canonicalizes %s in siteUrl', async (_, siteUrl, expected) => {
+    await expect(resolveInlineSiteUrl(siteUrl)).resolves.toMatchObject({
+      siteUrl: expected,
+    })
+  })
+
+  it('keeps siteUrl absent when it is not configured', async () => {
+    const config = await resolveInlineConfig({ base: '/docs/' })
+
+    expect(Object.hasOwn(config, 'siteUrl')).toBe(false)
+  })
+
+  it('rejects locale roots that normalize to the same pathname', async () => {
+    await expect(
+      resolveInlineConfig({
+        themeConfig: {
+          locales: [
+            { lang: 'en-US', label: 'English', root: '/en' },
+            { lang: 'fr-FR', label: 'Français', root: '/en/' },
+          ],
+        },
+      }),
+    ).rejects.toThrow(/duplicate.*locale.*root.*\/en\//i)
+  })
+
+  it('rejects locale roots whose percent-triplet hex case is equivalent', async () => {
+    await expect(
+      resolveInlineConfig({
+        themeConfig: {
+          locales: [
+            { lang: 'fr-FR', label: 'Français', root: '/caf%C3%A9/' },
+            { lang: 'fr-CA', label: 'Français canadien', root: '/caf%c3%a9/' },
+          ],
+        },
+      }),
+    ).rejects.toThrow(/duplicate.*locale.*root.*\/caf%C3%A9\//i)
+  })
+
+  it('keeps ordinary pathname character case distinct in locale roots', async () => {
+    await expect(
+      resolveInlineConfig({
+        themeConfig: {
+          locales: [
+            { lang: 'en-US', label: 'Uppercase path', root: '/EN/' },
+            { lang: 'en-GB', label: 'Lowercase path', root: '/en/' },
+          ],
+        },
+      }),
+    ).resolves.toMatchObject({
+      themeConfig: {
+        locales: [
+          { lang: 'en-US', root: '/EN/' },
+          { lang: 'en-GB', root: '/en/' },
+        ],
+      },
+    })
+  })
+
+  it('keeps distinct longest-prefix locale roots valid', async () => {
+    await expect(
+      resolveInlineConfig({
+        themeConfig: {
+          locales: [
+            { lang: 'en', label: 'English', root: '/en/' },
+            { lang: 'en-US', label: 'English (US)', root: '/en-us/' },
+          ],
+        },
+      }),
+    ).resolves.toMatchObject({
+      themeConfig: {
+        locales: [
+          { lang: 'en', root: '/en/' },
+          { lang: 'en-US', root: '/en-us/' },
+        ],
+      },
+    })
+  })
+
+  it.each([
+    ['a relative URL', 'docs.example.com'],
+    ['a scheme without an authority delimiter', 'https:docs.example.com'],
+    ['an empty authority', 'https:///docs.example.com'],
+    ['a non-HTTP protocol', 'ftp://docs.example.com'],
+    ['credentials', 'https://user:secret@docs.example.com'],
+    ['an empty userinfo delimiter', 'https://@example.com'],
+    ['empty userinfo with a password delimiter', 'https://:@example.com'],
+    ['a backslash root', 'https://example.com\\'],
+    ['an empty port delimiter', 'https://example.com:'],
+    ['an empty port delimiter before root', 'https://example.com:/'],
+    ['a deployment path', 'https://docs.example.com/project/'],
+    ['a dot deployment path', 'https://docs.example.com/.'],
+    ['a query', 'https://docs.example.com/?preview=true'],
+    ['an empty query', 'https://docs.example.com/?'],
+    ['a fragment', 'https://docs.example.com/#guide'],
+    ['an empty fragment', 'https://docs.example.com/#'],
+  ])('rejects siteUrl with %s actionably', async (_, siteUrl) => {
+    await expect(resolveInlineSiteUrl(siteUrl)).rejects.toThrow(
+      /siteUrl.*absolute http.*https.*origin.*base/i,
+    )
   })
 
   it('can disable only the Agent Contract while retaining AI artifacts', async () => {

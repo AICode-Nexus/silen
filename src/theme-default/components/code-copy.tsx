@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ComponentProps } from 'react'
+import { useThemeMessages } from '../lib/theme-config.js'
 
 const resetDelay = 2_000
 const resetTimers = new Map<HTMLButtonElement, number>()
@@ -15,18 +16,18 @@ function setCopyState(
 
   const label =
     state === 'success'
-      ? 'Code copied'
+      ? button.dataset.copySuccessLabel
       : state === 'failure'
-        ? 'Copy failed'
-        : 'Copy code'
+        ? button.dataset.copyFailureLabel
+        : button.dataset.copyLabel
   button.dataset.copyState = state
-  button.setAttribute('aria-label', label)
+  if (label) button.setAttribute('aria-label', label)
   button.textContent =
     state === 'success'
-      ? 'Copied'
+      ? (button.dataset.copiedText ?? '')
       : state === 'failure'
-        ? 'Copy failed'
-        : 'Copy'
+        ? (button.dataset.copyFailureLabel ?? '')
+        : (button.dataset.copyText ?? '')
 
   if (state !== 'idle') {
     resetTimers.set(
@@ -93,6 +94,7 @@ export function CodeBlock({
   'data-language': dataLanguage,
   ...props
 }: CodeBlockProps): React.JSX.Element {
+  const messages = useThemeMessages()
   const copyButton = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     const button = copyButton.current
@@ -126,10 +128,15 @@ export function CodeBlock({
           className="silen-code-copy"
           data-silen-copy=""
           data-copy-state="idle"
-          aria-label="Copy code"
+          data-copy-label={messages.copy.copyCode}
+          data-copy-success-label={messages.copy.codeCopied}
+          data-copy-failure-label={messages.copy.copyFailed}
+          data-copy-text={messages.copy.copy}
+          data-copied-text={messages.copy.copied}
+          aria-label={messages.copy.copyCode}
           aria-live="polite"
         >
-          Copy
+          {messages.copy.copy}
         </button>
       </div>
       <pre {...props} data-language={sourceLanguage}>

@@ -2,6 +2,13 @@ import type { RenderedPage } from '../client/app.js'
 import { appearanceScript } from '../theme-default/appearance-script.js'
 import { renderAnalyticsHead } from './analytics.js'
 import type { SilenHeadEntry } from '../shared/plugin.js'
+import {
+  coreSeoAttribute,
+  createSeoHeadEntries,
+  type PageSeo,
+} from '../shared/seo.js'
+
+export type { PageSeo, SeoAlternate } from '../shared/seo.js'
 
 export interface AssetPreload {
   as: 'audio' | 'font' | 'image' | 'video'
@@ -19,6 +26,7 @@ export interface RenderAssets {
   modulePreloads?: readonly string[]
   assetPreloads?: readonly AssetPreload[]
   head?: readonly SilenHeadEntry[]
+  seo?: PageSeo
 }
 
 const htmlEscapes: Readonly<Record<string, string>> = {
@@ -89,6 +97,25 @@ function renderHeadEntry(entry: SilenHeadEntry): string {
   return `${opening}${content}</${entry.tag}>`
 }
 
+function isCanonicalLink(entry: SilenHeadEntry): boolean {
+  if (entry.tag.toLowerCase() !== 'link') return false
+  return Object.entries(entry.attributes ?? {}).some(
+    ([name, value]) =>
+      name.toLowerCase() === 'rel' &&
+      typeof value === 'string' &&
+      value.split(/\s+/).some((token) => token.toLowerCase() === 'canonical'),
+  )
+}
+
+function renderSeo(page: RenderedPage, seo: PageSeo | undefined): string[] {
+  return createSeoHeadEntries(page, seo).map(({ tag, attributes }) => {
+    const renderedAttributes = Object.entries(attributes).map(
+      ([name, value]) => `${name}="${escapeHtml(value)}"`,
+    )
+    return `<${tag} ${renderedAttributes.join(' ')} ${coreSeoAttribute}>`
+  })
+}
+
 export function renderDocument(
   page: RenderedPage,
   assets: RenderAssets,
@@ -115,7 +142,10 @@ export function renderDocument(
       ]
     : []
   const analytics = renderAnalyticsHead(page.publicData.analytics ?? [])
-  const pluginHead = (assets.head ?? []).map(renderHeadEntry)
+  const pluginHead = (assets.head ?? [])
+    .filter((entry) => assets.seo === undefined || !isCanonicalLink(entry))
+    .map(renderHeadEntry)
+  const seo = renderSeo(page, assets.seo)
 
   return [
     '<!doctype html>',
@@ -131,6 +161,7 @@ export function renderDocument(
     ...stylesheets,
     ...modulePreloads,
     ...assetPreloads,
+    ...seo,
     ...analytics,
     ...pluginHead,
     '</head>',

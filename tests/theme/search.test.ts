@@ -19,6 +19,7 @@ import {
 import { build, type BuildResult } from '../../src/node/build'
 import {
   createSearchIndex,
+  createPageSearchDocuments,
   markdownToSearchText,
   querySearchIndex,
   serializeSearchIndex,
@@ -32,6 +33,7 @@ import {
 const documents: SearchDocument[] = [
   {
     id: '/config',
+    lang: 'en-US',
     title: 'Configuration',
     headings: ['Site options'],
     text: 'Choose the site options for a project.',
@@ -39,6 +41,7 @@ const documents: SearchDocument[] = [
   },
   {
     id: '/intro',
+    lang: 'en-US',
     title: 'Introduction',
     headings: ['Overview'],
     text: 'A configuration overview for new readers.',
@@ -133,6 +136,61 @@ Before <STYLE>private inline style <Nested>private nested inline style</Nested><
     expect(reverse).toBe(forward)
   })
 
+  it('serializes v2 indexes with document languages', () => {
+    const index = createSearchIndex(documents)
+
+    expect(index.version).toBe(2)
+    expect(querySearchIndex(index, 'configuration')[0]).toMatchObject({
+      route: '/config',
+      lang: 'en-US',
+    })
+  })
+
+  it('keeps deterministic score and title ordering inside language buckets', () => {
+    const index = createSearchIndex([
+      {
+        id: '/en/configuration',
+        lang: 'en-US',
+        title: 'Configuration',
+        text: 'Configuration reference.',
+        route: '/en/configuration',
+      },
+      {
+        id: '/zh/guide',
+        lang: 'zh-CN',
+        title: '中文指南',
+        text: 'Configuration reference.',
+        route: '/zh/guide',
+      },
+      {
+        id: '/zh/api',
+        lang: 'zh-CN',
+        title: 'API',
+        text: 'Configuration reference.',
+        route: '/zh/api',
+      },
+    ])
+
+    expect(
+      querySearchIndex(index, 'configuration', { lang: 'zh-CN' }).map(
+        ({ route }) => route,
+      ),
+    ).toEqual(['/zh/api', '/zh/guide', '/en/configuration'])
+  })
+
+  it('reads legacy v1 indexes as a flat list without invented languages', () => {
+    const current = createSearchIndex(documents)
+    const legacy = { version: 1 as const, index: current.index }
+
+    expect(querySearchIndex(legacy, 'configuration')).toEqual([
+      expect.objectContaining({ route: '/config' }),
+      expect.objectContaining({ route: '/intro' }),
+    ])
+    expect(querySearchIndex(legacy, 'configuration')[0]).not.toHaveProperty(
+      'lang',
+    )
+  })
+
   it('ranks title matches above body-only matches with prefix and fuzzy search', () => {
     const index = createSearchIndex(documents)
 
@@ -145,6 +203,7 @@ Before <STYLE>private inline style <Nested>private nested inline style</Nested><
     const index = createSearchIndex([
       {
         id: '/silen',
+        lang: 'en-US',
         title: 'Silen',
         description: 'React documentation for people and AI.',
         text: 'Two commands, one calm workflow Start in seconds Read the guide.',
@@ -161,6 +220,7 @@ Before <STYLE>private inline style <Nested>private nested inline style</Nested><
     const index = createSearchIndex([
       {
         id: '/unsafe',
+        lang: 'en-US',
         title: 'Unsafe examples',
         text: 'Configure <img src=x onerror="globalThis.bad=true"> safely.',
         route: '/unsafe',
@@ -173,6 +233,32 @@ Before <STYLE>private inline style <Nested>private nested inline style</Nested><
     expect(result?.snippet).not.toContain('<img')
     expect(result?.snippet).not.toContain('onerror="')
     expect(serializeSearchIndex(index)).not.toContain('<')
+  })
+
+  it('derives document language from the longest route locale root, not frontmatter', () => {
+    const pages = [
+      {
+        file: '/docs/zh/guide.mdx',
+        route: '/zh/guide/',
+        source: '# 指南\n\n公开内容。',
+        title: '指南',
+        description: '',
+        frontmatter: { lang: 'en-US' },
+        headings: [],
+        links: [],
+        data: {},
+      },
+    ]
+
+    expect(
+      createPageSearchDocuments(pages, {
+        lang: 'en-US',
+        locales: [
+          { lang: 'en-US', label: 'English', root: '/' },
+          { lang: 'zh-CN', label: '中文', root: '/zh/' },
+        ],
+      })[0],
+    ).toMatchObject({ lang: 'zh-CN', route: '/zh/guide/' })
   })
 })
 
@@ -201,8 +287,63 @@ describe('client search index loading', () => {
     expect(fetchIndex).toHaveBeenCalledTimes(1)
     expect(fetchIndex).toHaveBeenCalledWith(
       '/%E6%96%87%E6%A1%A3/search-index.json',
-      { headers: { accept: 'application/json' } },
+      { cache: 'no-cache', headers: { accept: 'application/json' } },
     )
+  })
+
+  it('loads v2 languages and ranks the current language first', async () => {
+    const serialized = serializeSearchIndex(
+      createSearchIndex([
+        {
+          id: '/en/configuration',
+          lang: 'en-US',
+          title: 'Configuration',
+          text: 'Configuration reference.',
+          route: '/en/configuration',
+        },
+        {
+          id: '/zh/guide',
+          lang: 'zh-CN',
+          title: '中文指南',
+          text: 'Configuration reference.',
+          route: '/zh/guide',
+        },
+      ]),
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response(serialized))),
+    )
+
+    const results = await searchClientIndex('configuration', {
+      base: '/v2-language/',
+      lang: 'zh-CN',
+    })
+
+    expect(results.map(({ route }) => route)).toEqual([
+      '/zh/guide',
+      '/en/configuration',
+    ])
+    expect(results.map(({ lang }) => lang)).toEqual(['zh-CN', 'en-US'])
+  })
+
+  it('loads legacy v1 indexes as an ungrouped result list', async () => {
+    const current = createSearchIndex(documents)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ version: 1, index: current.index })),
+        ),
+      ),
+    )
+
+    const results = await searchClientIndex('configuration', {
+      base: '/v1-transition/',
+      lang: 'zh-CN',
+    })
+
+    expect(results[0]).not.toHaveProperty('lang')
   })
 
   it('rejects a missing index without permanently caching the failure', async () => {
@@ -356,12 +497,10 @@ Choose public project settings.
       })),
     )
 
-    expect(initialSource).not.toContain(
-      'Search all public documentation pages.',
-    )
+    expect(initialSource).not.toContain('search-index.json')
     expect(initialSource).not.toContain('MiniSearch')
     const dialogChunk = lazySources.find(({ source }) =>
-      source.includes('Search all public documentation pages.'),
+      source.includes('search-index.json'),
     )
     expect(dialogChunk).toBeDefined()
     expect(home).not.toContain(dialogChunk!.file)

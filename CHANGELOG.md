@@ -7,6 +7,20 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-17
+
+### Added
+
+- Added the safe `silen init` activation path for new and existing content
+  directories.
+- Added localized theme messages and search v2 language-aware indexing.
+- Added canonical, alternate-locale, sitemap, and themed 404 SEO output.
+
+### Documentation
+
+- Rebuilt the bilingual English and Chinese product documentation, navigation,
+  homepages, live artifact evidence, and npm quick reference.
+
 ## [0.1.4] - 2026-07-17
 
 ### Fixed
@@ -117,7 +131,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Published Silen under the `@aicode-nexus` organization scope.
 
-[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.1.4...HEAD
+[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/AICode-Nexus/silen/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/AICode-Nexus/silen/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/AICode-Nexus/silen/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/AICode-Nexus/silen/compare/v0.1.1...v0.1.2

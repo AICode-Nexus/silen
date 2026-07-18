@@ -73,6 +73,20 @@ describe('default theme tokens', () => {
     expect(entry).toMatch(/--font-sans:\s*['"]Inter Variable['"]/)
   })
 
+  it('globally reduces nonessential motion when the user requests it', async () => {
+    const entry = await readFile('src/theme-default/styles/index.css', 'utf8')
+    const reducedMotionStart = entry.indexOf(
+      '@media (prefers-reduced-motion: reduce)',
+    )
+    const reducedMotion = entry.slice(reducedMotionStart)
+
+    expect(reducedMotionStart).toBeGreaterThanOrEqual(0)
+    expect(reducedMotion).toContain('animation-duration: 0.01ms !important;')
+    expect(reducedMotion).toContain('animation-iteration-count: 1 !important;')
+    expect(reducedMotion).toContain('transition-duration: 0.01ms !important;')
+    expect(reducedMotion).toContain('scroll-behavior: auto !important;')
+  })
+
   it('compiles semantic utilities and tokens into a real production build', async () => {
     const testRoot = path.resolve('.silen/.temp/tests')
     await mkdir(testRoot, { recursive: true })
@@ -137,7 +151,7 @@ export default defineConfig({
     )
     const actionStart = documentStyles.indexOf('.silen-home-inline-link,')
     const actionEnd = documentStyles.indexOf(
-      '.silen-home-panel-grid,',
+      '.silen-home-proof-grid,',
       actionStart,
     )
     const actionStyles = documentStyles.slice(actionStart, actionEnd)
@@ -151,5 +165,20 @@ export default defineConfig({
     expect(actionStyles).toContain('gap: inherit;')
     expect(actionStyles).toContain('margin: 0;')
     expect(actionStyles).toContain('flex: 0 0 auto;')
+  })
+
+  it('strengthens the community eyebrow against its muted background', async () => {
+    const documentStyles = await readFile(
+      'src/theme-default/styles/document.css',
+      'utf8',
+    )
+    const communityEyebrow = documentStyles.match(
+      /\.silen-home-community\s*>\s*\.silen-home-section-copy\s*>\s*\.silen-home-eyebrow\s*\{([^}]*)\}/,
+    )
+
+    expect(communityEyebrow).not.toBeNull()
+    expect(communityEyebrow?.[1]).toMatch(
+      /color:\s*var\(--silen-foreground\);[\s\S]*color:\s*color-mix\(\s*in oklab,\s*var\(--silen-primary\) 80%,\s*var\(--silen-foreground\)\s*\);/,
+    )
   })
 })

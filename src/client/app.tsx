@@ -14,7 +14,16 @@ import routes, { type PageModule } from 'virtual:silen/routes'
 import InitialTheme, { type Theme } from 'virtual:silen/theme'
 import clientExtensions from 'virtual:silen/client-extensions'
 import type { JsonObject } from '../shared/page.js'
+import { resolveCurrentLocale } from '../shared/config.js'
+import {
+  coreSeoAttribute,
+  createPageSeoResolver,
+  createSeoHeadEntries,
+  type PageSeo,
+} from '../shared/seo.js'
+import { stripSiteBase } from '../shared/url.js'
 import type { ThemeMdxComponents } from '../theme-default/index.js'
+import { resolveThemeMessages } from '../theme-default/lib/theme-config.js'
 import { analyticsPagePath, trackAnalyticsPageview } from './analytics.js'
 import { DataProvider, type PagePublicData } from './data.js'
 import {
@@ -25,6 +34,10 @@ import { navigateDocument } from './navigation.js'
 import { resolveInternalUrl, RouterProvider, type Router } from './router.js'
 
 const analyticsProviders = config.analytics ?? []
+const seoResolver = createPageSeoResolver(
+  config,
+  Object.keys(routes).map((path) => ({ path })),
+)
 
 function pluginRoot(children: ReactNode): ReactNode {
   return [...clientExtensions]
@@ -44,6 +57,7 @@ export interface ResolvedPage {
   title: string
   description: string
   publicData: PagePublicData
+  seo?: PageSeo
   Component: ComponentType<MdxContentProps>
 }
 
@@ -62,6 +76,7 @@ export interface RenderedPage {
   title: string
   description: string
   publicData: PagePublicData
+  seo?: PageSeo
 }
 
 export interface AppProps {
@@ -99,12 +114,11 @@ function routePathname(url: string): {
     return { pathname, route: decodePathname(pathname) }
   }
 
-  const baseWithoutSlash = config.base.slice(0, -1)
-  if (pathname === baseWithoutSlash) return { pathname, route: '/' }
-  if (!pathname.startsWith(config.base)) return { pathname, route: undefined }
-
-  const suffix = decodePathname(pathname.slice(config.base.length))
-  return { pathname, route: suffix === undefined ? undefined : `/${suffix}` }
+  const unmounted = stripSiteBase(pathname, config.base)
+  return {
+    pathname,
+    route: unmounted === undefined ? undefined : decodePathname(unmounted),
+  }
 }
 
 function browserPath(url: string): string {
@@ -141,14 +155,21 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
   const loader = route === undefined ? undefined : routes[route]
 
   if (!loader || !route) {
+    const locale = resolveCurrentLocale(
+      config.themeConfig?.locales,
+      request.route ?? request.pathname,
+      '/',
+      config.lang,
+    )
+    const messages = resolveThemeMessages(locale.lang, locale.locale?.messages)
     return {
       found: false,
       page: {
-        title: 'Page not found',
+        title: messages.notFound.title,
         description: '',
         publicData: {
           siteTitle: config.title,
-          lang: config.lang,
+          lang: locale.lang,
           base: config.base,
           route: request.route ?? request.pathname,
           ai: config.ai,
@@ -166,15 +187,23 @@ export async function resolveRoute(url: string): Promise<RouteMatch> {
 }
 
 function resolvedPage(route: string, module: PageModule): ResolvedPage {
+  const lang = resolveCurrentLocale(
+    config.themeConfig?.locales,
+    route,
+    '/',
+    stringField(module.frontmatter, 'lang', config.lang),
+  ).lang
+  const seo = seoResolver.resolve(route)
   return {
     title:
       module.title || stringField(module.frontmatter, 'title', config.title),
     description:
       module.description ||
       stringField(module.frontmatter, 'description', config.description),
+    ...(seo === undefined ? {} : { seo }),
     publicData: {
       siteTitle: config.title,
-      lang: stringField(module.frontmatter, 'lang', config.lang),
+      lang,
       base: config.base,
       route,
       ai: config.ai,
@@ -240,6 +269,23 @@ function setMetadata(page: ResolvedPage): void {
     document.head.append(description)
   }
   description.content = page.description
+
+  const owned = Array.from(
+    document.head.querySelectorAll(`[${coreSeoAttribute}]`),
+  )
+  const replacement = document.createDocumentFragment()
+  for (const entry of createSeoHeadEntries(page, page.seo)) {
+    const element = document.createElement(entry.tag)
+    element.setAttribute(coreSeoAttribute, '')
+    for (const [name, value] of Object.entries(entry.attributes)) {
+      element.setAttribute(name, value)
+    }
+    replacement.append(element)
+  }
+  const firstOwned = owned[0]
+  if (firstOwned) firstOwned.before(replacement)
+  else document.head.append(replacement)
+  for (const element of owned) element.remove()
 }
 
 function focusElement(element: HTMLElement): void {

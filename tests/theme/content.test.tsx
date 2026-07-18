@@ -399,6 +399,100 @@ describe('default content layouts', () => {
     expect(screen.queryByText('React-first')).toBeNull()
   })
 
+  it.each([
+    {
+      expected: 'Learn more about Typed links',
+      lang: 'en-US',
+      title: 'Typed links',
+    },
+    {
+      expected: '进一步了解类型化链接',
+      lang: 'zh-CN',
+      title: '类型化链接',
+    },
+  ])(
+    'localizes an omitted feature link label for $lang',
+    ({ expected, lang, title }) => {
+      render(
+        <TestSiteProvider lang={lang}>
+          <HomeLayout
+            features={[
+              {
+                title,
+                details: 'Localized fallback.',
+                link: '/guide/',
+              },
+            ]}
+          >
+            Home body
+          </HomeLayout>
+        </TestSiteProvider>,
+      )
+
+      expect(screen.getByRole('link', { name: expected })).not.toBeNull()
+    },
+  )
+
+  it('hydrates a custom feature link template and preserves explicit link text', async () => {
+    const themeConfig: ThemeConfig = {
+      locales: [
+        {
+          lang: 'en-US',
+          label: 'English',
+          root: '/',
+          messages: {
+            navigation: { featureLink: 'Explore {title}' },
+          },
+        },
+      ],
+    }
+    const tree = (
+      <TestSiteProvider path="/" themeConfig={themeConfig}>
+        <HomeLayout
+          features={[
+            {
+              title: 'Stable rendering',
+              details: 'Uses the resolved locale message.',
+              link: '/rendering/',
+            },
+            {
+              title: 'Explicit label',
+              details: 'Keeps the configured feature copy.',
+              link: '/explicit/',
+              linkText: 'Configured action',
+            },
+          ]}
+        >
+          Home body
+        </HomeLayout>
+      </TestSiteProvider>
+    )
+    const container = document.createElement('div')
+    container.innerHTML = renderToString(tree)
+    document.body.append(container)
+    const recoverableError = vi.fn()
+    const root = hydrateRoot(container, tree, {
+      onRecoverableError: recoverableError,
+    })
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+
+    expect(
+      within(container).getByRole('link', {
+        name: 'Explore Stable rendering',
+      }),
+    ).not.toBeNull()
+    expect(
+      within(container).getByRole('link', { name: 'Configured action' }),
+    ).not.toBeNull()
+    expect(recoverableError).not.toHaveBeenCalled()
+
+    act(() => root.unmount())
+    container.remove()
+  })
+
   it('renders document typography and base-aware previous/next pager cards', () => {
     const themeConfig: ThemeConfig = {
       sidebar: [
@@ -452,6 +546,84 @@ describe('default content layouts', () => {
       screen.getByRole('link', { name: 'Return home' }).getAttribute('href'),
     ).toBe('/project/')
   })
+
+  it('localizes home landmarks, pager labels, and the complete 404 screen', () => {
+    const themeConfig: ThemeConfig = {
+      sidebar: [
+        {
+          text: '指南',
+          items: [
+            { text: '介绍', link: '/zh/guide/' },
+            { text: '安装', link: '/zh/guide/install' },
+            { text: '接口', link: '/zh/reference/api' },
+          ],
+        },
+      ],
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        {
+          lang: 'zh-CN',
+          label: '中文',
+          root: '/zh/',
+          sidebar: [
+            {
+              text: '指南',
+              items: [
+                { text: '介绍', link: '/zh/guide/' },
+                { text: '安装', link: '/zh/guide/install' },
+                { text: '接口', link: '/zh/reference/api' },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const view = render(
+      <TestSiteProvider
+        lang="zh-CN"
+        path="/zh/guide/install"
+        themeConfig={themeConfig}
+      >
+        <DocLayout>安装</DocLayout>
+      </TestSiteProvider>,
+    )
+
+    const pager = screen.getByRole('navigation', { name: '页面导航' })
+    expect(
+      within(pager).getByRole('link', { name: '上一页：介绍' }),
+    ).not.toBeNull()
+    expect(
+      within(pager).getByRole('link', { name: '下一页：接口' }),
+    ).not.toBeNull()
+    view.unmount()
+
+    const notFoundView = render(
+      <TestSiteProvider
+        lang="zh-CN"
+        path="/zh/missing"
+        themeConfig={themeConfig}
+      >
+        <NotFound />
+      </TestSiteProvider>,
+    )
+    expect(screen.getByText('页面未找到')).not.toBeNull()
+    expect(screen.getByText('你请求的页面不存在或已被移动。')).not.toBeNull()
+    expect(screen.getByRole('link', { name: '返回首页' })).not.toBeNull()
+    notFoundView.unmount()
+
+    render(
+      <TestSiteProvider lang="zh-CN">
+        <HomeLayout
+          hero={{ name: '首页' }}
+          features={[{ title: '快速', details: '构建更快。' }]}
+        >
+          正文
+        </HomeLayout>
+      </TestSiteProvider>,
+    )
+    expect(screen.getByRole('region', { name: '特性' })).not.toBeNull()
+  })
 })
 
 describe('delegated code copy', () => {
@@ -490,6 +662,27 @@ describe('delegated code copy', () => {
     expect(writeText).toHaveBeenCalledWith('pnpm test')
     expect(buttons[1]?.getAttribute('aria-label')).toBe('Code copied')
     expect(buttons[1]?.textContent).toBe('Copied')
+  })
+
+  it('localizes delegated DOM copy state without hard-coded labels', async () => {
+    const writeText = vi.fn<(value: string) => Promise<void>>(() =>
+      Promise.resolve(),
+    )
+    clipboard(writeText)
+    render(
+      <TestSiteProvider lang="zh-CN">
+        <CodeBlock code="pnpm test" language="sh" />
+      </TestSiteProvider>,
+    )
+
+    const button = screen.getByRole('button', { name: '复制代码' })
+    await act(async () => {
+      fireEvent.click(button)
+      await Promise.resolve()
+    })
+
+    expect(button.getAttribute('aria-label')).toBe('代码已复制')
+    expect(button.textContent).toBe('已复制')
   })
 
   it('contains clipboard failure and resets its accessible state', async () => {

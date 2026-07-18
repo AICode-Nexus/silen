@@ -1,0 +1,60 @@
+---
+title: Local workspace and MCP
+description: Index, audit, and expose a bounded documentation workspace to local AI clients.
+---
+
+# Local workspace and MCP
+
+The local AI workspace is deterministic and model-free. It gives tools a
+bounded Markdown root, an inspectable index, and explicit write permission
+without exposing arbitrary shell execution.
+
+## Initialize, index, and audit
+
+```sh
+pnpm silen ai init docs
+pnpm silen ai index docs
+pnpm silen ai audit docs
+```
+
+`ai init` creates `wiki/` and the ignored `.silen/ai/` cache without changing
+existing MDX. `ai index` rebuilds the local search index. `ai audit` checks
+links, citations, generated artifacts, and index freshness, then exits nonzero
+when it finds an issue.
+
+## Connect an MCP client
+
+Run the server from the repository root:
+
+```json
+{
+  "mcpServers": {
+    "silen": {
+      "command": "pnpm",
+      "args": ["silen", "mcp", "docs"]
+    }
+  }
+}
+```
+
+The default server registers seven read-only tools: `guide`, `list`, `search`,
+`read`, `backlinks`, `citations`, and `build`. The `build` tool is a bounded
+preflight: it reads Markdown inputs and existing artifacts but does not load
+project config, execute MDX, invoke Vite, or write files.
+
+## Grant writes deliberately
+
+```sh
+pnpm silen mcp docs --allow-write
+```
+
+This explicit flag adds `write`, `link`, and `append`. Writes accept only
+workspace-relative `.md` or `.mdx` paths, reject traversal and escaping
+symlinks, use atomic replacement, and enforce a 2 MiB UTF-8 limit. It never
+adds a shell tool.
+
+Grant write mode only to a trusted local client for a bounded task. After a
+change, run the audit and site build, inspect the Git diff, and obtain separate
+authorization before committing or deploying.
+
+Read [Agent Contract](/silen/ai/agent-contract/) for client discovery rules.

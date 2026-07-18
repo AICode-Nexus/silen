@@ -8,7 +8,7 @@ import type {
 } from '../../shared/config.js'
 import { cn } from '../lib/cn.js'
 import { isActiveThemeLink, resolveThemeLink } from '../lib/navigation.js'
-import { resolveThemeConfig } from '../lib/theme-config.js'
+import { resolveThemeConfig, useThemeMessages } from '../lib/theme-config.js'
 import { Button } from './ui/button.js'
 import {
   Collapsible,
@@ -117,6 +117,7 @@ function SidebarNavigation({
   const { base, themeConfig: rawThemeConfig } = useData()
   const currentRoute = useRoute()
   const themeConfig = resolveThemeConfig(rawThemeConfig, currentRoute, base)
+  const messages = useThemeMessages()
   const nav = themeConfig?.nav ?? []
   const groups = themeConfig?.sidebar ?? []
 
@@ -128,7 +129,7 @@ function SidebarNavigation({
             id="mobile-main-navigation"
             className="mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
           >
-            Main
+            {messages.sidebar.main}
           </h2>
           <ul className="flex flex-col gap-0.5">
             {nav.map((item) => (
@@ -158,9 +159,10 @@ function SidebarNavigation({
 }
 
 export function Sidebar(): React.JSX.Element {
+  const messages = useThemeMessages()
   return (
     <aside className="sticky top-[var(--silen-nav-height)] hidden h-[calc(100svh-var(--silen-nav-height))] border-r min-[60rem]:block">
-      <nav aria-label="Documentation sidebar" className="h-full">
+      <nav aria-label={messages.sidebar.documentation} className="h-full">
         <ScrollArea className="h-full">
           <SidebarNavigation />
         </ScrollArea>
@@ -170,6 +172,7 @@ export function Sidebar(): React.JSX.Element {
 }
 
 export function MobileSidebar(): React.JSX.Element {
+  const messages = useThemeMessages()
   const [open, setOpen] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   return (
@@ -179,8 +182,8 @@ export function MobileSidebar(): React.JSX.Element {
           type="button"
           variant="ghost"
           size="icon"
-          className="min-[60rem]:hidden"
-          aria-label="Open navigation"
+          className="min-h-10 min-w-10 min-[60rem]:hidden"
+          aria-label={messages.sidebar.openNavigation}
         >
           <MenuIcon aria-hidden="true" />
         </Button>
@@ -188,6 +191,7 @@ export function MobileSidebar(): React.JSX.Element {
       <SheetContent
         ref={contentRef}
         side="left"
+        closeLabel={messages.navigation.close}
         className="w-[min(22rem,85vw)] p-0"
         onOpenAutoFocus={(event) => {
           event.preventDefault()
@@ -200,13 +204,13 @@ export function MobileSidebar(): React.JSX.Element {
         }}
       >
         <SheetHeader className="border-b pr-12">
-          <SheetTitle>Documentation navigation</SheetTitle>
+          <SheetTitle>{messages.sidebar.dialogTitle}</SheetTitle>
           <SheetDescription>
-            Browse the documentation sections.
+            {messages.sidebar.dialogDescription}
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="min-h-0 flex-1">
-          <nav aria-label="Mobile documentation navigation">
+          <nav aria-label={messages.sidebar.mobileNavigation}>
             <SidebarNavigation
               includeMainNavigation
               onNavigate={() => setOpen(false)}

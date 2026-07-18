@@ -1,0 +1,61 @@
+---
+title: Reference
+description: Configuration defaults, CLI syntax, and troubleshooting for Silen.
+---
+
+# Reference
+
+This page is the compact operational reference. Use the linked guides for
+explanations and examples.
+
+## Configuration
+
+| Field           | Default       | Purpose                                    |
+| --------------- | ------------- | ------------------------------------------ |
+| `title`         | `Silen`       | Human-readable site title                  |
+| `description`   | empty         | Generated page metadata                    |
+| `lang`          | `en-US`       | Default BCP 47 language                    |
+| `base`          | `/`           | Normalized deployment pathname             |
+| `siteUrl`       | unset         | Canonical HTTP(S) origin                   |
+| `outDir`        | `.silen/dist` | Output relative to content root            |
+| `onBrokenLinks` | `error`       | `error`, `warn`, or `ignore`               |
+| `themeConfig`   | `{}`          | Navigation, locales, home, search, Ask AI  |
+| `analytics`     | `[]`          | Ordered production analytics providers     |
+| `plugins`       | `[]`          | Ordered trusted plugin entries             |
+| `ai.*`          | enabled       | AI files, Markdown routes, index, contract |
+
+`base` must start with `/`, contain no query/hash or traversal, and is
+normalized with a trailing slash. `siteUrl` is an origin only, without
+credentials, path, query, or fragment.
+
+## CLI
+
+| Command                                | Effect                                        |
+| -------------------------------------- | --------------------------------------------- |
+| `silen init <root>`                    | Safely create starter config and homepage     |
+| `silen dev [root]`                     | Start development; accepts `--host`, `--port` |
+| `silen build [root]`                   | Validate and generate static output           |
+| `silen preview [root]`                 | Serve output; accepts `--host`, `--port`      |
+| `silen ai <init\|index\|audit> [root]` | Manage the local AI workspace                 |
+| `silen mcp [root]`                     | Serve read-only MCP; optional `--allow-write` |
+
+## Troubleshooting
+
+**A link works locally but fails after deployment.** Confirm the host mount
+matches `base`, authored root-relative content links include that mount, and
+the host serves nested `index.html` files.
+
+**Canonical URLs include the path twice.** Keep `siteUrl` to the origin and put
+the path only in `base`.
+
+**The language switch returns a missing page.** Create the exact mirrored route
+under every locale root and include it in translated navigation.
+
+**Build reports a duplicate route.** Remove either `topic.mdx` or
+`topic/index.mdx`; both resolve to the same public route.
+
+**MCP write tools are absent.** This is the safe default. Start the server with
+`--allow-write` only after the user authorizes a bounded write task.
+
+See [configuration](/silen/guide/configuration/) and
+[CLI/deployment](/silen/guide/cli-deployment/) for longer guidance.

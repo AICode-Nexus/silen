@@ -28,6 +28,7 @@ vi.mock('virtual:silen/config', () => ({
     description: 'Fixture fallback description',
     lang: 'en-US',
     base: '/project/',
+    siteUrl: 'https://docs.example.com',
     outDir: '.silen/dist',
     onBrokenLinks: 'error',
     command: 'build',
@@ -40,6 +41,12 @@ vi.mock('virtual:silen/config', () => ({
         scripts: [{ content: 'void 0' }],
       },
     ],
+    themeConfig: {
+      locales: [
+        { lang: 'en-US', label: 'English', root: '/' },
+        { lang: 'zh-CN', label: '中文', root: '/guide/' },
+      ],
+    },
   },
 }))
 
@@ -100,7 +107,7 @@ vi.mock('virtual:silen/routes', async () => {
       frontmatter: {
         title: 'Guide',
         description: 'Guide description',
-        lang: 'zh-CN',
+        lang: 'en-US',
       },
       headings: [
         { depth: 2, title: 'Install', slug: 'install' },
@@ -160,6 +167,7 @@ vi.mock('virtual:silen/theme', () => ({
 
 import { App, resolveRoute } from '../src/client/app'
 import { hydrate } from '../src/client/entry'
+import { publishHotRouteUpdate } from '../src/client/hmr'
 
 function metadataDescription(): HTMLMetaElement {
   const meta = document.querySelector<HTMLMetaElement>(
@@ -167,6 +175,18 @@ function metadataDescription(): HTMLMetaElement {
   )
   if (!meta) throw new Error('Expected description metadata')
   return meta
+}
+
+function coreSeoElement(selector: string): Element {
+  const element = document.head.querySelector(`[data-silen-seo]${selector}`)
+  if (!element) throw new Error(`Expected core SEO element ${selector}`)
+  return element
+}
+
+function pluginSeoSnapshot(): string[] {
+  return Array.from(document.head.querySelectorAll('[data-plugin-seo]')).map(
+    (element) => element.outerHTML,
+  )
 }
 
 async function serverMarkup(url: string): Promise<string> {
@@ -288,8 +308,18 @@ describe('hydration and browser navigation', () => {
 
   beforeEach(() => {
     setClientExtensions([])
-    document.head.innerHTML =
-      '<title>Server title</title><meta name="description" content="Server description">'
+    document.head.innerHTML = [
+      '<title>Server title</title>',
+      '<meta name="description" content="Server description">',
+      '<link data-silen-seo rel="canonical" href="https://docs.example.com/project/">',
+      '<link data-silen-seo rel="alternate" hreflang="en-US" href="https://docs.example.com/project/">',
+      '<meta data-silen-seo property="og:title" content="Home">',
+      '<meta data-silen-seo name="twitter:title" content="Home">',
+      '<link data-plugin-seo rel="canonical" href="https://plugin.example.com/canonical">',
+      '<link data-plugin-seo rel="alternate" hreflang="plugin" href="https://plugin.example.com/alternate">',
+      '<meta data-plugin-seo property="og:title" content="Plugin title">',
+      '<meta data-plugin-seo name="twitter:title" content="Plugin title">',
+    ].join('')
     document.body.innerHTML = ''
     document.documentElement.lang = 'en-US'
     window.history.replaceState(null, '', '/project/')
@@ -362,6 +392,10 @@ describe('hydration and browser navigation', () => {
         String(call[0]).toLowerCase().includes('hydration'),
       ),
     ).toBe(false)
+    expect(document.head.querySelectorAll('[data-silen-seo]')).toHaveLength(11)
+    expect(coreSeoElement('link[rel="canonical"]').getAttribute('href')).toBe(
+      'https://docs.example.com/project/guide',
+    )
 
     act(() => root.unmount())
   })
@@ -430,8 +464,77 @@ describe('hydration and browser navigation', () => {
     expect(document.title).toBe('Guide')
     expect(metadataDescription().content).toBe('Guide description')
     expect(document.documentElement.lang).toBe('zh-CN')
+    act(() => root.unmount())
+    expect(coreSeoElement('link[rel="canonical"]').getAttribute('href')).toBe(
+      'https://docs.example.com/project/guide',
+    )
+    expect(
+      Array.from(
+        document.head.querySelectorAll<HTMLLinkElement>(
+          'link[data-silen-seo][rel="alternate"]',
+        ),
+      ).map((link) => [link.hreflang, link.href]),
+    ).toEqual([
+      ['en-US', 'https://docs.example.com/project/'],
+      ['zh-CN', 'https://docs.example.com/project/guide'],
+      ['x-default', 'https://docs.example.com/project/'],
+    ])
+    expect(
+      coreSeoElement('meta[property="og:title"]').getAttribute('content'),
+    ).toBe('Guide')
+    expect(
+      coreSeoElement('meta[property="og:description"]').getAttribute('content'),
+    ).toBe('Guide description')
+    expect(
+      coreSeoElement('meta[property="og:url"]').getAttribute('content'),
+    ).toBe('https://docs.example.com/project/guide')
+    expect(
+      coreSeoElement('meta[name="twitter:title"]').getAttribute('content'),
+    ).toBe('Guide')
+    expect(pluginSeoSnapshot()).toEqual([
+      '<link data-plugin-seo="" rel="canonical" href="https://plugin.example.com/canonical">',
+      '<link data-plugin-seo="" rel="alternate" hreflang="plugin" href="https://plugin.example.com/alternate">',
+      '<meta data-plugin-seo="" property="og:title" content="Plugin title">',
+      '<meta data-plugin-seo="" name="twitter:title" content="Plugin title">',
+    ])
+  })
+
+  it('refreshes social metadata for an MDX hot route update', async () => {
+    window.history.replaceState(null, '', '/project/guide')
+    const container = document.createElement('div')
+    container.id = 'app'
+    container.innerHTML = await serverMarkup('/project/guide')
+    document.body.append(container)
+    const root = await act(async () => hydrate(container))
+    const guide = await routeMocks.guideLoader()
+
+    act(() => {
+      publishHotRouteUpdate({
+        path: '/guide',
+        module: {
+          ...guide,
+          title: '',
+          description: '',
+          data: {},
+          frontmatter: {
+            ...guide.frontmatter,
+            title: 'Guide refreshed',
+            description: 'Refreshed description',
+          },
+        },
+      })
+    })
 
     act(() => root.unmount())
+    expect(
+      coreSeoElement('meta[property="og:title"]').getAttribute('content'),
+    ).toBe('Guide refreshed')
+    expect(
+      coreSeoElement('meta[name="twitter:description"]').getAttribute(
+        'content',
+      ),
+    ).toBe('Refreshed description')
+    expect(document.head.querySelectorAll('[data-silen-seo]')).toHaveLength(11)
   })
 
   it('emits pageviews for hydrated route changes but not hash navigation', async () => {
@@ -595,6 +698,12 @@ describe('hydration and browser navigation', () => {
     expect(pushState).not.toHaveBeenCalled()
     expect(scrollTo).toHaveBeenLastCalledWith(24, 48)
     expect(document.title).toBe('Home')
+    expect(coreSeoElement('link[rel="canonical"]').getAttribute('href')).toBe(
+      'https://docs.example.com/project/',
+    )
+    expect(
+      coreSeoElement('meta[property="og:title"]').getAttribute('content'),
+    ).toBe('Home')
 
     act(() => root.unmount())
   })
@@ -1047,7 +1156,8 @@ describe('hydration and browser navigation', () => {
     expect(document.title).toBe('Page not found')
     expect(metadataDescription().content).toBe('')
     expect(window.location.pathname).toBe('/project/missing')
-
     act(() => root.unmount())
+    expect(document.head.querySelectorAll('[data-silen-seo]')).toHaveLength(0)
+    expect(pluginSeoSnapshot()).toHaveLength(4)
   })
 })
