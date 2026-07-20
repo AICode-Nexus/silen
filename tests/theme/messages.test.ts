@@ -51,6 +51,7 @@ describe('theme message contract', () => {
       'appearance',
       'sidebar',
       'outline',
+      'table',
       'pagination',
       'copy',
       'notFound',

@@ -11,16 +11,12 @@ and an optional local MCP workspace for AI clients.
 
 ## Requirements
 
-Use Node.js `^20.19.0 || >=22.12.0` and pnpm. Install the React runtime peers
-as direct project dependencies, then add Silen:
+Use Node.js `^20.19.0 || >=22.12.0` and pnpm. Silen installs its required
+React runtime automatically:
 
 ```sh
-pnpm add react@^19.2.7 react-dom@^19.2.7
-pnpm add -D @aicode-nexus/silen --allow-build=esbuild
+pnpm add -D @aicode-nexus/silen
 ```
-
-The explicit build allowance keeps esbuild usable under pnpm's strict
-dependency-script policy.
 
 ## Quick reference
 
@@ -51,7 +47,10 @@ export default defineConfig({
 })
 ```
 
-Markdown creates static routes; MDX can import trusted React components.
+Markdown creates static routes and supports GFM tables, task lists,
+strikethrough, autolinks, and footnotes. MDX can import trusted React
+components. Fenced code loads supported Shiki grammars on demand. The default
+theme adds accessible responsive tables and optional light/dark hero artwork.
 Configuration also supports locales, navigation, semantic theme tokens,
 analytics, ordered plugins, AI artifacts, and a public Agent Contract.
 

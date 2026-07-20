@@ -28,6 +28,23 @@ layout: doc
 - `page` keeps navigation and a neutral article container without documentation
   paging.
 
+Home hero artwork can provide separate light and dark assets while keeping one
+accessible description:
+
+```ts
+themeConfig: {
+  home: {
+    hero: {
+      image: {
+        src: '/workflow-light.jpg',
+        darkSrc: '/workflow-dark.jpg',
+        alt: 'Documentation workflow',
+      },
+    },
+  },
+}
+```
+
 ## Navigation and sidebar
 
 ```ts

@@ -7,8 +7,36 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-20
+
+### Added
+
+- Added GitHub-flavored Markdown tables, task lists, strikethrough, autolinks,
+  and footnotes across rendered HTML, local search, AI chunks, and generated
+  Markdown, including localized responsive table semantics in the default
+  theme.
+- Added theme-aware home hero artwork through `ThemeHomeImage.darkSrc` and a
+  dark workflow illustration for the official website.
+
+### Changed
+
+- Made `react` and `react-dom` runtime dependencies of Silen and routed Vite's
+  React resolution through them, so a clean project only needs to install
+  `@aicode-nexus/silen` before its first build.
+- Load supported Shiki grammars on demand and map `ndjson` fences to the JSON
+  Lines grammar instead of silently rendering valid languages as plain text.
+- Let narrow tables size to their content, tightened desktop header controls,
+  and made the official home illustration fill its visual frame.
+
 ### Fixed
 
+- Generate rendered heading IDs and exported outline slugs from the same MDX
+  syntax tree, including headings with inline formatting or links.
+- Apply the saved appearance selection and default-theme stylesheet before
+  hydration, and give the navigation logo explicit dimensions, preventing
+  refresh-time theme and oversized-image flashes.
+- Simplified the default install command and moved esbuild script approval to
+  conditional troubleshooting for builds that actually fail without it.
 - Included the generated `.well-known` Agent Contract directory in the GitHub
   Pages upload artifact so its live discovery URLs no longer return 404.
 - Upgraded the GitHub Pages configuration and deployment actions to their
@@ -148,7 +176,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Published Silen under the `@aicode-nexus` organization scope.
 
-[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.2.1...HEAD
+[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/AICode-Nexus/silen/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/AICode-Nexus/silen/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/AICode-Nexus/silen/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/AICode-Nexus/silen/compare/v0.1.3...v0.1.4

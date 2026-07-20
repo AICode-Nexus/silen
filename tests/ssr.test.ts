@@ -76,7 +76,7 @@ describe('SSR entry', () => {
       },
     })
     expect(rendered.appHtml).toContain('<h1>Guide</h1>')
-    expect(rendered.appHtml).toContain('<h2>Install</h2>')
+    expect(rendered.appHtml).toContain('<h2 id="install">Install</h2>')
     expect(rendered.appHtml).toContain(
       'This primary content must be present in the server response.',
     )

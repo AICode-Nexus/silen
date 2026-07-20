@@ -178,18 +178,23 @@ describe('development server', () => {
     const homeHtml = await home.text()
     expect(homeHtml).toContain('<h1')
     expect(homeHtml).toContain('>Server fixture</h1>')
-    expect(homeHtml).toContain('<h2>Development home</h2>')
+    expect(homeHtml).toContain('>Development home</h2>')
     expect(homeHtml).toContain('src="/docs/logo.svg"')
     expect(homeHtml).not.toContain('/docs/docs/logo.svg')
     expect(homeHtml.match(/src="\/docs\/logo\.svg"/g)).toHaveLength(2)
     expect(homeHtml).toContain('Rendered by Vite SSR.')
     expect(homeHtml).toContain('/docs/@vite/client')
     expect(homeHtml).toContain('/docs/@react-refresh')
+    expect(homeHtml).toContain('rel="stylesheet"')
+    expect(homeHtml).toContain('/docs/@fs/')
+    expect(homeHtml).toContain('src/theme-default/styles/index.css?direct')
+    expect(homeHtml.indexOf('rel="stylesheet"')).toBeLessThan(
+      homeHtml.indexOf('<body>'),
+    )
     expect(homeHtml).toContain(
       '<link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">',
     )
     expect(homeHtml).toContain('injectIntoGlobalHook(window)')
-    expect(homeHtml).toContain('/docs/@fs/')
     await expectViteHmrConnection(server.url)
 
     const favicon = await fetch(new URL('favicon.svg', server.url))
@@ -320,7 +325,7 @@ describe('preview server', () => {
     const html = await home.text()
     expect(html).toContain('<h1')
     expect(html).toContain('>Server fixture</h1>')
-    expect(html).toContain('<h2>Development home</h2>')
+    expect(html).toContain('>Development home</h2>')
     expect(html).toContain(
       '<link rel="icon" type="image/svg+xml" href="/docs/favicon.svg">',
     )

@@ -46,6 +46,8 @@ description: Silen 配置默认值、CLI 语法与排错。
 
 **构建报告重复路由。** 删除 `topic.mdx` 或 `topic/index.mdx` 之一；二者指向同一路由。
 
+**pnpm 提示忽略 esbuild 构建脚本，且 Silen 随后构建失败。** 执行 `pnpm approve-builds esbuild`，只批准该依赖，然后重新安装并重试。如果构建已经成功，则无需批准。
+
 **MCP 没有写工具。** 这是安全默认值。只有用户明确授权有边界的写任务后，才加入 `--allow-write`。
 
 深入阅读[配置](/silen/zh/guide/configuration/)与 [CLI/部署](/silen/zh/guide/cli-deployment/)。

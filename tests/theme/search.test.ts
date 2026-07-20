@@ -50,6 +50,24 @@ const documents: SearchDocument[] = [
 ]
 
 describe('local search index', () => {
+  it('extracts GFM table cell text without indexing authoring syntax', () => {
+    const text = markdownToSearchText(
+      [
+        '## Configuration',
+        '',
+        '| Field | Default |',
+        '| --- | --- |',
+        '| `title` | `Silen` |',
+      ].join('\n'),
+    )
+
+    expect(text).toContain('Configuration')
+    expect(text).toContain('Field Default')
+    expect(text).toContain('title Silen')
+    expect(text).not.toContain('|')
+    expect(text).not.toContain('---')
+  })
+
   it('extracts only rendered MDX text from adversarial metadata', () => {
     const text = markdownToSearchText(`---
 title: Public document

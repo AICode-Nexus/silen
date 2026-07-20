@@ -54,6 +54,10 @@ under every locale root and include it in translated navigation.
 **Build reports a duplicate route.** Remove either `topic.mdx` or
 `topic/index.mdx`; both resolve to the same public route.
 
+**A build fails after pnpm reports an ignored esbuild build script.** Approve
+only that dependency with `pnpm approve-builds esbuild`, reinstall, and retry.
+No approval is needed when the build already succeeds.
+
 **MCP write tools are absent.** This is the safe default. Start the server with
 `--allow-write` only after the user authorizes a bounded write task.
 

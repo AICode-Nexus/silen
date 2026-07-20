@@ -5,7 +5,7 @@ description: 编写可信内容、元数据、链接、代码与 React 组件。
 
 # Markdown 与 MDX
 
-持久说明优先使用 Markdown；页面确实需要类型化 React 组件时再使用 MDX。两者都会生成相同的路由、SSR HTML、搜索记录与可选 AI Markdown。
+持久说明优先使用 Markdown；页面确实需要类型化 React 组件时再使用 MDX。两者都会生成相同的路由、SSR HTML、搜索记录与可选 AI Markdown。GFM 表格、任务列表、删除线、自动链接与脚注会在这些产物中保持一致语义。
 
 ## Frontmatter
 
@@ -31,7 +31,7 @@ ai: true
 
 ## 代码与组件
 
-围栏代码块带语法高亮和可键盘操作的复制按钮。MDX 可以导入组件：
+围栏代码块带语法高亮和可键盘操作的复制按钮。Silen 会按需加载 Shiki 支持的语法，包括 `mdx`、`python`，并让 `ndjson` 使用 JSON Lines 语法；未知语言会安全降级为纯文本。MDX 可以导入组件：
 
 ```mdx
 import Status from './components/status.tsx'

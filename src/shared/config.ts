@@ -124,6 +124,7 @@ export interface ThemeHomeAction {
 
 export interface ThemeHomeImage {
   readonly src: string
+  readonly darkSrc?: string
   readonly alt: string
 }
 
@@ -198,6 +199,10 @@ export interface ThemeOutlineMessages {
   readonly onThisPage: string
 }
 
+export interface ThemeTableMessages {
+  readonly scrollableRegion: string
+}
+
 export interface ThemePaginationMessages {
   readonly navigation: string
   readonly previous: string
@@ -249,6 +254,7 @@ export interface ThemeMessages {
   readonly appearance: ThemeAppearanceMessages
   readonly sidebar: ThemeSidebarMessages
   readonly outline: ThemeOutlineMessages
+  readonly table: ThemeTableMessages
   readonly pagination: ThemePaginationMessages
   readonly copy: ThemeCopyMessages
   readonly notFound: ThemeNotFoundMessages
@@ -261,6 +267,7 @@ export interface ThemeMessagesOverrides {
   readonly appearance?: Partial<ThemeAppearanceMessages>
   readonly sidebar?: Partial<ThemeSidebarMessages>
   readonly outline?: Partial<ThemeOutlineMessages>
+  readonly table?: Partial<ThemeTableMessages>
   readonly pagination?: Partial<ThemePaginationMessages>
   readonly copy?: Partial<ThemeCopyMessages>
   readonly notFound?: Partial<ThemeNotFoundMessages>

@@ -1,4 +1,9 @@
-import { createHighlighter, type Highlighter } from 'shiki'
+import {
+  bundledLanguages,
+  createHighlighter,
+  type BundledLanguage,
+  type Highlighter,
+} from 'shiki'
 
 const themes = {
   light: 'github-light',
@@ -17,6 +22,10 @@ const languages = [
   'typescript',
 ] as const
 
+const languageAliases: Readonly<Record<string, BundledLanguage>> = {
+  ndjson: 'jsonl',
+}
+
 export interface HighlightedNode {
   type: string
   tagName?: string
@@ -31,6 +40,7 @@ export interface HighlightedRoot extends HighlightedNode {
 }
 
 let cachedHighlighter: Promise<Highlighter> | undefined
+const languageLoads = new Map<BundledLanguage, Promise<void>>()
 
 function loadHighlighter(): Promise<Highlighter> {
   if (!cachedHighlighter) {
@@ -45,9 +55,27 @@ function loadHighlighter(): Promise<Highlighter> {
   return cachedHighlighter
 }
 
-function normalizedLanguage(instance: Highlighter, language: string): string {
+async function normalizedLanguage(
+  instance: Highlighter,
+  language: string,
+): Promise<string> {
   const requested = language.trim().toLowerCase()
-  return instance.getLoadedLanguages().includes(requested) ? requested : 'text'
+  const resolved = languageAliases[requested] ?? requested
+  if (!(resolved in bundledLanguages)) return 'text'
+
+  const bundled = resolved as BundledLanguage
+  if (!instance.getLoadedLanguages().includes(bundled)) {
+    let loading = languageLoads.get(bundled)
+    if (!loading) {
+      loading = instance.loadLanguage(bundled).catch((error: unknown) => {
+        languageLoads.delete(bundled)
+        throw error
+      })
+      languageLoads.set(bundled, loading)
+    }
+    await loading
+  }
+  return bundled
 }
 
 export async function highlightCode(
@@ -56,7 +84,7 @@ export async function highlightCode(
 ): Promise<string> {
   const instance = await loadHighlighter()
   return instance.codeToHtml(code, {
-    lang: normalizedLanguage(instance, language),
+    lang: await normalizedLanguage(instance, language),
     themes,
   })
 }
@@ -67,7 +95,7 @@ export async function highlightCodeToHast(
 ): Promise<HighlightedRoot> {
   const instance = await loadHighlighter()
   return instance.codeToHast(code, {
-    lang: normalizedLanguage(instance, language),
+    lang: await normalizedLanguage(instance, language),
     themes,
   })
 }

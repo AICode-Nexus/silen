@@ -153,6 +153,9 @@ function publicHome(
                 ? home.hero.image
                 : {
                     src: home.hero.image.src,
+                    ...(home.hero.image.darkSrc === undefined
+                      ? {}
+                      : { darkSrc: home.hero.image.darkSrc }),
                     alt: home.hero.image.alt,
                   },
           }),

@@ -16,6 +16,7 @@ import DefaultTheme, {
   DocLayout,
   HomeLayout,
   NotFound,
+  Table,
 } from '../../src/theme-default'
 import { TestSiteProvider } from '../helpers/test-site-provider'
 
@@ -32,7 +33,72 @@ describe('default content layouts', () => {
     expect(DefaultTheme.layouts.home).toBe(HomeLayout)
     expect(DefaultTheme.NotFound).toBe(NotFound)
     expect(DefaultTheme.components.pre).toBe(CodeBlock)
+    expect(DefaultTheme.components.table).toBe(Table)
     expect(DefaultTheme.components.a).toBe(Link)
+  })
+
+  it('wraps semantic tables in the default responsive scroll container', () => {
+    const { container } = render(
+      <TestSiteProvider lang="zh-CN">
+        <Table>
+          <thead>
+            <tr>
+              <th>Field</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>title</td>
+            </tr>
+          </tbody>
+        </Table>
+      </TestSiteProvider>,
+    )
+
+    const table = screen.getByRole('table')
+    const scrollRegion = screen.getByRole('region', {
+      name: '可横向滚动的表格',
+    })
+    expect(scrollRegion.getAttribute('tabindex')).toBe('0')
+    expect(table.closest('.silen-table-scroll')).toBe(scrollRegion)
+    expect(container.querySelectorAll('table')).toHaveLength(1)
+  })
+
+  it('exposes one accessible hero image when light and dark assets differ', () => {
+    const { container } = render(
+      <TestSiteProvider base="/project/">
+        <HomeLayout
+          hero={{
+            name: 'Theme-aware workflow',
+            image: {
+              src: '/workflow-light.jpg',
+              darkSrc: '/workflow-dark.jpg',
+              alt: 'Silen workflow',
+            },
+          }}
+          features={[]}
+        >
+          Home body
+        </HomeLayout>
+      </TestSiteProvider>,
+    )
+
+    const accessibleImage = screen.getByRole('img', {
+      name: 'Silen workflow',
+    })
+    const sources = [...container.querySelectorAll('img')]
+
+    expect(accessibleImage.className).toContain('silen-home-visual')
+    expect(sources.map((image) => image.getAttribute('src'))).toEqual([
+      '/project/workflow-light.jpg',
+      '/project/workflow-dark.jpg',
+    ])
+    expect(sources.every((image) => image.getAttribute('alt') === '')).toBe(
+      true,
+    )
+    expect(sources.every((image) => image.getAttribute('aria-hidden'))).toBe(
+      true,
+    )
   })
 
   it('renders a semantic, base-aware hero and complete feature cards', () => {

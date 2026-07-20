@@ -51,6 +51,26 @@ it('extracts prose, fenced code, and links into their section chunk', () => {
   expect(chunks[1]?.text).toContain('Read the setup notes before running:')
 })
 
+it('extracts GFM table cells without leaking table authoring syntax', () => {
+  const chunks = createAiChunks({
+    route: '/reference/',
+    title: 'Reference',
+    markdown: [
+      '# Reference',
+      '',
+      '## Configuration',
+      '',
+      '| Field | Default |',
+      '| --- | --- |',
+      '| `title` | `Silen` |',
+    ].join('\n'),
+  })
+
+  expect(chunks[1]?.text).toContain('Field Default title Silen')
+  expect(chunks[1]?.text).not.toContain('|')
+  expect(chunks[1]?.text).not.toContain('---')
+})
+
 it('suffixes duplicate headings deterministically', () => {
   const page = {
     route: '/guide/',

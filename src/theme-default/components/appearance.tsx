@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { formatThemeMessage, useThemeMessages } from '../lib/theme-config.js'
@@ -11,6 +11,8 @@ const STORAGE_KEY = 'silen-theme'
 const DARK_QUERY = '(prefers-color-scheme: dark)'
 
 const preferenceOptions = ['dark', 'system', 'light'] as const
+const useIsomorphicLayoutEffect =
+  typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 function isAppearancePreference(value: unknown): value is AppearancePreference {
   return value === 'light' || value === 'dark' || value === 'system'
@@ -48,6 +50,7 @@ function applyPreference(
   const dark =
     preference === 'dark' ||
     (preference === 'system' && media?.matches === true)
+  document.documentElement.dataset.silenAppearance = preference
   document.documentElement.classList.toggle('dark', dark)
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
 }
@@ -68,14 +71,12 @@ export function AppearanceSwitch(): React.JSX.Element {
   const preferenceRef = useRef<AppearancePreference>('system')
   const buttonRefs = useRef(new Map<AppearancePreference, HTMLButtonElement>())
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const media = darkMediaQuery()
     const stored = readPreference()
     preferenceRef.current = stored
     applyPreference(stored, media)
-    const preferenceTimer = window.setTimeout(() => {
-      if (preferenceRef.current === stored) setPreference(stored)
-    }, 0)
+    setPreference(stored)
 
     const handleMediaChange = (): void => {
       if (preferenceRef.current === 'system') applyPreference('system', media)
@@ -118,7 +119,6 @@ export function AppearanceSwitch(): React.JSX.Element {
     }
     window.addEventListener('storage', handleStorage)
     return () => {
-      window.clearTimeout(preferenceTimer)
       removeMediaListener()
       window.removeEventListener('storage', handleStorage)
     }
@@ -165,7 +165,8 @@ export function AppearanceSwitch(): React.JSX.Element {
     <div
       role="radiogroup"
       aria-label={messages.appearance.label}
-      className="inline-flex min-h-10 items-center rounded-full border border-border bg-muted/70 p-0.5 text-muted-foreground shadow-sm transition-colors dark:bg-muted/40"
+      data-silen-appearance-switch=""
+      className="inline-flex min-h-10 items-center rounded-full border border-border bg-muted/70 p-0.5 text-muted-foreground shadow-sm sm:min-h-9 sm:p-px dark:bg-muted/40"
     >
       {preferenceOptions.map((option) => {
         const selected = preference === option
@@ -187,9 +188,10 @@ export function AppearanceSwitch(): React.JSX.Element {
             aria-checked={selected}
             aria-label={optionLabel}
             title={optionLabel}
+            data-silen-appearance-option={option}
             tabIndex={selected ? 0 : -1}
             className={cn(
-              'inline-flex size-10 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-95 [&_svg]:size-3.5',
+              'inline-flex size-10 cursor-pointer items-center justify-center rounded-full hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-95 sm:size-8 [&_svg]:size-3.5',
               selected
                 ? 'bg-background text-foreground shadow-sm dark:bg-input/70'
                 : 'text-muted-foreground',

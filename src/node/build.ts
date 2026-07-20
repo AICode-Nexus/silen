@@ -33,6 +33,7 @@ import { serializePageMarkdown } from './markdown-output.js'
 import { compilePage, createMdxPlugins, type CompiledPage } from './mdx.js'
 import { silenPlugin } from './plugin.js'
 import { pluginRunnerFor, type PluginRunner } from './plugins.js'
+import { reactRuntimeAliases, reactRuntimeResolver } from './react-runtime.js'
 import { renderDocument, type RenderAssets } from './render.js'
 import { scanRoutes } from './routes.js'
 import {
@@ -328,6 +329,7 @@ async function productionPlugins(
 ): Promise<PluginOption[]> {
   const runner = pluginRunnerFor(config)
   return [
+    reactRuntimeResolver(),
     react(),
     ...(await silenPlugin(config, { publicConfigOnly: true })),
     ...(await runner.collectVitePlugins()),
@@ -372,6 +374,7 @@ async function buildClient(
       mode: 'production',
       oxc: { jsx: { development: false } },
       plugins: await productionPlugins(config, pages),
+      resolve: { alias: reactRuntimeAliases() },
       root: config.root,
       build: {
         assetsInlineLimit: 0,
@@ -407,6 +410,7 @@ async function buildServerRenderer(
       mode: 'production',
       oxc: { jsx: { development: false } },
       plugins: await productionPlugins(config, pages),
+      resolve: { alias: reactRuntimeAliases() },
       root: config.root,
       ssr: { noExternal: ['@aicode-nexus/silen'] },
       build: {
