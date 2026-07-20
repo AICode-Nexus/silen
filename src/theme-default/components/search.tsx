@@ -134,7 +134,7 @@ export function SearchDialog({
           value={result.id}
           aria-label={searchResultLabel(result, messages.search.home)}
           onSelect={() => void selectResult(result)}
-          className="cursor-pointer items-start gap-3 border-b border-border/60 bg-transparent px-3 py-2.5 text-left transition-colors duration-150 in-data-[slot=dialog-content]:rounded-none! last:border-b-0 hover:bg-transparent data-selected:bg-transparent data-selected:text-foreground [&>svg:last-child]:hidden"
+          className="cursor-pointer items-start gap-3 border-b border-border/60 bg-transparent px-3 py-2.5 text-left transition-colors duration-150 in-data-[slot=dialog-content]:rounded-none! last:border-b-0 hover:bg-accent data-[selected=true]:bg-accent data-[selected=true]:text-foreground [&>svg:last-child]:hidden"
         >
           <span className="grid min-w-0 flex-1 gap-1">
             <span className="flex min-w-0 items-start gap-3">
@@ -241,7 +241,7 @@ export function SearchDialog({
             {currentResults.length ? (
               <CommandGroup
                 heading={messages.search.documentation}
-                className="p-0! pt-2 **:[[cmdk-group-heading]]:px-1 **:[[cmdk-group-heading]]:pb-2 **:[[cmdk-group-heading]]:pt-0 **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wide"
+                className="p-0! pt-2! **:[[cmdk-group-heading]]:px-1 **:[[cmdk-group-heading]]:pb-2 **:[[cmdk-group-heading]]:pt-0 **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wide"
               >
                 {resultItems(currentResults, false)}
               </CommandGroup>
@@ -249,7 +249,7 @@ export function SearchDialog({
             {otherResults.length ? (
               <CommandGroup
                 heading={messages.search.otherLanguages}
-                className="p-0! pt-2 **:[[cmdk-group-heading]]:px-1 **:[[cmdk-group-heading]]:pb-2 **:[[cmdk-group-heading]]:pt-0 **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wide"
+                className="p-0! pt-2! **:[[cmdk-group-heading]]:px-1 **:[[cmdk-group-heading]]:pb-2 **:[[cmdk-group-heading]]:pt-0 **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-wide"
               >
                 {resultItems(otherResults, true)}
               </CommandGroup>
