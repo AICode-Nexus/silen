@@ -39,6 +39,20 @@ describe('example website homepage', () => {
     expect(chinese).toContain('<html lang="zh-CN">')
   })
 
+  it('renders both reference pages with semantic tables', async () => {
+    const [english, chinese] = await Promise.all([
+      readFile(path.join(result.outDir, 'reference/index.html'), 'utf8'),
+      readFile(path.join(result.outDir, 'zh/reference/index.html'), 'utf8'),
+    ])
+
+    for (const html of [english, chinese]) {
+      expect(html.match(/<table>/g)).toHaveLength(2)
+      expect(html.match(/<thead>/g)).toHaveLength(2)
+      expect(html.match(/<tbody>/g)).toHaveLength(2)
+      expect(html).not.toMatch(/<p>\|[^<]+-{3,}/)
+    }
+  })
+
   it('publishes canonical bilingual metadata and the official sitemap', async () => {
     const [english, chinese, sitemap] = await Promise.all([
       readFile(path.join(result.outDir, 'guide/index.html'), 'utf8'),
@@ -83,13 +97,14 @@ describe('example website homepage', () => {
     expect(chineseAi).toContain('](/silen/zh/guide/)')
   })
 
-  it('ships the generated workflow illustration as a compressed JPEG', async () => {
-    const source = await readFile(
-      path.resolve('website/public/silen-workflow.jpg'),
-    )
-    expect([...source.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
-    expect(source.byteLength).toBeLessThan(150_000)
-  })
+  it.each(['silen-workflow.jpg', 'silen-workflow-dark.jpg'])(
+    'ships %s as a compressed JPEG',
+    async (file) => {
+      const source = await readFile(path.resolve('website/public', file))
+      expect([...source.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
+      expect(source.byteLength).toBeLessThan(150_000)
+    },
+  )
 
   it('ships the AI Dev Hub QR code as a PNG', async () => {
     const source = await readFile(

@@ -114,6 +114,7 @@ declare module 'virtual:silen/config' {
 
   interface ThemeHomeImage {
     readonly src: string
+    readonly darkSrc?: string
     readonly alt: string
   }
 

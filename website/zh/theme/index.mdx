@@ -21,6 +21,22 @@ layout: doc
 - `home` 在页面 MDX 前渲染当前语言的 hero 与可选功能区，并使用全宽外壳。
 - `page` 保留导航和中性文章容器，但不显示文档翻页。
 
+首页 hero 可分别配置亮色与暗色图片，并共用一个无障碍说明：
+
+```ts
+themeConfig: {
+  home: {
+    hero: {
+      image: {
+        src: '/workflow-light.jpg',
+        darkSrc: '/workflow-dark.jpg',
+        alt: '文档工作流',
+      },
+    },
+  },
+}
+```
+
 ## 导航与侧栏
 
 ```ts

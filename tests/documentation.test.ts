@@ -105,12 +105,9 @@ describe('0.2.0 product documentation', () => {
       )
       expect(positions, home.file).toEqual([...positions].sort((a, b) => a - b))
       expect(positions[0], home.file).toBeGreaterThan(-1)
-      expect(content, home.file).toContain(
-        'pnpm add react@^19.2.7 react-dom@^19.2.7',
-      )
-      expect(content, home.file).toContain(
-        'pnpm add -D @aicode-nexus/silen --allow-build=esbuild',
-      )
+      expect(content, home.file).not.toContain('pnpm add react')
+      expect(content, home.file).toContain('pnpm add -D @aicode-nexus/silen')
+      expect(content, home.file).not.toContain('--allow-build=esbuild')
       expect(content, home.file).toContain('pnpm silen init docs')
       expect(content, home.file).toContain('pnpm silen dev docs')
       expect(content, home.file).toContain(`href="${home.quickStart}"`)
@@ -261,11 +258,15 @@ describe('0.2.0 product documentation', () => {
 
     expect(readme.length).toBeLessThan(8_000)
     expect(readme).toContain('Node.js `^20.19.0 || >=22.12.0`')
-    expect(readme).toContain('pnpm add react@^19.2.7 react-dom@^19.2.7')
+    expect(readme).not.toContain('pnpm add react')
+    expect(readme).toContain('React runtime automatically')
     expect(readme).toContain('pnpm silen init docs')
-    expect(readme).toContain('--allow-build=esbuild')
+    expect(readme).toContain('pnpm add -D @aicode-nexus/silen')
+    expect(readme).not.toContain('--allow-build=esbuild')
     expect(readme).toContain('pnpm silen dev docs')
     expect(readme).toContain('pnpm silen build docs')
+    expect(readme).toContain('GFM tables')
+    expect(readme).toContain('light/dark hero artwork')
     expect(readme).toContain('https://aicode-nexus.github.io/silen/guide/')
     expect(readme).toContain('https://aicode-nexus.github.io/silen/reference/')
     expect(readme).toContain('https://aicode-nexus.github.io/silen/ai/')
@@ -273,27 +274,41 @@ describe('0.2.0 product documentation', () => {
     expect(readme).toContain('Contributing')
   })
 
-  it('keeps React peers explicit in both quick-start guides', async () => {
+  it('documents the bundled React runtime in both quick-start guides', async () => {
     const guides = await Promise.all([
       source('website/guide/index.mdx'),
       source('website/zh/guide/index.mdx'),
     ])
 
     for (const guide of guides) {
-      const peers = guide.indexOf('pnpm add react@^19.2.7 react-dom@^19.2.7')
-      const silen = guide.indexOf(
-        'pnpm add -D @aicode-nexus/silen --allow-build=esbuild',
-      )
+      const silen = guide.indexOf('pnpm add -D @aicode-nexus/silen')
 
-      expect(peers).toBeGreaterThan(-1)
-      expect(silen).toBeGreaterThan(peers)
+      expect(silen).toBeGreaterThan(-1)
+      expect(guide).not.toContain('pnpm add react')
+      expect(guide).not.toContain('--allow-build=esbuild')
+      expect(guide).toMatch(/automatically|自动安装/)
       expect(guide).toContain('react/jsx-runtime')
     }
   })
 
-  it('records the dated 0.2.x documentation checkpoints', async () => {
+  it('keeps esbuild approval conditional in troubleshooting', async () => {
+    const references = await Promise.all([
+      source('website/reference/index.mdx'),
+      source('website/zh/reference/index.mdx'),
+    ])
+
+    for (const reference of references) {
+      expect(reference).toContain('pnpm approve-builds esbuild')
+      expect(reference).toMatch(/build already succeeds|构建已经成功/)
+    }
+  })
+
+  it('records the dated 0.3.0 and 0.2.x documentation checkpoints', async () => {
     const changelog = await source('CHANGELOG.md')
 
+    expect(changelog).toContain('## [0.3.0] - 2026-07-20')
+    expect(changelog).toContain('GitHub-flavored Markdown')
+    expect(changelog).toContain('ThemeHomeImage.darkSrc')
     expect(changelog).toContain('## [0.2.1] - 2026-07-18')
     expect(changelog).toContain('react/jsx-runtime')
     expect(changelog).toContain('## [0.2.0] - 2026-07-17')

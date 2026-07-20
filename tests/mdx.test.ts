@@ -118,6 +118,8 @@ describe('MDX compilation', () => {
 
   it('loads typed metadata exports and a default component through Vite', async () => {
     const pageModule = await loadMdxModule(fixture)
+    const Component = pageModule.default as ComponentType
+    const rendered = renderToStaticMarkup(createElement(Component))
 
     expect(pageModule.frontmatter).toEqual({
       title: 'Getting Started',
@@ -133,6 +135,8 @@ describe('MDX compilation', () => {
       'https://example.com/packages',
     ])
     expect(pageModule.default).toBeTypeOf('function')
+    expect(rendered).toContain('<h2 id="install">Install</h2>')
+    expect(rendered).toContain('<h2 id="install-1">Install</h2>')
   })
 
   it('highlights fenced code at compile time while preserving trusted MDX', async () => {
@@ -149,6 +153,42 @@ describe('MDX compilation', () => {
     expect(rendered).not.toContain(
       path.resolve('tests/fixtures/mdx/highlight.mdx'),
     )
+  })
+
+  it('renders GitHub-flavored Markdown as semantic HTML', async () => {
+    const file = 'tests/fixtures/mdx/gfm.mdx'
+    const route: RouteRecord = {
+      path: '/gfm',
+      relativeFile: 'gfm.mdx',
+      file,
+    }
+    const [page, pageModule] = await Promise.all([
+      compilePage(route),
+      loadMdxModule(file),
+    ])
+    const Component = pageModule.default as ComponentType
+    const rendered = renderToStaticMarkup(createElement(Component))
+
+    expect(page.headings).toEqual([
+      { depth: 2, title: 'Linked heading', slug: 'linked-heading' },
+    ])
+    expect(pageModule.headings).toEqual(page.headings)
+    expect(page.links).toEqual([
+      'https://example.com/details',
+      'http://www.example.com',
+    ])
+    expect(pageModule.links).toEqual(page.links)
+    expect(rendered).toContain('<h2 id="linked-heading">')
+    expect(rendered).toContain('<table>')
+    expect(rendered).toContain('<thead>')
+    expect(rendered).toContain('<th style="text-align:left">Feature</th>')
+    expect(rendered).toContain('<th style="text-align:right">State</th>')
+    expect(rendered).toContain('<td style="text-align:left">Tables</td>')
+    expect(rendered).toContain('<del>Deprecated copy</del>')
+    expect(rendered).toContain('class="contains-task-list"')
+    expect(rendered).toContain('type="checkbox"')
+    expect(rendered).toContain('checked=""')
+    expect(rendered).toContain('href="http://www.example.com"')
   })
 
   it('shares JSON-safe frontmatter between static and Vite results', async () => {

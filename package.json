@@ -1,6 +1,6 @@
 {
   "name": "@aicode-nexus/silen",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A lightweight documentation-first static site generator powered by React, TypeScript, Vite, and MDX.",
   "keywords": [
     "documentation",
@@ -67,10 +67,6 @@
     "format:check": "prettier --check .",
     "check:no-maps": "jiti tooling/assert-no-source-maps.ts"
   },
-  "peerDependencies": {
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
-  },
   "dependencies": {
     "@fontsource-variable/inter": "5.2.8",
     "@mdx-js/mdx": "3.1.1",
@@ -88,13 +84,16 @@
     "github-slugger": "2.0.0",
     "gray-matter": "4.0.3",
     "lucide-react": "1.24.0",
+    "mdast-util-gfm": "3.1.0",
     "mdast-util-to-markdown": "2.1.2",
     "minisearch": "7.2.0",
     "radix-ui": "1.6.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "remark-frontmatter": "5.0.0",
+    "remark-gfm": "4.0.1",
     "remark-mdx-frontmatter": "5.2.0",
     "remark-parse": "11.0.0",
-    "remark-stringify": "11.0.0",
     "shiki": "4.3.1",
     "tailwind-merge": "3.6.0",
     "tailwindcss": "4.3.2",
@@ -119,8 +118,6 @@
     "jsdom": "29.1.1",
     "prettier": "3.9.5",
     "publint": "0.3.21",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
     "tsup": "8.5.1",
     "typescript": "7.0.2",
     "vitest": "4.1.10"

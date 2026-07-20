@@ -1,12 +1,14 @@
 import { createProcessor } from '@mdx-js/mdx'
+import { gfmToMarkdown } from 'mdast-util-gfm'
+import { toMarkdown } from 'mdast-util-to-markdown'
 import remarkFrontmatter from 'remark-frontmatter'
-import remarkStringify from 'remark-stringify'
-import { unified } from 'unified'
+import remarkGfm from 'remark-gfm'
 import type { CompiledPage } from './mdx.js'
 import { rewriteInternalPageLink } from './links.js'
 
 interface MarkdownAstNode {
   type: string
+  align?: Array<'left' | 'right' | 'center' | null>
   children?: MarkdownAstNode[]
   position?: {
     start?: { offset?: number }
@@ -17,15 +19,18 @@ interface MarkdownAstNode {
 }
 
 const markdownParser = createProcessor({
-  remarkPlugins: [[remarkFrontmatter, ['yaml', 'toml']]],
+  remarkPlugins: [remarkGfm, [remarkFrontmatter, ['yaml', 'toml']]],
 })
 
-// The pinned remark package resolves its own compatible unified declaration.
-// Runtime interop is stable; bridge only the duplicated declaration families.
-const markdownSerializer = unified().use(remarkStringify as never, {
-  bullet: '-',
+const markdownSerializerOptions = {
+  bullet: '-' as const,
   fences: true,
-})
+  extensions: [gfmToMarkdown()],
+}
+
+function stringifyMarkdown(node: MarkdownAstNode): string {
+  return toMarkdown(node as never, markdownSerializerOptions)
+}
 
 const omittedNodeTypes = new Set([
   'html',
@@ -36,35 +41,6 @@ const omittedNodeTypes = new Set([
   'yaml',
 ])
 
-function sourceForNode(node: MarkdownAstNode, source: string): string {
-  const start = node.position?.start?.offset
-  const end = node.position?.end?.offset
-  return typeof start === 'number' && typeof end === 'number'
-    ? source.slice(start, end)
-    : ''
-}
-
-function isGfmTable(value: string): boolean {
-  const lines = value.split(/\r?\n/).map((line) => line.trim())
-  if (lines.length < 2 || lines.some((line) => !line.includes('|'))) {
-    return false
-  }
-  const rows = lines.map((line) =>
-    line
-      .replace(/^\|/, '')
-      .replace(/\|$/, '')
-      .split('|')
-      .map((cell) => cell.trim()),
-  )
-  const header = rows[0]
-  const separators = rows[1]
-  return Boolean(
-    header?.length &&
-    separators?.length === header.length &&
-    separators.every((cell) => /^:?-{3,}:?$/.test(cell)),
-  )
-}
-
 function sanitizedChildren(
   nodes: readonly MarkdownAstNode[],
   source: string,
@@ -72,6 +48,70 @@ function sanitizedChildren(
   base: string,
 ): MarkdownAstNode[] {
   return nodes.flatMap((node) => sanitizeNode(node, source, route, base))
+}
+
+function tableCellText(
+  cell: MarkdownAstNode | undefined,
+  source: string,
+  route: string,
+  base: string,
+): string {
+  if (!cell) return ''
+  const content = stringifyMarkdown({
+    type: 'paragraph',
+    children: sanitizedChildren(cell.children ?? [], source, route, base),
+  })
+    .trim()
+    .replace(/\s*\n\s*/g, '<br>')
+  return content.replaceAll('|', '\\|')
+}
+
+function tableDelimiter(align: 'left' | 'right' | 'center' | null): string {
+  if (align === 'left') return ':---'
+  if (align === 'right') return '---:'
+  if (align === 'center') return ':---:'
+  return '---'
+}
+
+function markdownTable(
+  node: MarkdownAstNode,
+  source: string,
+  route: string,
+  base: string,
+): string {
+  const [header, ...rows] = node.children ?? []
+  const columnCount = Math.max(
+    header?.children?.length ?? 0,
+    ...rows.map((row) => row.children?.length ?? 0),
+  )
+  if (columnCount === 0) return ''
+  const raw =
+    node.position?.start?.offset === undefined ||
+    node.position.end?.offset === undefined
+      ? undefined
+      : source.slice(node.position.start.offset, node.position.end.offset)
+  const outerPipes =
+    raw
+      ?.split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .every((line) => line.startsWith('|') && line.endsWith('|')) ?? false
+  const columns = Array.from({ length: columnCount }, (_, index) => index)
+  const align = node.align ?? []
+  const serializeRow = (row: MarkdownAstNode | undefined): string =>
+    columns
+      .map((index) =>
+        tableCellText(row?.children?.[index], source, route, base),
+      )
+      .join(' | ')
+  const tableRows = [
+    serializeRow(header),
+    columns.map((index) => tableDelimiter(align[index] ?? null)).join(' | '),
+    ...rows.map(serializeRow),
+  ]
+  return outerPipes
+    ? tableRows.map((row) => `| ${row} |`).join('\n')
+    : tableRows.join('\n')
 }
 
 function sanitizeNode(
@@ -82,13 +122,13 @@ function sanitizeNode(
 ): MarkdownAstNode[] {
   if (omittedNodeTypes.has(node.type)) return []
 
-  if (node.type === 'mdxJsxFlowElement' || node.type === 'mdxJsxTextElement') {
-    return sanitizedChildren(node.children ?? [], source, route, base)
+  if (node.type === 'table') {
+    const value = markdownTable(node, source, route, base)
+    return value ? [{ type: 'html', value }] : []
   }
 
-  const original = sourceForNode(node, source)
-  if (node.type === 'paragraph' && isGfmTable(original)) {
-    return [{ type: 'html', value: original.replace(/\r\n?/g, '\n') }]
+  if (node.type === 'mdxJsxFlowElement' || node.type === 'mdxJsxTextElement') {
+    return sanitizedChildren(node.children ?? [], source, route, base)
   }
 
   const sanitized =
@@ -120,5 +160,5 @@ export function serializePageMarkdown(page: CompiledPage, base = '/'): string {
       base,
     ),
   }
-  return `${String(markdownSerializer.stringify(tree as never)).trimEnd()}\n`
+  return `${stringifyMarkdown(tree).trimEnd()}\n`
 }

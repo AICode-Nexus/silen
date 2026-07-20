@@ -78,3 +78,43 @@ it('preserves valid GFM tables without leading or trailing pipes', () => {
   )
   expect(output).not.toContain('\\--- | ---')
 })
+
+it('preserves GFM footnotes and strikethrough in clean Markdown', () => {
+  const output = serializePageMarkdown({
+    route: '/guide/',
+    source: [
+      '# Guide',
+      '',
+      'Use the current path[^1], not ~~the legacy path~~.',
+      '',
+      '[^1]: The current path is supported.',
+    ].join('\n'),
+    frontmatter: { title: 'Guide' },
+  } as never)
+
+  expect(output).toContain('current path[^1]')
+  expect(output).toContain('~~the legacy path~~')
+  expect(output).toContain('[^1]: The current path is supported.')
+})
+
+it('preserves aligned GFM tables with empty and escaped cells', () => {
+  const output = serializePageMarkdown({
+    route: '/reference/',
+    source: [
+      '# Reference',
+      '',
+      '| Left | Center | Right |',
+      '| :--- | :---: | ---: |',
+      '| `a \\| b` |  | value |',
+    ].join('\n'),
+    frontmatter: { title: 'Reference' },
+  } as never)
+
+  expect(output).toContain(
+    [
+      '| Left | Center | Right |',
+      '| :--- | :---: | ---: |',
+      '| `a \\| b` |  | value |',
+    ].join('\n'),
+  )
+})

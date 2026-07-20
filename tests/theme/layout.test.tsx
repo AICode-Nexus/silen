@@ -308,7 +308,10 @@ describe('default documentation layout', () => {
       </TestSiteProvider>,
     )
 
-    expect(document.querySelector('img')?.getAttribute('src')).toBe(expected)
+    const logoImage = document.querySelector('img')
+    expect(logoImage?.getAttribute('src')).toBe(expected)
+    expect(logoImage?.getAttribute('width')).toBe('28')
+    expect(logoImage?.getAttribute('height')).toBe('28')
   })
 
   it('keeps the active group expanded and lets other groups collapse', async () => {
@@ -421,7 +424,7 @@ describe('default documentation layout', () => {
     expect(grid?.className).not.toContain('min-[75rem]:grid-cols-')
   })
 
-  it('keeps every mobile header control at least 40 CSS pixels at 390px', () => {
+  it('keeps header controls touchable on mobile and compact on desktop', () => {
     const themeConfig: ThemeConfig = {
       locales: [
         { lang: 'en-US', label: 'English', root: '/' },
@@ -448,11 +451,18 @@ describe('default documentation layout', () => {
       const control = screen.getByRole('button', { name })
       expect(control.className).toContain('min-h-10')
       expect(control.className).toContain('min-w-10')
+      if (name !== 'Open navigation') {
+        expect(control.className).toContain('sm:min-h-9')
+        expect(control.className).toContain('sm:min-w-9')
+      }
     }
     const appearance = screen.getByRole('radiogroup', { name: 'Appearance' })
     expect(appearance.className).toContain('min-h-10')
+    expect(appearance.className).toContain('sm:min-h-9')
+    expect(appearance.className).toContain('sm:p-px')
     for (const control of within(appearance).getAllByRole('radio')) {
       expect(control.className).toContain('size-10')
+      expect(control.className).toContain('sm:size-8')
     }
   })
 

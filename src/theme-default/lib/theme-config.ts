@@ -56,6 +56,7 @@ const englishMessages: ThemeMessages = {
     mobileNavigation: 'Mobile documentation navigation',
   },
   outline: { onThisPage: 'On this page' },
+  table: { scrollableRegion: 'Scrollable table' },
   pagination: {
     navigation: 'Page navigation',
     previous: 'Previous',
@@ -142,6 +143,7 @@ const chineseMessages: ThemeMessages = {
     mobileNavigation: '移动端文档导航',
   },
   outline: { onThisPage: '本页内容' },
+  table: { scrollableRegion: '可横向滚动的表格' },
   pagination: {
     navigation: '页面导航',
     previous: '上一页',
@@ -191,6 +193,7 @@ const messageGroups = [
   'appearance',
   'sidebar',
   'outline',
+  'table',
   'pagination',
   'copy',
   'notFound',

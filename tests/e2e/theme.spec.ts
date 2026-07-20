@@ -133,6 +133,75 @@ test('serves the complete built theme at the exact desktop boundary', async ({
   await expect(page.locator('[data-custom-root]')).toBeVisible()
 })
 
+test('scrolls to generated Markdown heading IDs from the desktop outline', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1_200, height: 900 })
+  await page.goto(serverUrl(preview, 'guide/'))
+
+  const outline = page.getByRole('complementary', { name: 'On this page' })
+  await expect(outline).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Install', level: 2 }),
+  ).toHaveAttribute('id', 'install')
+
+  await outline.getByRole('link', { name: 'Install' }).click()
+
+  await expect(page).toHaveURL(serverUrl(preview, 'guide/#install'))
+})
+
+test('paints the saved appearance selection before hydration', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('silen-theme', 'dark')
+  })
+  await page.route(/\/assets\/[^/?]+\.js(?:\?.*)?$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: '',
+    }),
+  )
+
+  await page.goto(serverUrl(preview), { waitUntil: 'domcontentloaded' })
+
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-silen-appearance',
+    'dark',
+  )
+  await expect(page.locator('html')).toHaveClass(/dark/)
+
+  const appearance = page.getByRole('radiogroup', { name: 'Appearance' })
+  const firstPaint = await appearance
+    .locator('[role="radio"]')
+    .evaluateAll<
+      Record<string, { backgroundColor: string; boxShadow: string }>
+    >((options) => {
+      const styles: Record<
+        string,
+        { backgroundColor: string; boxShadow: string }
+      > = {}
+      for (const option of options) {
+        const preference = option.getAttribute('data-silen-appearance-option')
+        if (!preference) continue
+        const style = getComputedStyle(option)
+        styles[preference] = {
+          backgroundColor: style.backgroundColor,
+          boxShadow: style.boxShadow,
+        }
+      }
+      return styles
+    })
+
+  expect(firstPaint.system).toEqual({
+    backgroundColor: 'rgba(0, 0, 0, 0)',
+    boxShadow: 'none',
+  })
+  expect(firstPaint.dark?.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+  expect(firstPaint.dark?.boxShadow).not.toBe('none')
+})
+
 test('supports mobile Sheet focus, lazy keyboard search, and no-flash appearance persistence', async ({
   page,
 }) => {

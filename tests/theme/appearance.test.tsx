@@ -59,6 +59,7 @@ function installMatchMedia(initialMatches: boolean): {
 beforeEach(() => {
   localStorage.clear()
   document.documentElement.classList.remove('dark')
+  document.documentElement.removeAttribute('data-silen-appearance')
   document.documentElement.style.colorScheme = ''
 })
 
@@ -67,6 +68,7 @@ afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   document.documentElement.classList.remove('dark')
+  document.documentElement.removeAttribute('data-silen-appearance')
   document.documentElement.style.colorScheme = ''
 })
 
@@ -170,6 +172,8 @@ describe('appearance preference', () => {
     installMatchMedia(false)
     const markup = renderToString(<AppearanceSwitch />)
     expect(markup).toContain('Appearance: System')
+    expect(markup).toContain('data-silen-appearance-switch')
+    expect(markup).toContain('data-silen-appearance-option="dark"')
     const container = document.createElement('div')
     container.innerHTML = markup
     document.body.append(container)
@@ -230,6 +234,21 @@ describe('appearance preference', () => {
         matchMedia: () => ({ matches: true }),
       })
     }).not.toThrow()
+    expect(document.documentElement.dataset.silenAppearance).toBe('system')
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+
+    document.documentElement.classList.remove('dark')
+    document.documentElement.removeAttribute('data-silen-appearance')
+    document.documentElement.style.colorScheme = ''
+    expect(() => {
+      void runInNewContext(appearanceScript, {
+        document,
+        localStorage: { getItem: () => 'dark' },
+        matchMedia: () => ({ matches: false }),
+      })
+    }).not.toThrow()
+    expect(document.documentElement.dataset.silenAppearance).toBe('dark')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
     expect(document.documentElement.style.colorScheme).toBe('dark')
   })

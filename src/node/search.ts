@@ -5,6 +5,7 @@ import MiniSearch, {
 } from 'minisearch'
 import { createProcessor } from '@mdx-js/mdx'
 import remarkFrontmatter from 'remark-frontmatter'
+import remarkGfm from 'remark-gfm'
 import type { CompiledPage } from './mdx.js'
 import { resolveCurrentLocale, type ThemeLocaleItem } from '../shared/config.js'
 
@@ -333,7 +334,7 @@ interface ExtractedSearchContent {
 }
 
 const searchTextParser = createProcessor({
-  remarkPlugins: [[remarkFrontmatter, ['yaml', 'toml']]],
+  remarkPlugins: [remarkGfm, [remarkFrontmatter, ['yaml', 'toml']]],
 })
 
 function isSearchAstNode(value: unknown): value is SearchAstNode {

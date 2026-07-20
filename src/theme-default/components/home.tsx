@@ -286,8 +286,11 @@ function homeImage(
   if (typeof value === 'string') return value
   const image = record(value)
   const src = stringValue(image?.src)
+  const darkSrc = stringValue(image?.darkSrc)
   const alt = stringValue(image?.alt)
-  return src && alt !== undefined ? { src, alt } : undefined
+  return src && alt !== undefined
+    ? { src, ...(darkSrc === undefined ? {} : { darkSrc }), alt }
+    : undefined
 }
 
 function homeActions(
@@ -395,6 +398,9 @@ export function HomeLayout({
   const imageSource = imageData
     ? safeImageSource(imageData.src, base)
     : undefined
+  const darkImageSource = imageData?.darkSrc
+    ? safeImageSource(imageData.darkSrc, base)
+    : undefined
 
   return (
     <div className="silen-home mx-auto flex max-w-[var(--silen-layout-width)] flex-col gap-12 px-6 py-12 sm:py-16 lg:px-10">
@@ -421,12 +427,29 @@ export function HomeLayout({
             <HeroActions actions={hero.actions ?? []} base={base} />
           </div>
           {imageSource && imageData ? (
-            <div className="silen-home-visual">
+            <div
+              aria-label={darkImageSource ? imageData.alt : undefined}
+              className="silen-home-visual"
+              role={darkImageSource ? 'img' : undefined}
+            >
               <img
                 src={imageSource}
-                alt={imageData.alt}
-                className="silen-home-hero-image"
+                alt={darkImageSource ? '' : imageData.alt}
+                aria-hidden={darkImageSource ? true : undefined}
+                className={
+                  darkImageSource
+                    ? 'silen-home-hero-image silen-home-hero-image--light'
+                    : 'silen-home-hero-image'
+                }
               />
+              {darkImageSource ? (
+                <img
+                  src={darkImageSource}
+                  alt=""
+                  aria-hidden="true"
+                  className="silen-home-hero-image silen-home-hero-image--dark"
+                />
+              ) : null}
             </div>
           ) : null}
         </section>

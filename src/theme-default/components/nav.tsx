@@ -121,7 +121,7 @@ function SearchLauncher(): React.JSX.Element {
         type="button"
         variant="outline"
         size="sm"
-        className="min-h-10 min-w-10"
+        className="min-h-10 min-w-10 sm:min-h-9 sm:min-w-9"
         aria-label={messages.search.dialogTitle}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -215,7 +215,7 @@ function LanguageSwitch({
           type="button"
           variant="ghost"
           size="sm"
-          className="min-h-10 min-w-10"
+          className="min-h-10 min-w-10 sm:min-h-9 sm:min-w-9"
           aria-label={languageLabel}
           title={languageLabel}
         >
@@ -270,6 +270,8 @@ export function Nav(): React.JSX.Element {
             <img
               src={resolveThemeLink(logoSource, base)}
               alt=""
+              width="28"
+              height="28"
               aria-hidden="true"
               className="size-7 shrink-0 object-contain"
             />

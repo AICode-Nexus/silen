@@ -1,15 +1,18 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import mdx from '@mdx-js/rollup'
-import type { ProcessorOptions as MdxOptions } from '@mdx-js/mdx'
+import {
+  createProcessor,
+  type ProcessorOptions as MdxOptions,
+} from '@mdx-js/mdx'
 import matter from 'gray-matter'
-import GithubSlugger from 'github-slugger'
+import remarkGfm from 'remark-gfm'
 import type { Plugin } from 'vite'
 import type { Heading, JsonObject, RouteRecord } from '../shared/page.js'
 import type { SilenPageData } from '../shared/plugin.js'
 import type { ResolvedConfig } from '../shared/config.js'
 import type { PluginRunner } from './plugins.js'
-import { remarkPageData } from './remark-page-data.js'
+import { extractPageData, remarkPageData } from './remark-page-data.js'
 import { fileToRoute } from './routes.js'
 import { highlightCodeToHast, type HighlightedNode } from './highlight.js'
 
@@ -67,27 +70,11 @@ function analyzePageSource(
   frontmatter: unknown,
 ): AnalyzedPage {
   const normalizedFrontmatter = normalizeFrontmatter(frontmatter)
-  const slugger = new GithubSlugger()
-  const headings: Heading[] = []
-  const links: string[] = []
-
-  for (const match of content.matchAll(/^(#{2,6})\s+(.+)$/gm)) {
-    const hashes = match[1]
-    const rawTitle = match[2]
-    if (!hashes || !rawTitle) continue
-
-    const title = rawTitle.trim()
-    headings.push({
-      depth: hashes.length,
-      title,
-      slug: slugger.slug(title),
-    })
-  }
-
-  for (const match of content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
-    const url = match[1]
-    if (url) links.push(url)
-  }
+  const {
+    headings,
+    links,
+    title: sourceTitle,
+  } = extractPageData(pageDataParser.parse(content))
 
   return {
     frontmatter: normalizedFrontmatter,
@@ -95,16 +82,15 @@ function analyzePageSource(
     links,
     title:
       stringField(normalizedFrontmatter, 'title') ??
-      fallbackTitle(content, headings),
+      sourceTitle ??
+      headings[0]?.title ??
+      '',
     description: stringField(normalizedFrontmatter, 'description') ?? '',
     data: {},
   }
 }
 
-function fallbackTitle(content: string, headings: Heading[]): string {
-  const h1 = /^#\s+(.+)$/m.exec(content)?.[1]?.trim()
-  return h1 ?? headings[0]?.title ?? ''
-}
+const pageDataParser = createProcessor({ remarkPlugins: [remarkGfm] })
 
 function serializeJsonForModule(value: JsonObject): string {
   const serialized = JSON.stringify(value)
@@ -299,6 +285,7 @@ export async function createMdxPlugins(
     format: 'mdx',
     mdxExtensions: ['.md', '.mdx'],
     remarkPlugins: [
+      remarkGfm,
       remarkPageData,
       ...(extensions.remarkPlugins ?? []),
     ] as NonNullable<MdxOptions['remarkPlugins']>,

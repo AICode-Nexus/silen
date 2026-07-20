@@ -25,6 +25,7 @@ import { resolveConfig } from './config.js'
 import { createMdxPlugins } from './mdx.js'
 import { silenPlugin } from './plugin.js'
 import { pluginRunnerFor, type PluginRunner } from './plugins.js'
+import { reactRuntimeAliases, reactRuntimeResolver } from './react-runtime.js'
 import { scanRoutes } from './routes.js'
 import { renderDocument } from './render.js'
 import {
@@ -240,6 +241,18 @@ function ssrEntrySource(): string {
   )
 }
 
+function defaultThemeStylesSource(): string {
+  const sourceExtension = path.extname(fileURLToPath(import.meta.url)) === '.ts'
+  return fileURLToPath(
+    new URL(
+      sourceExtension
+        ? '../theme-default/styles/index.css'
+        : '../theme-default/index.css',
+      import.meta.url,
+    ),
+  )
+}
+
 const developmentSsrOutlet = '<!--silen-development-ssr-outlet-->'
 
 async function transformDevelopmentDocument(
@@ -256,6 +269,7 @@ async function transformDevelopmentDocument(
       clientEntry: viteFileUrl(clientEntrySource()),
       favicon,
       head,
+      stylesheets: [`${viteFileUrl(defaultThemeStylesSource())}?direct`],
       ...(page.seo === undefined ? {} : { seo: page.seo }),
     },
   )
@@ -708,13 +722,14 @@ export async function createDevServer(
         ],
       },
       plugins: [
+        reactRuntimeResolver(),
         react(),
         ...(await silenPlugin(config, { publicConfigOnly: true, hmr: true })),
         ...(await runner.collectVitePlugins()),
         ...(await createMdxPlugins({ config, runner })),
       ],
       oxc: { jsx: { development: false } },
-      resolve: { dedupe: ['react', 'react-dom'] },
+      resolve: { alias: reactRuntimeAliases() },
       root: config.root,
       ssr: { noExternal: ['@aicode-nexus/silen'] },
       server: {

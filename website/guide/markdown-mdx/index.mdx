@@ -7,7 +7,9 @@ description: Author trusted content, metadata, links, code, and React components
 
 Use Markdown for durable prose and MDX when a page benefits from a typed React
 component. Both produce the same route, SSR HTML, search record, and optional
-AI-readable Markdown.
+AI-readable Markdown. GitHub-flavored Markdown tables, task lists,
+strikethrough, autolinks, and footnotes keep the same meaning across each
+output.
 
 ## Frontmatter
 
@@ -45,7 +47,9 @@ users.
 ## Code and components
 
 Fenced code blocks receive syntax highlighting and a keyboard-accessible copy
-button. MDX can import components and use expressions:
+button. Silen loads supported Shiki grammars on demand, including `mdx`,
+`python`, and JSON Lines for `ndjson` fences. Unknown language names safely
+fall back to plain text. MDX can import components and use expressions:
 
 ```mdx
 import Status from './components/status.tsx'

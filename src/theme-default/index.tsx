@@ -5,12 +5,14 @@ import { CodeBlock } from './components/code-copy.js'
 import { DocLayout, PageLayout } from './components/doc.js'
 import { HomeLayout } from './components/home.js'
 import { NotFound } from './components/not-found.js'
+import { Table } from './components/table.js'
 import { Link } from '../client/router.js'
 
 export { CodeBlock, type CodeBlockProps } from './components/code-copy.js'
 export { DocLayout, PageLayout } from './components/doc.js'
 export { HomeLayout, type HomeLayoutProps } from './components/home.js'
 export { NotFound } from './components/not-found.js'
+export { Table, type TableProps } from './components/table.js'
 
 export { Layout } from './components/layout.js'
 export {
@@ -128,6 +130,7 @@ export const layouts = {
 export const components = {
   a: Link,
   pre: CodeBlock,
+  table: Table,
   CodeBlock,
 }
 

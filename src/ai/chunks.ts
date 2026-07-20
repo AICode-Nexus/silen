@@ -1,4 +1,5 @@
 import GithubSlugger from 'github-slugger'
+import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import { unified } from 'unified'
 import type { AiChunk, AiPage } from '../shared/ai.js'
@@ -22,7 +23,9 @@ interface PendingChunk {
 
 // remark-parse and unified are both pinned, but pnpm keeps the parser's own
 // compatible declaration copy. Bridge that type-only boundary here.
-const markdownParser = unified().use(remarkParse as never)
+const markdownParser = unified()
+  .use(remarkParse as never)
+  .use(remarkGfm as never)
 
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, ' ').trim()

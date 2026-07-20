@@ -94,6 +94,7 @@ describe('published package smoke test', () => {
         .stdout,
     ) as {
       bin?: Record<string, string>
+      dependencies?: Record<string, string>
       engines?: Record<string, string>
       license?: string
       name?: string
@@ -151,6 +152,10 @@ describe('published package smoke test', () => {
     expect(files.some((file) => file.endsWith('.map'))).toBe(false)
     expect(packedManifest).toMatchObject({
       bin: { silen: 'dist/node/cli.js' },
+      dependencies: {
+        react: '^19.2.7',
+        'react-dom': '^19.2.7',
+      },
       engines: { node: '^20.19.0 || >=22.12.0' },
       license: 'MIT',
       name: '@aicode-nexus/silen',
@@ -204,8 +209,6 @@ describe('published package smoke test', () => {
             private: true,
             type: 'module',
             dependencies: {
-              react: '19.2.7',
-              'react-dom': '19.2.7',
               '@aicode-nexus/silen': `file:${archivePath}`,
             },
             devDependencies: {

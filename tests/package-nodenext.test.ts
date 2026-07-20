@@ -55,8 +55,6 @@ describe('packed package declarations', () => {
         private: true,
         type: 'module',
         dependencies: {
-          react: '19.2.7',
-          'react-dom': '19.2.7',
           '@aicode-nexus/silen': `file:${archivePath}`,
         },
         devDependencies: {
