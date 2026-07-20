@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { ChevronDownIcon, MenuIcon } from 'lucide-react'
 import { Link, useData, useRoute } from '../../client/index.js'
 import type {
@@ -28,6 +28,7 @@ import {
 interface NavigationLinkProps {
   readonly base: string
   readonly currentRoute: string
+  readonly nested?: boolean
   readonly item: ThemeNavItem | ThemeSidebarItem
   readonly onNavigate?: (() => void) | undefined
 }
@@ -35,6 +36,7 @@ interface NavigationLinkProps {
 function NavigationLink({
   base,
   currentRoute,
+  nested = false,
   item,
   onNavigate,
 }: NavigationLinkProps): React.JSX.Element {
@@ -44,8 +46,11 @@ function NavigationLink({
       href={resolveThemeLink(item.link, base)}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'block rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2',
-        active && 'bg-muted font-medium text-foreground',
+        'block rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
+        nested && 'ml-1.5 mr-4 pl-3.5',
+        active
+          ? 'bg-primary/10 font-semibold text-primary hover:bg-primary/15 hover:text-primary'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
       )}
       onClick={onNavigate}
     >
@@ -56,6 +61,7 @@ function NavigationLink({
 
 interface SidebarGroupProps {
   readonly base: string
+  readonly collapsible: boolean
   readonly currentRoute: string
   readonly group: ThemeSidebarGroup
   readonly onNavigate?: (() => void) | undefined
@@ -63,13 +69,45 @@ interface SidebarGroupProps {
 
 function SidebarGroup({
   base,
+  collapsible,
   currentRoute,
   group,
   onNavigate,
 }: SidebarGroupProps): React.JSX.Element {
+  const headingId = useId()
   const containsActiveLink = group.items.some((item) =>
     isActiveThemeLink(currentRoute, item.link, base),
   )
+  const items = (
+    <ul className="flex flex-col gap-0.5">
+      {group.items.map((item) => (
+        <li key={`${item.text}:${item.link}`}>
+          <NavigationLink
+            base={base}
+            currentRoute={currentRoute}
+            item={item}
+            nested
+            onNavigate={onNavigate}
+          />
+        </li>
+      ))}
+    </ul>
+  )
+
+  if (!collapsible) {
+    return (
+      <section aria-labelledby={headingId} className="flex flex-col gap-1">
+        <h2
+          id={headingId}
+          className="flex h-8 items-center px-2 text-sm font-semibold text-foreground"
+        >
+          {group.text}
+        </h2>
+        {items}
+      </section>
+    )
+  }
+
   return (
     <Collapsible
       key={`${group.text}:${containsActiveLink}`}
@@ -80,7 +118,7 @@ function SidebarGroup({
         <Button
           type="button"
           variant="ghost"
-          className="w-full justify-between px-3 text-left"
+          className="w-full justify-between px-3 text-left font-semibold aria-expanded:bg-transparent aria-expanded:text-foreground hover:bg-muted/60 dark:hover:bg-muted/60"
         >
           {group.text}
           <ChevronDownIcon
@@ -89,28 +127,17 @@ function SidebarGroup({
           />
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent>
-        <ul className="flex flex-col gap-0.5">
-          {group.items.map((item) => (
-            <li key={`${item.text}:${item.link}`}>
-              <NavigationLink
-                base={base}
-                currentRoute={currentRoute}
-                item={item}
-                onNavigate={onNavigate}
-              />
-            </li>
-          ))}
-        </ul>
-      </CollapsibleContent>
+      <CollapsibleContent>{items}</CollapsibleContent>
     </Collapsible>
   )
 }
 
 function SidebarNavigation({
+  collapsibleGroups = false,
   includeMainNavigation = false,
   onNavigate,
 }: {
+  readonly collapsibleGroups?: boolean
   readonly includeMainNavigation?: boolean
   readonly onNavigate?: (() => void) | undefined
 }): React.JSX.Element {
@@ -149,6 +176,7 @@ function SidebarNavigation({
         <SidebarGroup
           key={group.text}
           base={base}
+          collapsible={collapsibleGroups}
           currentRoute={currentRoute}
           group={group}
           onNavigate={onNavigate}
@@ -212,6 +240,7 @@ export function MobileSidebar(): React.JSX.Element {
         <ScrollArea className="min-h-0 flex-1">
           <nav aria-label={messages.sidebar.mobileNavigation}>
             <SidebarNavigation
+              collapsibleGroups
               includeMainNavigation
               onNavigate={() => setOpen(false)}
             />

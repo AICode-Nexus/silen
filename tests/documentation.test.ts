@@ -267,6 +267,8 @@ describe('0.2.0 product documentation', () => {
     expect(readme).toContain('pnpm silen build docs')
     expect(readme).toContain('GFM tables')
     expect(readme).toContain('light/dark hero artwork')
+    expect(readme).toContain('Desktop sidebar groups stay visible')
+    expect(readme).toContain('aria-current')
     expect(readme).toContain('https://aicode-nexus.github.io/silen/guide/')
     expect(readme).toContain('https://aicode-nexus.github.io/silen/reference/')
     expect(readme).toContain('https://aicode-nexus.github.io/silen/ai/')
@@ -303,9 +305,11 @@ describe('0.2.0 product documentation', () => {
     }
   })
 
-  it('records the dated 0.3.0 and 0.2.x documentation checkpoints', async () => {
+  it('records the dated 0.3.x and 0.2.x documentation checkpoints', async () => {
     const changelog = await source('CHANGELOG.md')
 
+    expect(changelog).toContain('## [0.3.1] - 2026-07-20')
+    expect(changelog).toContain('persistent semantic sections')
     expect(changelog).toContain('## [0.3.0] - 2026-07-20')
     expect(changelog).toContain('GitHub-flavored Markdown')
     expect(changelog).toContain('ThemeHomeImage.darkSrc')

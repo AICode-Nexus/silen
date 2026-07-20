@@ -219,7 +219,10 @@ describe('default documentation layout', () => {
       within(mainNavigation).queryByRole('link', { name: 'Guide' }),
     ).toBeNull()
     expect(
-      within(sidebar).getByRole('button', { name: '中文文档' }),
+      within(sidebar).getByRole('heading', {
+        name: '中文文档',
+        level: 2,
+      }),
     ).not.toBeNull()
     expect(
       within(sidebar)
@@ -314,7 +317,7 @@ describe('default documentation layout', () => {
     expect(logoImage?.getAttribute('height')).toBe('28')
   })
 
-  it('keeps the active group expanded and lets other groups collapse', async () => {
+  it('keeps desktop groups visible and mobile groups collapsible', async () => {
     const user = userEvent.setup()
     const themeConfig: ThemeConfig = {
       sidebar: [
@@ -337,16 +340,39 @@ describe('default documentation layout', () => {
     )
 
     expect(
-      screen
+      screen.getByRole('heading', { name: 'Guide section', level: 2 }),
+    ).not.toBeNull()
+    expect(
+      screen.getByRole('heading', { name: 'Reference section', level: 2 }),
+    ).not.toBeNull()
+    expect(screen.getByRole('link', { name: 'Configuration' })).not.toBeNull()
+    expect(screen.getByRole('link', { name: 'Guide' }).className).toContain(
+      'bg-primary/10',
+    )
+    const activeGuide = screen.getByRole('link', { name: 'Guide' })
+    expect(activeGuide.className).toContain('ml-1.5')
+    expect(activeGuide.className).toContain('mr-4')
+    expect(activeGuide.className).toContain('pl-3.5')
+
+    await user.click(screen.getByRole('button', { name: 'Open navigation' }))
+    const sheet = screen.getByRole('dialog', {
+      name: 'Documentation navigation',
+    })
+    expect(
+      within(sheet)
         .getByRole('button', { name: 'Guide section' })
         .getAttribute('aria-expanded'),
     ).toBe('true')
-    const reference = screen.getByRole('button', { name: 'Reference section' })
+    const reference = within(sheet).getByRole('button', {
+      name: 'Reference section',
+    })
     expect(reference.getAttribute('aria-expanded')).toBe('true')
 
     await user.click(reference)
     expect(reference.getAttribute('aria-expanded')).toBe('false')
-    expect(screen.queryByRole('link', { name: 'Configuration' })).toBeNull()
+    expect(
+      within(sheet).queryByRole('link', { name: 'Configuration' }),
+    ).toBeNull()
   })
 
   it('opens a titled mobile sheet, moves focus inside, and restores trigger focus', async () => {
