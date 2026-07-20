@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-20
+
+### Changed
+
+- Render default-theme sidebar groups as persistent semantic sections on
+  desktop while retaining collapsible groups in the labelled mobile navigation
+  sheet.
+- Strengthened the current-page treatment and nested-link spacing with semantic
+  primary and muted theme tokens across light and dark appearances.
+
+### Documentation
+
+- Added a portable sidebar redesign QA record covering desktop and mobile
+  behavior, visual fidelity, responsive overflow, and accessibility checks.
+
 ## [0.3.0] - 2026-07-20
 
 ### Added
@@ -176,7 +191,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Published Silen under the `@aicode-nexus` organization scope.
 
-[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/AICode-Nexus/silen/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/AICode-Nexus/silen/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/AICode-Nexus/silen/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/AICode-Nexus/silen/compare/v0.1.4...v0.2.0

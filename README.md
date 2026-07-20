@@ -53,6 +53,9 @@ components. Fenced code loads supported Shiki grammars on demand. The default
 theme adds accessible responsive tables and optional light/dark hero artwork.
 Configuration also supports locales, navigation, semantic theme tokens,
 analytics, ordered plugins, AI artifacts, and a public Agent Contract.
+Desktop sidebar groups stay visible as semantic sections, while the labelled
+mobile navigation sheet keeps the same groups collapsible. The current page is
+exposed with `aria-current` and emphasized through the theme's primary token.
 
 - [Project structure](https://aicode-nexus.github.io/silen/guide/project-structure/)
 - [Configuration](https://aicode-nexus.github.io/silen/guide/configuration/)
