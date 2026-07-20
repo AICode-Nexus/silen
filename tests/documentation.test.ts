@@ -122,14 +122,15 @@ describe('0.2.0 product documentation', () => {
     }
   })
 
-  it('renders the QR only on the Chinese homepage and no config feature row', async () => {
+  it('renders the QR on both homepages and no config feature row', async () => {
     const [english, chinese, config] = await Promise.all([
       source('website/index.mdx'),
       source('website/zh/index.mdx'),
       source('website/.silen/config.ts'),
     ])
 
-    expect(english).not.toContain('wechat-ai-dev-hub')
+    expect(english).toContain('wechat-ai-dev-hub.png')
+    expect(english).toContain('loading="lazy"')
     expect(chinese).toContain('wechat-ai-dev-hub.png')
     expect(chinese).toContain('loading="lazy"')
     expect(config).not.toMatch(/home:\s*\{[\s\S]*?features:\s*\[/)

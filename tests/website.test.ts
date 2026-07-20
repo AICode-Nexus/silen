@@ -123,8 +123,9 @@ describe('example website homepage', () => {
         'Live output from this build',
         'Useful to readers, agents, and maintainers',
         'Build the documentation layer with us',
+        'AI Dev Hub on WeChat',
       ],
-      hasQr: false,
+      hasQr: true,
     },
     {
       file: 'website/zh/index.mdx',
@@ -202,7 +203,7 @@ describe('example website homepage', () => {
     }
     expect(english).toContain('href="/silen/guide/index.md"')
     expect(chinese).toContain('href="/silen/zh/guide/index.md"')
-    expect(english).not.toContain('wechat-ai-dev-hub')
+    expect(english).toContain('wechat-ai-dev-hub')
 
     for (const artifact of [
       'llms.txt',

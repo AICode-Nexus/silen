@@ -11,6 +11,7 @@ import {
   GitForkIcon,
   UsersIcon,
 } from 'lucide-react'
+import wechatQr from './assets/wechat-ai-dev-hub.png'
 
 <section
   className="silen-home-section silen-home-section--split"
@@ -119,7 +120,7 @@ pnpm silen dev docs
 </section>
 
 <section
-  className="silen-home-section silen-home-community"
+  className="silen-home-section silen-home-community silen-home-community--qr"
   aria-labelledby="community-title"
 >
   <div className="silen-home-section-copy">
@@ -127,17 +128,27 @@ pnpm silen dev docs
     <h2 id="community-title">Build the documentation layer with us</h2>
     <p className="silen-home-lede">
       {
-        'Read the code, report a sharp edge, or contribute a focused improvement.'
+        'Read the code, report a sharp edge, or contribute a focused improvement. You can also follow AI Dev Hub on WeChat for Chinese AI development notes.'
       }
     </p>
+    <a
+      className="silen-home-action"
+      href="https://github.com/AICode-Nexus/silen"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <GitForkIcon aria-hidden="true" />
+      {' Silen on GitHub'}
+    </a>
   </div>
-  <a
-    className="silen-home-action"
-    href="https://github.com/AICode-Nexus/silen"
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    <GitForkIcon aria-hidden="true" />
-    {' Silen on GitHub'}
-  </a>
+  <figure className="silen-home-qr">
+    <img
+      src={wechatQr}
+      alt="QR code for the AI Dev Hub WeChat official account"
+      width={344}
+      height={344}
+      loading="lazy"
+    />
+    <figcaption>AI Dev Hub on WeChat</figcaption>
+  </figure>
 </section>

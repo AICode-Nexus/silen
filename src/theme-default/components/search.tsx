@@ -134,11 +134,11 @@ export function SearchDialog({
           value={result.id}
           aria-label={searchResultLabel(result, messages.search.home)}
           onSelect={() => void selectResult(result)}
-          className="cursor-pointer items-start gap-3 border-b border-border/60 bg-transparent px-3 py-2.5 text-left transition-colors duration-150 in-data-[slot=dialog-content]:rounded-none! last:border-b-0 hover:bg-accent/60 data-selected:bg-accent data-selected:text-accent-foreground [&>svg:last-child]:hidden"
+          className="cursor-pointer items-start gap-3 border-b border-border/60 bg-transparent px-3 py-2.5 text-left transition-colors duration-150 in-data-[slot=dialog-content]:rounded-none! last:border-b-0 hover:bg-transparent data-selected:bg-transparent data-selected:text-foreground [&>svg:last-child]:hidden"
         >
           <span className="grid min-w-0 flex-1 gap-1">
             <span className="flex min-w-0 items-start gap-3">
-              <span className="truncate text-sm font-semibold leading-5 text-foreground">
+              <span className="truncate text-sm font-semibold leading-5 text-foreground group-data-[selected=true]/command-item:text-primary">
                 {result.title}
               </span>
               <span className="ml-auto flex max-w-[45%] shrink-0 flex-wrap justify-end gap-x-1.5 gap-y-0.5 text-right text-[0.72rem] font-medium leading-4 text-muted-foreground">
