@@ -29,6 +29,10 @@ export interface SearchResult {
   readonly lang?: string
 }
 
+export interface RankedSearchResult extends SearchResult {
+  readonly score: number
+}
+
 interface IndexedSearchDocument {
   id: string
   lang: string
@@ -253,11 +257,11 @@ function compareSearchResults(
   )
 }
 
-export function querySearchIndex(
+export function queryRankedSearchIndex(
   serialized: ReadableSearchIndex,
   query: string,
   options: SearchOptions = {},
-): SearchResult[] {
+): RankedSearchResult[] {
   const normalizedQuery = normalizedText(query)
   if (!normalizedQuery) return []
   if (serialized.version !== 1 && serialized.version !== 2) {
@@ -279,7 +283,7 @@ export function querySearchIndex(
         serialized.version === 2 ? options.lang : undefined,
       ),
     )
-    .map((result): SearchResult => {
+    .map((result): RankedSearchResult => {
       const terms = [...result.terms, ...result.queryTerms]
       const title = typeof result.title === 'string' ? result.title : ''
       const route = typeof result.route === 'string' ? result.route : ''
@@ -299,10 +303,21 @@ export function querySearchIndex(
           snippetSource({ title, description, text, terms }),
           terms,
         ),
+        score: Number(result.score.toFixed(6)),
         ...(lang === undefined ? {} : { lang }),
         ...(heading === undefined ? {} : { heading }),
       }
     })
+}
+
+export function querySearchIndex(
+  serialized: ReadableSearchIndex,
+  query: string,
+  options: SearchOptions = {},
+): SearchResult[] {
+  return queryRankedSearchIndex(serialized, query, options).map(
+    ({ score: _score, ...result }) => result,
+  )
 }
 
 export function serializeSearchIndex(index: SerializedSearchIndex): string {

@@ -21,6 +21,7 @@ import {
   createSearchIndex,
   createPageSearchDocuments,
   markdownToSearchText,
+  queryRankedSearchIndex,
   querySearchIndex,
   serializeSearchIndex,
   type SearchDocument,
@@ -194,6 +195,44 @@ Before <STYLE>private inline style <Nested>private nested inline style</Nested><
         ({ route }) => route,
       ),
     ).toEqual(['/zh/api', '/zh/guide', '/en/configuration'])
+  })
+
+  it('exposes rounded diagnostic scores without changing public search results', () => {
+    const index = createSearchIndex(documents)
+    const ranked = queryRankedSearchIndex(index, 'configuration')
+    const plain = querySearchIndex(index, 'configuration')
+
+    expect(ranked.map(({ route }) => route)).toEqual(
+      plain.map(({ route }) => route),
+    )
+    expect(ranked[0]?.score).toBeGreaterThan(0)
+    expect(String(ranked[0]?.score)).toMatch(/^\d+(?:\.\d{1,6})?$/)
+    expect(plain[0]).not.toHaveProperty('score')
+  })
+
+  it('keeps language preference and deterministic tie breaks in the scored path', () => {
+    const index = createSearchIndex([
+      {
+        id: '/en/configuration',
+        lang: 'en-US',
+        title: 'Configuration',
+        text: 'Configuration reference.',
+        route: '/en/configuration',
+      },
+      {
+        id: '/zh/api',
+        lang: 'zh-CN',
+        title: 'API',
+        text: 'Configuration reference.',
+        route: '/zh/api',
+      },
+    ])
+
+    expect(
+      queryRankedSearchIndex(index, 'configuration', { lang: 'zh-CN' }).map(
+        ({ route }) => route,
+      ),
+    ).toEqual(['/zh/api', '/en/configuration'])
   })
 
   it('reads legacy v1 indexes as a flat list without invented languages', () => {
