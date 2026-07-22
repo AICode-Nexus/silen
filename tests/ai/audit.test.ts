@@ -46,6 +46,18 @@ describe('base-aware AI audit', () => {
     ])
   })
 
+  it('accepts a built artifact link under the deployment base', () => {
+    const result = auditDocuments(
+      documents('/silen/.well-known/silen/manifest.json'),
+      {
+        artifacts: new Set([...artifacts, '.well-known/silen/manifest.json']),
+        base: '/silen/',
+        indexFresh: true,
+      },
+    )
+    expect(result.issues).toEqual([])
+  })
+
   it('keeps root-base and relative-link behavior', () => {
     expect(
       auditDocuments(documents('/guide/'), {

@@ -1228,7 +1228,12 @@ export async function createWorkspace(
     }
 
     const artifacts = new Set<string>()
-    for (const artifact of ['llms.txt', 'llms-full.txt', 'ai-index.json']) {
+    for (const artifact of [
+      'llms.txt',
+      'llms-full.txt',
+      'ai-index.json',
+      '.well-known/silen/manifest.json',
+    ]) {
       if (await existingFile(`.silen/dist/${artifact}`)) {
         artifacts.add(artifact)
       }

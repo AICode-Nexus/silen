@@ -442,12 +442,17 @@ export function auditDocuments(
   const routes = new Set(
     documents.map((document) => normalizeSiteRoute(document.route)),
   )
+  const artifactRoutes = new Set(
+    [...options.artifacts].map((artifact) =>
+      normalizeSiteRoute(`/${artifact}`),
+    ),
+  )
   const issues: WorkspaceAuditIssue[] = []
   issues.push(...(options.contractIssues ?? []))
   for (const document of documents) {
     for (const link of markdownLinks(document.text)) {
       const target = targetRoute(document, link.target, options.base)
-      if (target && !routes.has(target)) {
+      if (target && !routes.has(target) && !artifactRoutes.has(target)) {
         issues.push({
           code: 'broken-link',
           path: document.path,
