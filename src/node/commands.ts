@@ -1,11 +1,19 @@
 import type { CAC } from 'cac'
+import {
+  AiEvalSetupError,
+  formatAiEvalReport,
+  runAiEvaluation,
+  serializeAiEvalReport,
+  serializeAiEvalSetupError,
+} from '../ai/eval.js'
 import { serveMcp } from '../ai/mcp/stdio.js'
-import { createWorkspace, type Workspace } from '../ai/workspace.js'
+import { createWorkspace } from '../ai/workspace.js'
 import type {
   SilenCliCommandContract,
   SilenCliOptionContract,
 } from '../shared/ai-contract.js'
 import { build, type BuildResult } from './build.js'
+import { resolveConfig } from './config.js'
 import { initializeSite } from './init.js'
 import {
   createDevServer,
@@ -27,8 +35,10 @@ interface CommandDependencies {
   buildSite(root: string): Promise<BuildResult>
   createDevServer: ServerFactory
   createPreviewServer: ServerFactory
-  createWorkspace(root: string): Promise<Workspace>
+  createWorkspace: typeof createWorkspace
   initializeSite: typeof initializeSite
+  resolveConfig: typeof resolveConfig
+  runAiEvaluation: typeof runAiEvaluation
   serveMcp: typeof serveMcp
   output(message: string): void
   setExitCode(code: number): void
@@ -74,6 +84,18 @@ function commandServerOptions(value: unknown): ServerOptions {
   return options
 }
 
+function commandAiOptions(value: unknown): { json: boolean } {
+  if (value === undefined) return { json: false }
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('Silen AI options are invalid')
+  }
+  const json = (value as Record<string, unknown>).json
+  if (json !== undefined && typeof json !== 'boolean') {
+    throw new TypeError('Silen AI --json option is invalid')
+  }
+  return { json: json === true }
+}
+
 async function waitForProcessSignal(server: SilenServer): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     let closing = false
@@ -95,6 +117,8 @@ const defaultDependencies: CommandDependencies = {
   createPreviewServer,
   createWorkspace,
   initializeSite,
+  resolveConfig,
+  runAiEvaluation,
   serveMcp,
   output(message) {
     console.log(message)
@@ -234,26 +258,71 @@ export function createCommandDescriptors(
     {
       id: 'ai',
       syntax: 'ai <action> [root]',
-      description: 'Initialize, index, or audit the local AI workspace',
+      description:
+        'Initialize, index, audit, or evaluate the local AI workspace',
       sideEffect: 'write',
       arguments: [
         {
           name: 'action',
           required: true,
-          description: 'One of init, index, or audit.',
+          description: 'One of init, index, audit, or eval.',
         },
         rootArgument,
       ],
-      options: [],
-      async execute(action: unknown, root: unknown) {
-        if (action !== 'init' && action !== 'index' && action !== 'audit') {
+      options: [
+        {
+          name: '--json',
+          description: 'Print the AI evaluation as JSON',
+          required: false,
+          default: false,
+        },
+      ],
+      async execute(action: unknown, root: unknown, rawOptions: unknown) {
+        if (
+          action !== 'init' &&
+          action !== 'index' &&
+          action !== 'audit' &&
+          action !== 'eval'
+        ) {
           throw new Error(
             'Unknown AI command ' +
               JSON.stringify(action) +
-              '; expected init, index, or audit',
+              '; expected init, index, audit, or eval',
           )
         }
-        const workspace = await dependencies.createWorkspace(commandRoot(root))
+        const resolvedRoot = commandRoot(root)
+        const options = commandAiOptions(rawOptions)
+        if (action === 'eval') {
+          try {
+            const result = await dependencies.runAiEvaluation(resolvedRoot)
+            dependencies.output(
+              options.json
+                ? serializeAiEvalReport(result).trimEnd()
+                : formatAiEvalReport(result),
+            )
+            if (!result.ok) dependencies.setExitCode(1)
+          } catch (error) {
+            if (!(error instanceof AiEvalSetupError)) throw error
+            dependencies.output(
+              options.json
+                ? serializeAiEvalSetupError(error).trimEnd()
+                : error.message,
+            )
+            dependencies.setExitCode(2)
+          }
+          return
+        }
+
+        const workspace = await dependencies.createWorkspace(
+          resolvedRoot,
+          action === 'audit'
+            ? {
+                resolveAuditBase: async () =>
+                  (await dependencies.resolveConfig(resolvedRoot, 'build'))
+                    .base,
+              }
+            : undefined,
+        )
         if (action === 'init') {
           await workspace.init()
           dependencies.output('Initialized ' + workspace.relativeRoot)

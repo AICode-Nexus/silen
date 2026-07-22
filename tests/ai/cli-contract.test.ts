@@ -37,6 +37,17 @@ describe('CLI Agent Contract registry', () => {
   it('generates serializable CLI API without runtime handlers', () => {
     const contract = createCliApiContract(commandDescriptors)
     expect(contract.commands).toHaveLength(commandDescriptors.length)
+    expect(commandDescriptors.find(({ id }) => id === 'ai')).toMatchObject({
+      description:
+        'Initialize, index, audit, or evaluate the local AI workspace',
+      options: [
+        {
+          name: '--json',
+          required: false,
+          default: false,
+        },
+      ],
+    })
     expect(
       contract.commands.find((command) => command.id === 'mcp'),
     ).toMatchObject({
@@ -70,7 +81,7 @@ describe('CLI Agent Contract registry', () => {
     })
     expect(result.exitCode).not.toBe(0)
     expect(result.all).toContain(
-      'Unknown AI command "unknown"; expected init, index, or audit',
+      'Unknown AI command "unknown"; expected init, index, audit, or eval',
     )
   })
 })
