@@ -10,10 +10,40 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import path from 'node:path'
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it, vi } from 'vitest'
 import { createWorkspace } from '../../src/ai/workspace'
+import { SILEN_VERSION } from '../../src/shared/version'
 
 const fixture = path.resolve('tests/fixtures/ai-workspace')
+
+function siteManifest(base: string): unknown {
+  return {
+    schemaVersion: 1,
+    kind: 'silen-site',
+    generator: { name: 'Silen', version: SILEN_VERSION },
+    site: {
+      title: 'Workspace fixture',
+      description: 'Workspace audit fixture.',
+      base,
+      lang: 'en-US',
+      locales: [{ lang: 'en-US', root: '/' }],
+    },
+    capabilities: {
+      llmsTxt: false,
+      llmsFullTxt: false,
+      markdownRoutes: true,
+      index: true,
+      mcp: {
+        transport: 'stdio',
+        localOnly: true,
+        readOnlyByDefault: true,
+        writeRequiresFlag: '--allow-write',
+      },
+    },
+    resources: [],
+    tasks: [],
+  }
+}
 
 afterAll(async () => {
   await Promise.all([
@@ -31,6 +61,13 @@ describe('read-only AI workspace', () => {
     try {
       const workspace = await createWorkspace(root)
       expect((await workspace.search('needle')).results).toHaveLength(1)
+      const audit = await workspace.audit()
+      expect(audit.issues).not.toContainEqual(
+        expect.objectContaining({ code: 'index' }),
+      )
+      expect(audit.notices).toContainEqual(
+        expect.objectContaining({ code: 'index-cache' }),
+      )
       await expect(lstat(path.join(root, '.silen'))).rejects.toMatchObject({
         code: 'ENOENT',
       })
@@ -61,6 +98,9 @@ describe('read-only AI workspace', () => {
         ok: false,
       })
       expect(result.issues.length).toBeGreaterThan(0)
+      expect(result.notices).toContainEqual(
+        expect.objectContaining({ code: 'base-unknown' }),
+      )
       await expect(lstat(marker)).rejects.toMatchObject({ code: 'ENOENT' })
       await expect(lstat(path.join(root, '.silen/dist'))).rejects.toMatchObject(
         {
@@ -69,6 +109,71 @@ describe('read-only AI workspace', () => {
       )
     } finally {
       await rm(marker, { force: true })
+      await rm(root, { force: true, recursive: true })
+    }
+  })
+
+  it('prefers the built site base without invoking the lazy fallback', async () => {
+    const root = await mkdtemp(path.resolve('.silen/.temp/built-base-'))
+    const fallback = vi.fn(() =>
+      Promise.reject(new Error('fallback should not run')),
+    )
+    await mkdir(path.join(root, '.silen/dist/.well-known/silen'), {
+      recursive: true,
+    })
+    await Promise.all([
+      writeFile(
+        path.join(root, 'index.mdx'),
+        '# Home\n\n[Guide](/handbook/guide/)\n',
+      ),
+      mkdir(path.join(root, 'guide')),
+      writeFile(
+        path.join(root, '.silen/dist/.well-known/silen/manifest.json'),
+        `${JSON.stringify(siteManifest('/handbook/'))}\n`,
+      ),
+    ])
+    await writeFile(path.join(root, 'guide/index.mdx'), '# Guide\n')
+
+    try {
+      const result = await (
+        await createWorkspace(root, { resolveAuditBase: fallback })
+      ).audit()
+      expect(fallback).not.toHaveBeenCalled()
+      expect(result.issues).not.toContainEqual(
+        expect.objectContaining({ code: 'broken-link' }),
+      )
+      expect(result.notices).not.toContainEqual(
+        expect.objectContaining({ code: 'base-unknown' }),
+      )
+    } finally {
+      await rm(root, { force: true, recursive: true })
+    }
+  })
+
+  it('resolves the audit base lazily when no built manifest exists', async () => {
+    const root = await mkdtemp(path.resolve('.silen/.temp/fallback-base-'))
+    const fallback = vi.fn(() => Promise.resolve('/handbook/'))
+    await mkdir(path.join(root, 'guide'))
+    await Promise.all([
+      writeFile(
+        path.join(root, 'index.mdx'),
+        '# Home\n\n[Guide](/handbook/guide/)\n',
+      ),
+      writeFile(path.join(root, 'guide/index.mdx'), '# Guide\n'),
+    ])
+
+    try {
+      const result = await (
+        await createWorkspace(root, { resolveAuditBase: fallback })
+      ).audit()
+      expect(fallback).toHaveBeenCalledTimes(1)
+      expect(result.issues).not.toContainEqual(
+        expect.objectContaining({ code: 'broken-link' }),
+      )
+      expect(result.notices).not.toContainEqual(
+        expect.objectContaining({ code: 'base-unknown' }),
+      )
+    } finally {
       await rm(root, { force: true, recursive: true })
     }
   })

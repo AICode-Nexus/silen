@@ -156,8 +156,8 @@ describe('workspace mutations', () => {
       code: 'ENOENT',
     })
     expect(await readFile(existing, 'utf8')).toBe('# Existing\n')
-    expect((await workspace.audit()).issues).not.toContainEqual(
-      expect.objectContaining({ code: 'index' }),
+    expect((await workspace.audit()).notices).not.toContainEqual(
+      expect.objectContaining({ code: 'index-cache' }),
     )
     expect(
       (await readdir(root)).filter((entry) => /\.(?:tmp|backup)$/.test(entry)),
@@ -370,8 +370,8 @@ describe('workspace mutations', () => {
       const lines = (await readFile(page, 'utf8')).split('\n')
       expect(lines[0]).toBe('# Events')
       expect(lines.slice(1).sort()).toEqual([...additions].sort())
-      expect((await first.audit()).issues).not.toContainEqual(
-        expect.objectContaining({ code: 'index' }),
+      expect((await first.audit()).notices).not.toContainEqual(
+        expect.objectContaining({ code: 'index-cache' }),
       )
     },
   )
@@ -404,8 +404,8 @@ describe('workspace mutations', () => {
     expect(await readFile(path.join(root, 'docs/page.md'), 'utf8')).toBe(
       '# Replaced\n',
     )
-    expect((await workspace.audit()).issues).not.toContainEqual(
-      expect.objectContaining({ code: 'index' }),
+    expect((await workspace.audit()).notices).not.toContainEqual(
+      expect.objectContaining({ code: 'index-cache' }),
     )
   })
 
@@ -461,8 +461,8 @@ describe('workspace mutations', () => {
         ...Array.from({ length: 20 }, (_, i) => `entry-${i}`),
       ].join('\n'),
     )
-    expect((await workspace.audit()).issues).not.toContainEqual(
-      expect.objectContaining({ code: 'index' }),
+    expect((await workspace.audit()).notices).not.toContainEqual(
+      expect.objectContaining({ code: 'index-cache' }),
     )
   })
 

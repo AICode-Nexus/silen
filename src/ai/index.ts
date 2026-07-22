@@ -20,12 +20,14 @@ export type { CreateMcpServerOptions } from './mcp/server.js'
 export { serveMcp } from './mcp/stdio.js'
 export type { CreateMcpOptions } from './mcp/stdio.js'
 export { createWorkspace, WorkspaceError } from './workspace.js'
+export type { WorkspaceAuditNotice } from './audit.js'
 export type {
   Workspace,
   WorkspaceBuildResult,
   WorkspaceFile,
   WorkspaceLinkInput,
   WorkspaceMutationResult,
+  WorkspaceOptions,
   WorkspaceReadOptions,
   WorkspaceReadResult,
   WorkspaceWriteInput,

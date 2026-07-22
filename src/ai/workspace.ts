@@ -18,7 +18,10 @@ import {
   auditDocuments,
   findBacklinks,
   inspectCitations,
+  readBuiltSiteBase,
+  type AgentContractAuditInput,
   type WorkspaceAuditIssue,
+  type WorkspaceAuditNotice,
   type WorkspaceAuditResult,
   type WorkspaceBacklink,
   type WorkspaceCitation,
@@ -82,6 +85,11 @@ export interface WorkspaceBuildResult {
   routes: Array<{ path: string; file: string }>
   ok: boolean
   issues: WorkspaceAuditIssue[]
+  notices: WorkspaceAuditNotice[]
+}
+
+export interface WorkspaceOptions {
+  readonly resolveAuditBase?: () => Promise<string>
 }
 
 export interface WorkspaceWriteInput {
@@ -427,7 +435,10 @@ async function withNamedLock<T>(
   }
 }
 
-export async function createWorkspace(root: string): Promise<Workspace> {
+export async function createWorkspace(
+  root: string,
+  options: WorkspaceOptions = {},
+): Promise<Workspace> {
   if (typeof root !== 'string' || !root || root.length > MAX_PATH_LENGTH) {
     throw new WorkspaceError(
       'INVALID_ROOT',
@@ -1226,16 +1237,22 @@ export async function createWorkspace(root: string): Promise<Workspace> {
       '.silen/dist/llms.txt',
       MAX_FILE_BYTES,
     )
-    const contractIssues = await auditAgentContract({
+    const auditInput: AgentContractAuditInput = {
       ...(llmsTxt === undefined ? {} : { llmsTxt }),
       read(relativeOutputPath) {
         return readOptionalFile(relativeOutputPath, MAX_FILE_BYTES)
       },
-    })
+    }
+    const [contractIssues, builtBase] = await Promise.all([
+      auditAgentContract(auditInput),
+      readBuiltSiteBase(auditInput),
+    ])
+    const base = builtBase ?? (await options.resolveAuditBase?.())
     return auditDocuments(documents, {
       artifacts,
       indexFresh,
       contractIssues,
+      ...(base === undefined ? {} : { base }),
     })
   }
 
@@ -1373,6 +1390,7 @@ export async function createWorkspace(root: string): Promise<Workspace> {
         })),
         ok: result.ok,
         issues: result.issues,
+        notices: result.notices,
       }
     },
     async audit() {

@@ -101,6 +101,12 @@ describe('read-only MCP server', () => {
     const builtResult = jsonResult(built)
     expect(builtResult).toMatchObject({ outDir: '.silen/dist', ok: false })
     expect(Array.isArray(builtResult.issues)).toBe(true)
+    expect(Array.isArray(builtResult.notices)).toBe(true)
+    expect(
+      (builtResult.notices as Array<{ code?: string }>).some(
+        ({ code }) => code === 'index-cache',
+      ),
+    ).toBe(true)
     expect(text(built)).not.toContain(fixture)
   }, 30_000)
 

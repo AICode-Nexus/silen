@@ -2,6 +2,7 @@ import path from 'node:path'
 import { SILEN_VERSION } from '../shared/version.js'
 import { parseApiContract, parseContractManifest } from './contract/schema.js'
 import { parseTaskDocument } from './contract/tasks.js'
+import { normalizeSiteRoute, routeUnderBase } from './routes.js'
 import type { WorkspaceSearchDocument } from './search.js'
 
 export interface WorkspaceCitation {
@@ -40,6 +41,13 @@ export interface WorkspaceAuditResult {
   ok: boolean
   filesChecked: number
   issues: WorkspaceAuditIssue[]
+  notices: WorkspaceAuditNotice[]
+}
+
+export interface WorkspaceAuditNotice {
+  code: 'base-unknown' | 'index-cache'
+  path: string
+  message: string
 }
 
 export type WorkspaceDocument = WorkspaceSearchDocument
@@ -283,6 +291,19 @@ export async function auditAgentContract(
   )
 }
 
+export async function readBuiltSiteBase(
+  input: AgentContractAuditInput,
+): Promise<string | undefined> {
+  const manifestSource = await input.read(manifestPath)
+  if (manifestSource === undefined) return undefined
+  try {
+    const manifest = parseContractManifest(JSON.parse(manifestSource))
+    return manifest.kind === 'silen-site' ? manifest.site.base : undefined
+  } catch {
+    return undefined
+  }
+}
+
 const absoluteScheme = /^[A-Za-z][A-Za-z\d+.-]*:/
 
 function routeForFile(file: string): string {
@@ -294,21 +315,10 @@ function routeForFile(file: string): string {
   return `/${withoutExtension}`
 }
 
-function normalizedRoute(route: string): string {
-  const withoutSuffix = route.split(/[?#]/, 1)[0] ?? route
-  const withoutExtension = withoutSuffix.replace(/\.(?:md|mdx|html)$/i, '')
-  if (withoutExtension === '/index') return '/'
-  if (withoutExtension.endsWith('/index')) {
-    return withoutExtension.slice(0, -6) || '/'
-  }
-  return withoutExtension.length > 1 && withoutExtension.endsWith('/')
-    ? withoutExtension.slice(0, -1)
-    : withoutExtension || '/'
-}
-
 function targetRoute(
   source: WorkspaceDocument,
   target: string,
+  base?: string,
 ): string | undefined {
   const trimmed = target.trim()
   if (
@@ -319,14 +329,14 @@ function targetRoute(
   ) {
     return undefined
   }
-  if (trimmed.startsWith('/')) return normalizedRoute(trimmed)
+  if (trimmed.startsWith('/')) return routeUnderBase(trimmed, base)
   const targetPath = path.posix.normalize(
     path.posix.join(
       path.posix.dirname(source.path),
       trimmed.split(/[?#]/, 1)[0] ?? trimmed,
     ),
   )
-  return normalizedRoute(routeForFile(targetPath))
+  return normalizeSiteRoute(routeForFile(targetPath))
 }
 
 function markdownLinks(
@@ -405,7 +415,7 @@ export function findBacklinks(
   documents: readonly WorkspaceDocument[],
   route: string,
 ): WorkspaceBacklink[] {
-  const requested = normalizedRoute(route)
+  const requested = normalizeSiteRoute(route)
   return documents
     .filter((document) =>
       markdownLinks(document.text).some(
@@ -424,18 +434,19 @@ export function auditDocuments(
   documents: readonly WorkspaceDocument[],
   options: {
     artifacts: ReadonlySet<string>
+    base?: string
     indexFresh: boolean
     contractIssues?: readonly WorkspaceAuditIssue[]
   },
 ): WorkspaceAuditResult {
   const routes = new Set(
-    documents.map((document) => normalizedRoute(document.route)),
+    documents.map((document) => normalizeSiteRoute(document.route)),
   )
   const issues: WorkspaceAuditIssue[] = []
   issues.push(...(options.contractIssues ?? []))
   for (const document of documents) {
     for (const link of markdownLinks(document.text)) {
-      const target = targetRoute(document, link.target)
+      const target = targetRoute(document, link.target, options.base)
       if (target && !routes.has(target)) {
         issues.push({
           code: 'broken-link',
@@ -463,12 +474,27 @@ export function auditDocuments(
       })
     }
   }
-  if (!options.indexFresh) {
-    issues.push({
-      code: 'index',
-      path: '.silen/ai/index.json',
-      message: 'The deterministic workspace index is missing or stale',
+  const notices: WorkspaceAuditNotice[] = []
+  if (options.base === undefined) {
+    notices.push({
+      code: 'base-unknown',
+      path: manifestPath,
+      message:
+        'The deployment base could not be verified; root-relative links were checked against /',
     })
   }
-  return { ok: issues.length === 0, filesChecked: documents.length, issues }
+  if (!options.indexFresh) {
+    notices.push({
+      code: 'index-cache',
+      path: '.silen/ai/index.json',
+      message:
+        'The optional workspace index cache is missing or stale; run silen ai index to refresh it while in-memory search remains available',
+    })
+  }
+  return {
+    ok: issues.length === 0,
+    filesChecked: documents.length,
+    issues,
+    notices,
+  }
 }
