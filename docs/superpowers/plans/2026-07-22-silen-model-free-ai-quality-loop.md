@@ -91,7 +91,7 @@ website/zh/reference/index.mdx
 - Produces: `RankedSearchResult extends SearchResult` and `queryRankedSearchIndex(index, query, options): RankedSearchResult[]`.
 - Preserves: `querySearchIndex(index, query, options): SearchResult[]` without a public `score` property.
 
-- [ ] **Step 1: Write failing scored-search tests**
+- [x] **Step 1: Write failing scored-search tests**
 
 Add the import and focused assertions:
 
@@ -145,7 +145,7 @@ it('keeps language preference and deterministic tie breaks in the scored path', 
 })
 ```
 
-- [ ] **Step 2: Run the focused test and verify the missing export**
+- [x] **Step 2: Run the focused test and verify the missing export**
 
 Run:
 
@@ -155,7 +155,7 @@ corepack pnpm test tests/theme/search.test.ts
 
 Expected: FAIL because `queryRankedSearchIndex` is not exported.
 
-- [ ] **Step 3: Add the scored query seam**
+- [x] **Step 3: Add the scored query seam**
 
 Add the type and make the ranked function own the existing search pipeline:
 
@@ -228,7 +228,7 @@ export function querySearchIndex(
 }
 ```
 
-- [ ] **Step 4: Run search tests and typecheck**
+- [x] **Step 4: Run search tests and typecheck**
 
 Run:
 
@@ -239,7 +239,7 @@ corepack pnpm typecheck
 
 Expected: both commands PASS; existing client and Node search expectations remain unchanged.
 
-- [ ] **Step 5: Commit the scored search seam**
+- [x] **Step 5: Commit the scored search seam**
 
 ```bash
 git add src/node/search.ts tests/theme/search.test.ts docs/superpowers/plans/2026-07-22-silen-model-free-ai-quality-loop.md
@@ -260,7 +260,7 @@ git commit -m "refactor(search): expose ranked diagnostics"
 - Produces: `normalizeSiteRoute`, `routeUnderBase`, `AiEvalSetupError`, `AiEvalReport`, `runAiEvaluation`, `formatAiEvalReport`, `serializeAiEvalReport`, and `serializeAiEvalSetupError`.
 - Reads only: `.silen/ai-evals.json` up to 1 MiB and `.silen/dist/search-index.json` up to 64 MiB.
 
-- [ ] **Step 1: Write failing evaluator behavior tests**
+- [x] **Step 1: Write failing evaluator behavior tests**
 
 Create `tests/ai/eval.test.ts` with real temporary files and a generated production index:
 
@@ -614,7 +614,7 @@ it('distinguishes production index setup failures', async () => {
 })
 ```
 
-- [ ] **Step 2: Run the evaluator test and verify missing modules**
+- [x] **Step 2: Run the evaluator test and verify missing modules**
 
 Run:
 
@@ -624,7 +624,7 @@ corepack pnpm test tests/ai/eval.test.ts
 
 Expected: FAIL because `src/ai/eval.ts` does not exist.
 
-- [ ] **Step 3: Implement shared route normalization**
+- [x] **Step 3: Implement shared route normalization**
 
 Create `src/ai/routes.ts`:
 
@@ -662,7 +662,7 @@ export function routeUnderBase(
 }
 ```
 
-- [ ] **Step 4: Implement strict suite parsing, safe reads, evaluation, and reports**
+- [x] **Step 4: Implement strict suite parsing, safe reads, evaluation, and reports**
 
 Create `src/ai/eval.ts` with these exact contracts:
 
@@ -970,7 +970,7 @@ const document = {
 
 Both report and setup-error JSON serialization use `JSON.stringify(value, null, 2)` plus one trailing newline.
 
-- [ ] **Step 5: Run evaluator, search, type, and lint checks**
+- [x] **Step 5: Run evaluator, search, type, and lint checks**
 
 Run:
 
@@ -982,7 +982,7 @@ corepack pnpm lint
 
 Expected: all commands PASS.
 
-- [ ] **Step 6: Commit the model-free evaluator**
+- [x] **Step 6: Commit the model-free evaluator**
 
 ```bash
 git add src/ai/routes.ts src/ai/eval.ts tests/ai/eval.test.ts docs/superpowers/plans/2026-07-22-silen-model-free-ai-quality-loop.md
@@ -1010,7 +1010,7 @@ git commit -m "feat(ai): add model-free retrieval evaluation"
 - Produces: `WorkspaceAuditNotice`, `WorkspaceAuditResult.notices`, `WorkspaceBuildResult.notices`, `WorkspaceOptions.resolveAuditBase`, and `readBuiltSiteBase`.
 - Preserves: `issues` as the only collection controlling `ok`.
 
-- [ ] **Step 1: Add failing pure audit tests**
+- [x] **Step 1: Add failing pure audit tests**
 
 Create `tests/ai/audit.test.ts`:
 
@@ -1095,7 +1095,7 @@ describe('base-aware AI audit', () => {
 })
 ```
 
-- [ ] **Step 2: Run the pure audit test and verify the missing notice contract**
+- [x] **Step 2: Run the pure audit test and verify the missing notice contract**
 
 Run:
 
@@ -1105,7 +1105,7 @@ corepack pnpm test tests/ai/audit.test.ts
 
 Expected: FAIL because audit has no `base` option or `notices` collection.
 
-- [ ] **Step 3: Add finding severity and exact base routing**
+- [x] **Step 3: Add finding severity and exact base routing**
 
 In `src/ai/audit.ts` add:
 
@@ -1154,7 +1154,7 @@ return {
 }
 ```
 
-- [ ] **Step 4: Add built-manifest base discovery and lazy fallback**
+- [x] **Step 4: Add built-manifest base discovery and lazy fallback**
 
 Add `readBuiltSiteBase(input)` to `src/ai/audit.ts`:
 
@@ -1218,7 +1218,7 @@ return auditDocuments(documents, {
 
 Return `notices` from `workspace.build()` and export `WorkspaceOptions` plus `WorkspaceAuditNotice` through `src/ai/index.ts`.
 
-- [ ] **Step 5: Extend workspace and MCP safety tests**
+- [x] **Step 5: Extend workspace and MCP safety tests**
 
 In `tests/ai/workspace.test.ts`:
 
@@ -1238,7 +1238,7 @@ expect(
 ).toBe(true)
 ```
 
-- [ ] **Step 6: Run audit, workspace, MCP, scenario, and type checks**
+- [x] **Step 6: Run audit, workspace, MCP, scenario, and type checks**
 
 Run:
 
@@ -1249,7 +1249,7 @@ corepack pnpm typecheck
 
 Expected: all commands PASS; stale cache expectations now use `notices`.
 
-- [ ] **Step 7: Commit audit correctness**
+- [x] **Step 7: Commit audit correctness**
 
 ```bash
 git add src/ai/audit.ts src/ai/workspace.ts src/ai/index.ts tests/ai/audit.test.ts tests/ai/workspace.test.ts tests/ai/mcp-read.test.ts tests/ai/agent-scenarios.test.ts tests/ai/workspace-write.test.ts docs/superpowers/plans/2026-07-22-silen-model-free-ai-quality-loop.md
@@ -1270,7 +1270,7 @@ git commit -m "fix(ai): make workspace audit base-aware"
 - Produces: `silen ai eval [root]`, `--json`, and stable `0`/`1`/`2` routing.
 - Preserves: existing `init`, `index`, `audit` output and the grouped AI command's `write` side-effect classification.
 
-- [ ] **Step 1: Add failing CLI contract and subprocess tests**
+- [x] **Step 1: Add failing CLI contract and subprocess tests**
 
 Update the unknown-action assertion:
 
@@ -1339,7 +1339,7 @@ Add separate subprocess assertions:
 - Missing built index returns `2` and prints `silen build <root>`.
 - `--json` setup failure parses as one JSON error document.
 
-- [ ] **Step 2: Run CLI tests and verify eval is rejected**
+- [x] **Step 2: Run CLI tests and verify eval is rejected**
 
 Run:
 
@@ -1349,7 +1349,7 @@ corepack pnpm test tests/cli.test.ts tests/ai/cli-contract.test.ts
 
 Expected: FAIL because `eval` is not an accepted AI action and `--json` is absent.
 
-- [ ] **Step 3: Wire evaluator dependencies and trusted audit fallback**
+- [x] **Step 3: Wire evaluator dependencies and trusted audit fallback**
 
 In `src/node/commands.ts` import evaluator functions and `resolveConfig`. Extend dependencies:
 
@@ -1463,7 +1463,7 @@ options: [
 
 The evaluator branch runs before `createWorkspace` so `ai eval` never receives the config fallback and never executes project code.
 
-- [ ] **Step 4: Run CLI, contract, workspace, and package build checks**
+- [x] **Step 4: Run CLI, contract, workspace, and package build checks**
 
 Run:
 
@@ -1475,7 +1475,7 @@ corepack pnpm build
 
 Expected: all commands PASS, and generated `dist/agent/api.json` includes the updated AI command description and `--json` option.
 
-- [ ] **Step 5: Commit CLI integration**
+- [x] **Step 5: Commit CLI integration**
 
 ```bash
 git add src/node/commands.ts tests/cli.test.ts tests/ai/cli-contract.test.ts dist/agent/api.json docs/superpowers/plans/2026-07-22-silen-model-free-ai-quality-loop.md
@@ -1506,7 +1506,7 @@ git commit -m "feat(cli): add deterministic AI eval command"
 - Produces: a passing four-case bilingual official suite and matching human/Agent documentation.
 - Preserves: Ask AI as a separate endpoint-only integration.
 
-- [ ] **Step 1: Add failing documentation and website assertions**
+- [x] **Step 1: Add failing documentation and website assertions**
 
 Extend `tests/ai/documentation.test.ts`:
 
@@ -1540,7 +1540,7 @@ it('dogfoods the deterministic bilingual AI evaluation suite', async () => {
 })
 ```
 
-- [ ] **Step 2: Run docs and website tests and verify missing content**
+- [x] **Step 2: Run docs and website tests and verify missing content**
 
 Run:
 
@@ -1550,7 +1550,7 @@ corepack pnpm test tests/ai/documentation.test.ts tests/website.test.ts
 
 Expected: FAIL because the suite and `ai eval` documentation do not exist.
 
-- [ ] **Step 3: Add the official bilingual suite**
+- [x] **Step 3: Add the official bilingual suite**
 
 Create `website/.silen/ai-evals.json`:
 
@@ -1597,7 +1597,7 @@ Create `website/.silen/ai-evals.json`:
 }
 ```
 
-- [ ] **Step 4: Update bilingual human and Agent documentation**
+- [x] **Step 4: Update bilingual human and Agent documentation**
 
 Document this exact workflow in both languages:
 
@@ -1620,7 +1620,7 @@ Change both reference tables to `silen ai <init|index|audit|eval> [root]`.
 
 Update both `audit-site.md` task packs so the ordered read-only sequence is build, audit, then eval when `.silen/ai-evals.json` exists. Replace “stale indexes” with separate “production index” and “optional workspace-cache notice” language.
 
-- [ ] **Step 5: Build and tune only authored queries if ranking evidence requires it**
+- [x] **Step 5: Build and tune only authored queries if ranking evidence requires it**
 
 Run:
 
@@ -1638,7 +1638,7 @@ Expected:
 
 If a case fails, use the printed actual Top K evidence to change only that case's query or expected optional heading. Do not tune MiniSearch, add score thresholds, or weaken `topK` beyond 5.
 
-- [ ] **Step 6: Run documentation, website, contract, and formatting tests**
+- [x] **Step 6: Run documentation, website, contract, and formatting tests**
 
 Run:
 
@@ -1649,7 +1649,7 @@ corepack pnpm format:check
 
 Expected: all commands PASS.
 
-- [ ] **Step 7: Rebuild generated Agent Contract and commit dogfooding**
+- [x] **Step 7: Rebuild generated Agent Contract and commit dogfooding**
 
 ```bash
 corepack pnpm build
@@ -1669,7 +1669,7 @@ git commit -m "docs(ai): dogfood model-free quality gates"
 - Consumes: all behavior and documentation from Tasks 1 through 5.
 - Produces: full repository proof, byte-stable evaluation output, clean Git state, and a final implementation commit when verification required a scoped correction.
 
-- [ ] **Step 1: Run focused feature gates**
+- [x] **Step 1: Run focused feature gates**
 
 ```bash
 corepack pnpm test tests/theme/search.test.ts tests/ai/eval.test.ts tests/ai/audit.test.ts tests/ai/workspace.test.ts tests/ai/mcp-read.test.ts tests/ai/agent-scenarios.test.ts tests/cli.test.ts tests/ai/cli-contract.test.ts tests/ai/documentation.test.ts tests/website.test.ts
@@ -1677,7 +1677,7 @@ corepack pnpm test tests/theme/search.test.ts tests/ai/eval.test.ts tests/ai/aud
 
 Expected: all focused tests PASS.
 
-- [ ] **Step 2: Run static and full repository gates**
+- [x] **Step 2: Run static and full repository gates**
 
 ```bash
 corepack pnpm format:check
@@ -1691,7 +1691,7 @@ corepack pnpm pack --dry-run
 
 Expected: every command exits `0`.
 
-- [ ] **Step 3: Prove official site build, audit, and evaluation**
+- [x] **Step 3: Prove official site build, audit, and evaluation**
 
 ```bash
 corepack pnpm site:build
@@ -1706,7 +1706,7 @@ Expected:
 - Human evaluation reports `4/4 passed`.
 - JSON evaluation reports `"ok": true` and `"failed": 0`.
 
-- [ ] **Step 4: Prove byte-identical evaluator output without model credentials**
+- [x] **Step 4: Prove byte-identical evaluator output without model credentials**
 
 ```bash
 diff \
@@ -1716,7 +1716,7 @@ diff \
 
 Expected: `diff` exits `0` with no output.
 
-- [ ] **Step 5: Verify read-only behavior and intended Git state**
+- [x] **Step 5: Verify read-only behavior and intended Git state**
 
 ```bash
 git status --short --branch
@@ -1726,7 +1726,7 @@ git log --oneline --decorate -8
 
 Expected: no unstaged or untracked files; `main` is ahead of `origin/main` only by the approved design, translation, plan, and implementation commits.
 
-- [ ] **Step 6: Commit a scoped verification correction only when needed**
+- [x] **Step 6: Commit a scoped verification correction only when needed**
 
 When Step 1 through Step 5 required a correction, stage only affected files already listed in this plan and run:
 
