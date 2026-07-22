@@ -316,7 +316,10 @@ export function querySearchIndex(
   options: SearchOptions = {},
 ): SearchResult[] {
   return queryRankedSearchIndex(serialized, query, options).map(
-    ({ score: _score, ...result }) => result,
+    ({ score, ...result }) => {
+      void score
+      return result
+    },
   )
 }
 
