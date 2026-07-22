@@ -306,9 +306,12 @@ describe('0.2.0 product documentation', () => {
     }
   })
 
-  it('records the dated 0.3.x and 0.2.x documentation checkpoints', async () => {
+  it('records the dated 0.4.x, 0.3.x, and 0.2.x documentation checkpoints', async () => {
     const changelog = await source('CHANGELOG.md')
 
+    expect(changelog).toContain('## [0.4.0] - 2026-07-22')
+    expect(changelog).toContain('silen ai eval')
+    expect(changelog).toContain('model-free retrieval quality gate')
     expect(changelog).toContain('## [0.3.1] - 2026-07-20')
     expect(changelog).toContain('persistent semantic sections')
     expect(changelog).toContain('## [0.3.0] - 2026-07-20')

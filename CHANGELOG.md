@@ -7,6 +7,33 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-22
+
+### Added
+
+- Added `silen ai eval`, a deterministic model-free retrieval quality gate that
+  validates committed questions against the production search index, supports
+  expected routes and optional headings within Top K, and provides stable human
+  and `--json` output with `0`/`1`/`2` exit semantics.
+- Added a four-case bilingual evaluation suite for the official website and
+  documented the complete `build` → `ai audit` → `ai eval` workflow.
+
+### Changed
+
+- Exposed rounded ranked-search diagnostics internally while preserving the
+  existing score-free public search result contract.
+- Treat the optional `.silen/ai/index.json` workspace snapshot as a notice when
+  missing or stale because MCP search continues to use its in-memory index.
+
+### Fixed
+
+- Made AI workspace audits deployment-base-aware through the built Agent
+  Contract manifest, with a trusted direct-CLI config fallback that MCP
+  preflight never executes.
+- Accept existing generated Agent Contract artifacts as valid internal link
+  targets and reject unsafe or oversized evaluation inputs without executing
+  project configuration, calling a model, using the network, or writing files.
+
 ## [0.3.1] - 2026-07-20
 
 ### Changed
@@ -191,7 +218,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Published Silen under the `@aicode-nexus` organization scope.
 
-[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.3.1...HEAD
+[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/AICode-Nexus/silen/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/AICode-Nexus/silen/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/AICode-Nexus/silen/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/AICode-Nexus/silen/compare/v0.2.0...v0.2.1

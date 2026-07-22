@@ -262,6 +262,6 @@ describe('Silen Agent Contract v1', () => {
       version: string
     }
     expect(SILEN_VERSION).toBe(packageJson.version)
-    expect(SILEN_VERSION).toBe('0.3.1')
+    expect(SILEN_VERSION).toBe('0.4.0')
   })
 })

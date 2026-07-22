@@ -33,6 +33,18 @@ pnpm silen preview docs
 `init` adds `.silen/config.ts` and `index.mdx` without overwriting existing
 files. Production output defaults to `docs/.silen/dist`.
 
+For a deterministic AI-readiness gate that needs no model, API key, endpoint,
+embeddings service, or network, commit `.silen/ai-evals.json` and run:
+
+```sh
+pnpm silen build docs
+pnpm silen ai audit docs
+pnpm silen ai eval docs
+```
+
+`ai eval --json` provides stable CI output. Exit codes `0`, `1`, and `2` mean
+pass, retrieval failure, and setup failure.
+
 ## Minimal configuration
 
 ```ts
