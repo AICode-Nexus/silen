@@ -1,6 +1,7 @@
 import { readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { runAiEvaluation } from '../src/ai/eval'
 import { build, type BuildResult } from '../src/node/build'
 
 let result: BuildResult
@@ -276,5 +277,19 @@ describe('example website homepage', () => {
     ].join('\n')
     expect(publicContract).not.toContain(process.cwd())
     expect(publicContract).not.toContain(path.resolve('website'))
+  })
+
+  it('dogfoods the deterministic bilingual AI evaluation suite', async () => {
+    const suite = JSON.parse(
+      await readFile(path.resolve('website/.silen/ai-evals.json'), 'utf8'),
+    ) as { cases: Array<{ lang?: string }> }
+    expect(suite.cases.filter(({ lang }) => lang === 'en-US')).toHaveLength(2)
+    expect(suite.cases.filter(({ lang }) => lang === 'zh-CN')).toHaveLength(2)
+    await expect(
+      runAiEvaluation(path.resolve('website')),
+    ).resolves.toMatchObject({
+      ok: true,
+      summary: { total: 4, passed: 4, failed: 0 },
+    })
   })
 })

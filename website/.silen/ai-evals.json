@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "topK": 5,
+  "cases": [
+    {
+      "id": "en-public-ai-artifacts",
+      "query": "AI artifacts",
+      "lang": "en-US",
+      "expected": {
+        "route": "/ai/",
+        "heading": "Public AI artifacts"
+      }
+    },
+    {
+      "id": "en-model-free-workspace",
+      "query": "deterministic model-free workspace",
+      "lang": "en-US",
+      "expected": {
+        "route": "/ai/local-workspace-mcp/"
+      }
+    },
+    {
+      "id": "zh-public-ai-artifacts",
+      "query": "面向 AI 的公开产物",
+      "lang": "zh-CN",
+      "expected": {
+        "route": "/zh/ai/",
+        "heading": "面向 AI 的公开产物"
+      }
+    },
+    {
+      "id": "zh-model-free-workspace",
+      "query": "确定性 无模型 工作区",
+      "lang": "zh-CN",
+      "expected": {
+        "route": "/zh/ai/local-workspace-mcp/"
+      }
+    }
+  ]
+}

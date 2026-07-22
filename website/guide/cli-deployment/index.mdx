@@ -29,11 +29,14 @@ AI workspace commands are separate:
 pnpm silen ai init docs
 pnpm silen ai index docs
 pnpm silen ai audit docs
+pnpm silen ai eval docs
 pnpm silen mcp docs
 ```
 
 The MCP command is read-only unless a trusted user explicitly starts it with
-`--allow-write`.
+`--allow-write`. The model-free `ai eval` command reads
+`.silen/ai-evals.json` and `.silen/dist/search-index.json`; use `--json` for CI.
+It needs no model, API key, endpoint, embeddings service, or network.
 
 ## Static deployment
 
@@ -55,9 +58,23 @@ URLs remain base-relative.
 
 ## Release check
 
-Before uploading, run the production build, preview a nested route directly,
-open a missing route, and inspect `llms.txt` plus
+Before uploading, run the deterministic quality chain:
+
+```sh
+pnpm silen build docs
+pnpm silen ai audit docs
+pnpm silen ai eval docs
+```
+
+Exit codes `0`, `1`, and `2` from `ai eval` mean pass, retrieval failure, and
+setup failure. The optional `.silen/ai/index.json` workspace snapshot can be
+missing or stale without blocking audit; MCP search remains in memory.
+
+Then preview a nested route directly, open a missing route, and inspect `llms.txt` plus
 `.well-known/silen/manifest.json`. A successful build proves files were
 generated; those direct checks prove the host serves them at the expected base.
+
+Ask AI remains endpoint-only. If no endpoint is configured, its control and
+bundle are absent.
 
 Use [Reference](/silen/reference/) for command syntax and troubleshooting.

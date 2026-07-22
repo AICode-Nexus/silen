@@ -49,9 +49,15 @@ describe('AI Alpha documentation contract', () => {
       expect(contract).toContain(value)
     }
 
-    for (const command of ['ai init', 'ai index', 'ai audit']) {
+    for (const command of ['ai init', 'ai index', 'ai audit', 'ai eval']) {
       expect(workspace).toContain(command)
     }
+    for (const documentation of [artifacts, workspace]) {
+      expect(documentation).toMatch(/without (?:an AI )?model|no model/i)
+    }
+    expect(workspace).toContain('.silen/ai-evals.json')
+    expect(workspace).toContain('search-index.json')
+    expect(workspace).toMatch(/optional.*\.silen\/ai\/index\.json/is)
     expect(integrations).toContain('NDJSON')
     expect(integrations).toContain('provider keys')
     expect(integrations).toMatch(/no endpoint.*no Ask AI.*bundle/is)

@@ -5,7 +5,7 @@ description: 为本地 AI 客户端索引、审计并暴露有边界的文档工
 
 # 本地工作区与 MCP
 
-本地 AI 工作区是确定性、无模型的能力层：它为工具提供有边界的 Markdown 根目录、可检查索引与显式写权限，不暴露任意 shell 执行。
+本地 AI 工作区是确定性、无模型的能力层：它为工具提供有边界的 Markdown 根目录、可检查索引与显式写权限，不暴露任意 shell 执行。整个流程不需要模型、API key、端点、向量服务或网络。
 
 ## 初始化、索引与审计
 
@@ -13,9 +13,20 @@ description: 为本地 AI 客户端索引、审计并暴露有边界的文档工
 pnpm silen ai init docs
 pnpm silen ai index docs
 pnpm silen ai audit docs
+pnpm silen ai eval docs
 ```
 
-`ai init` 创建 `wiki/` 与被忽略的 `.silen/ai/` 缓存，不修改已有 MDX；`ai index` 重建本地搜索索引；`ai audit` 检查链接、引用、生成产物与索引新鲜度，发现问题时返回非零状态。
+`ai init` 创建 `wiki/` 与被忽略的 `.silen/ai/` 缓存，不修改已有 MDX；`ai index` 重建可选的 `.silen/ai/index.json` 工作区快照；`ai audit` 检查链接、引用、生成产物与生产契约。快照缺失或过期只会成为提示，因为 MCP 搜索使用内存索引。
+
+## 构建、审计与评测
+
+```sh
+pnpm silen build docs
+pnpm silen ai audit docs
+pnpm silen ai eval docs
+```
+
+`ai eval` 读取 `.silen/ai-evals.json` 与生产构建的 `.silen/dist/search-index.json`，检查每个问题能否在 Top K 内命中预期路由和可选标题。退出码 `0`、`1`、`2` 分别表示通过、检索失败、初始化或配置失败；CI 使用 `--json`。
 
 ## 连接 MCP 客户端
 
@@ -43,5 +54,7 @@ pnpm silen mcp docs --allow-write
 显式参数会增加 `write`、`link`、`append`。写入只接受工作区相对 `.md`/`.mdx` 路径，拒绝目录穿越和逃逸符号链接，使用原子替换，并限制为 2 MiB UTF-8；它不会增加 shell 工具。
 
 只在边界明确的任务中授权可信本地客户端。修改后运行 audit 与站点构建，检查 Git diff，并在提交或部署前另行取得授权。
+
+Ask AI 是独立能力，必须显式配置端点；没有端点时，Silen 不会输出控件及其 bundle。
 
 客户端发现规则见 [Agent Contract](/silen/zh/ai/agent-contract/)。

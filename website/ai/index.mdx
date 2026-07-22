@@ -7,7 +7,8 @@ description: Deterministic artifacts and a permission-gated local MCP workspace.
 
 Silen treats AI access as part of the documentation build instead of an
 afterthought. The default output is deterministic, inspectable, and does not
-call a model.
+call a model. No model, API key, endpoint, embeddings service, or network is
+required for the core AI-ready documentation workflow.
 
 ## Agent Contract
 
@@ -72,6 +73,7 @@ build artifacts, so it stays aligned with the rendered page.
 pnpm silen ai init docs
 pnpm silen ai index docs
 pnpm silen ai audit docs
+pnpm silen ai eval docs
 pnpm silen mcp docs
 ```
 
@@ -79,10 +81,30 @@ The MCP server is read-only by default. Write tools appear only when it is
 started explicitly with `--allow-write`, and all writes remain inside the
 Markdown workspace.
 
+## Model-free quality gate
+
+Use the production search index itself as a deterministic retrieval contract:
+
+```sh
+pnpm silen build docs
+pnpm silen ai audit docs
+pnpm silen ai eval docs
+```
+
+`ai eval` reads the committed `.silen/ai-evals.json` suite and the built
+`.silen/dist/search-index.json`; it never calls a model or the network. Exit
+codes `0`, `1`, and `2` mean pass, retrieval failure, and setup failure.
+Add `--json` for stable CI output.
+
+The rebuildable `.silen/ai/index.json` workspace snapshot is optional. A
+missing or stale snapshot appears as an audit notice while MCP search continues
+to run from its in-memory index.
+
 ## Ask AI
 
 Ask AI is an optional endpoint integration. Silen never places provider keys in
 the generated site: your server owns authentication and streams a small NDJSON
-protocol back to the theme.
+protocol back to the theme. With no explicitly configured endpoint, the Ask AI
+control and its bundle remain absent.
 
 Return to the [getting started guide](/silen/guide/).
