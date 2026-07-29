@@ -5,7 +5,7 @@
   [`@aicode-nexus/silen` 0.4.0](../CHANGELOG.md#040---2026-07-22) at
   [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0)
   ([commit `01b95b4`](https://github.com/AICode-Nexus/silen/commit/01b95b4))
-- Default next item: `QUAL-003`
+- Default next item: `QUAL-003` (Active)
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -81,10 +81,6 @@ items remain planning inputs, not release commitments.
 
 ## Active
 
-No map-selected item is active. `QUAL-003` is the first eligible Ready item.
-
-## Ready
-
 ### QUAL-003 — Release-enforced AI readiness gate
 
 - Outcome: One provider-free official-site gate blocks regressions in Core CI,
@@ -114,9 +110,15 @@ No map-selected item is active. `QUAL-003` is the first eligible Ready item.
   [Pages workflow](../.github/workflows/pages.yml),
   [Core CI workflow](../.github/workflows/ci.yml),
   [Publish workflow](../.github/workflows/publish.yml),
+  [release-enforced gate design](./superpowers/specs/2026-07-29-silen-release-enforced-ai-readiness-gate-design.md),
+  [implementation plan](./superpowers/plans/2026-07-29-silen-release-enforced-ai-readiness-gate.md),
   [site-gate design](./superpowers/specs/2026-07-29-silen-deterministic-site-gate-design.md),
   and
   [rank-expectations design](./superpowers/specs/2026-07-29-silen-retrieval-rank-expectations-design.md).
+
+## Ready
+
+No item is ready for default implementation while `QUAL-003` is Active.
 
 ## Candidate
 
