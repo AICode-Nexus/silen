@@ -62,21 +62,28 @@ URLs remain base-relative.
 
 ## Release check
 
-Before uploading, run the deterministic quality chain:
+Repository maintainers run one canonical command:
 
 ```sh
-pnpm silen build docs
-pnpm silen ai audit docs
-pnpm silen ai eval docs
+pnpm site:ai-check
 ```
 
-Exit codes `0`, `1`, and `2` from `ai eval` mean pass, retrieval failure, and
-setup failure. The optional `.silen/ai/index.json` workspace snapshot can be
-missing or stale without blocking audit; MCP search remains in memory.
+It executes `site:build` -> `ai audit` -> `ai eval` -> `check:no-maps` once and
+in order. `pnpm site:check` is a compatibility alias. Core CI, GitHub Pages,
+and npm release all use the canonical command; an audit or evaluation failure
+blocks deployment or publication.
 
-Then preview a nested route directly, open a missing route, and inspect `llms.txt` plus
-`.well-known/silen/manifest.json`. A successful build proves files were
-generated; those direct checks prove the host serves them at the expected base.
+The official `.silen/ai-evals.json` uses `"schemaVersion": 3`, explicit
+`maxRank`, and present `acceptable` and `forbidden` target arrays. Reports keep
+the diagnostic `topK`, stable `matchedRank`, and forbidden evidence. Each
+workflow uploads `artifacts/ai-eval/site-ai-eval.json` with an always condition
+when the evaluator produced valid JSON, including retrieval failures or a
+later source-map failure.
+
+Then preview a nested route directly, open a missing route, and inspect
+`llms.txt` plus `.well-known/silen/manifest.json`. A successful build proves
+files were generated; those direct checks prove the host serves them at the
+expected base.
 
 Ask AI remains endpoint-only. If no endpoint is configured, its control and
 bundle are absent.

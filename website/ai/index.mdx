@@ -94,12 +94,43 @@ pnpm silen ai eval docs
 `ai eval` reads the committed `.silen/ai-evals.json` suite and the built
 `.silen/dist/search-index.json`; it never calls a model or the network. Exit
 codes `0`, `1`, and `2` mean pass, retrieval failure, and setup failure.
-Add `--json` for stable CI output.
 
-Existing `"schemaVersion": 1` suites keep their original whole-`topK`
-behavior. Version 2 can set `expected.maxRank` per case; it defaults to `topK`
-when omitted. Version 2 JSON reports expose the effective `maxRank` and
-`matchedRank`, while the complete Top K remains diagnostic evidence.
+Version 1 keeps whole-`topK` matching. Version 2 adds optional
+`expected.maxRank` and reports its effective value plus `matchedRank`. Strict
+`"schemaVersion": 3` requires both target arrays and an explicit rank bound:
+
+```json
+{
+  "schemaVersion": 3,
+  "topK": 5,
+  "cases": [
+    {
+      "id": "install-quick-start",
+      "query": "How do I install and start a site?",
+      "expected": {
+        "acceptable": [
+          { "route": "/guide/", "heading": "Quick start" },
+          { "route": "/guide/cli-deployment/" }
+        ],
+        "forbidden": [{ "route": "/draft-notes/" }],
+        "maxRank": 1
+      }
+    }
+  ]
+}
+```
+
+`acceptable` and `forbidden` are both present arrays with zero to 20 targets;
+at least one must be non-empty. At least one acceptable target must appear at
+or before `maxRank`, and every forbidden target must stay out of the diagnostic
+Top K. A negative-only case uses `acceptable: []` and `maxRank: topK`. Unknown
+fields, overlapping targets, an empty combined target set, and invalid bounds
+are setup errors. Version 3 keeps authored case order and exposes `matchedRank`
+plus `forbiddenMatches`; v1 and v2 JSON and human output remain compatible.
+
+For this repository, `pnpm site:ai-check` runs build, audit, evaluation, and
+source-map checks once. It saves the exact JSON report to
+`artifacts/ai-eval/site-ai-eval.json` for CI, Pages, and release comparison.
 
 The rebuildable `.silen/ai/index.json` workspace snapshot is optional. A
 missing or stale snapshot appears as an audit notice while MCP search continues

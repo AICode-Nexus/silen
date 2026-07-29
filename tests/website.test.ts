@@ -47,9 +47,9 @@ describe('example website homepage', () => {
     ])
 
     for (const html of [english, chinese]) {
-      expect(html.match(/<table>/g)).toHaveLength(2)
-      expect(html.match(/<thead>/g)).toHaveLength(2)
-      expect(html.match(/<tbody>/g)).toHaveLength(2)
+      expect(html.match(/<table>/g)).toHaveLength(3)
+      expect(html.match(/<thead>/g)).toHaveLength(3)
+      expect(html.match(/<tbody>/g)).toHaveLength(3)
       expect(html).not.toMatch(/<p>\|[^<]+-{3,}/)
     }
   })

@@ -90,9 +90,14 @@ The [project map](./docs/project-map.md) is the canonical view of Silen's
 current baseline, executable next work, candidate directions, and watched
 ecosystem signals.
 
-For official-site changes, run `pnpm site:check`. It builds the package and
-site, audits the AI artifacts, evaluates production retrieval, and rejects
-source maps before deployment.
+For official-site changes, run `pnpm site:ai-check`. It runs `site:build`,
+`ai audit`, `ai eval`, and `check:no-maps` in order, then saves the evaluator's
+exact JSON as `artifacts/ai-eval/site-ai-eval.json`. The ignored local report
+is uploaded by Core CI, GitHub Pages, and npm release for ranking-drift review.
+`pnpm site:check` remains a compatibility alias for the same gate.
+
+The gate is deterministic, model-free, credential-free, and read-only with
+respect to source content.
 
 Focused bug reports and pull requests are welcome. Open an
 [issue](https://github.com/AICode-Nexus/silen/issues) to describe observable

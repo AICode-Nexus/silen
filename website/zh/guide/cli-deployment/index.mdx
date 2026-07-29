@@ -51,18 +51,26 @@ export default defineConfig({
 
 ## 上线前检查
 
-先运行确定性的质量链路：
+仓库维护者只运行一个规范命令：
 
 ```sh
-pnpm silen build docs
-pnpm silen ai audit docs
-pnpm silen ai eval docs
+pnpm site:ai-check
 ```
 
-`ai eval` 的退出码 `0`、`1`、`2` 分别表示通过、检索失败、初始化或配置失败。
-可选的 `.silen/ai/index.json` 工作区快照缺失或过期不会阻断 audit；MCP 搜索仍在内存中完成。
+它依次且只执行一次 `site:build` -> `ai audit` -> `ai eval` ->
+`check:no-maps`；`pnpm site:check` 只是兼容别名。Core CI、GitHub Pages 与
+npm 发布都使用规范命令，audit 或评测失败会阻断部署和发布。
 
-再预览一个嵌套路由、一个不存在的路由，并打开 `llms.txt` 与 `.well-known/silen/manifest.json`。构建成功只证明文件已生成；直接访问才能证明托管平台按预期 base 提供了它们。
+正式 `.silen/ai-evals.json` 使用 `"schemaVersion": 3`、显式
+`maxRank`，以及必需的 `acceptable` 和 `forbidden` 目标数组。报告保留诊断
+`topK`、稳定的 `matchedRank` 与禁止命中证据。只要评测器产出了有效 JSON，
+每条工作流都会用 always 条件上传
+`artifacts/ai-eval/site-ai-eval.json`，包括检索失败或后续 source map
+检查失败的情况。
+
+随后直接预览一个嵌套路由和一个不存在的路由，并检查 `llms.txt` 与
+`.well-known/silen/manifest.json`。构建成功只证明文件已生成；直接访问才能
+证明托管平台按预期 base 提供了它们。
 
 Ask AI 仍然只通过端点接入；未配置端点时，不会出现控件或对应 bundle。
 

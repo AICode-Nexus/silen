@@ -34,12 +34,22 @@ pnpm silen ai eval docs
 ```
 
 `ai eval` reads `.silen/ai-evals.json` and the production
-`.silen/dist/search-index.json`. A `"schemaVersion": 1` suite passes when the
-expected route and optional heading appear anywhere within `topK`. Version 2
-can add `expected.maxRank` for a stricter per-case bound; it defaults to
-`topK`. Its JSON report includes effective `maxRank`, `matchedRank`, and the
-complete diagnostic Top K. Exit codes `0`, `1`, and `2` mean pass, retrieval
-failure, and setup failure; use `--json` in CI.
+`.silen/dist/search-index.json`; it neither starts MCP nor calls a model or the
+network. Version 1 uses one route and optional heading within `topK`. Version 2
+adds optional `expected.maxRank`. Strict `"schemaVersion": 3` requires present
+`acceptable` and `forbidden` arrays, at least one target between them, and an
+explicit `maxRank` from 1 through `topK`. Negative-only cases use
+`acceptable: []` and `maxRank: topK`.
+
+Version 3 reports `matchedRank: null` when no acceptable target appears and
+lists prohibited hits in `forbiddenMatches`. Exit `0` means every case passed,
+exit `1` means a retrieval expectation failed, and exit `2` means the suite or
+input is invalid. The full diagnostic Top K remains in stable case order.
+
+For the Silen repository, `pnpm site:ai-check` composes the complete read-only
+gate and saves exact evaluation JSON at
+`artifacts/ai-eval/site-ai-eval.json`. The optional `.silen/ai/index.json`
+snapshot remains non-blocking and does not replace the production search index.
 
 ## Connect an MCP client
 

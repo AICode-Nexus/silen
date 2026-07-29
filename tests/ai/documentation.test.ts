@@ -17,11 +17,34 @@ describe('AI Alpha documentation contract', () => {
     )
 
     for (const document of documents) {
-      expect(document).toContain('.silen/ai-evals.json')
-      expect(document).toContain('schemaVersion')
-      expect(document).toContain('maxRank')
-      expect(document).toContain('topK')
-      expect(document).toContain('matchedRank')
+      for (const value of [
+        '.silen/ai-evals.json',
+        'schemaVersion',
+        'acceptable',
+        'forbidden',
+        'maxRank',
+        'topK',
+        'matchedRank',
+      ]) {
+        expect(document).toContain(value)
+      }
+    }
+  })
+
+  it('documents the canonical release gate and stable report', async () => {
+    const documents = await Promise.all(
+      [
+        'README.md',
+        'website/ai/index.mdx',
+        'website/zh/ai/index.mdx',
+        'website/guide/cli-deployment/index.mdx',
+        'website/zh/guide/cli-deployment/index.mdx',
+      ].map((file) => readFile(file, 'utf8')),
+    )
+
+    for (const document of documents) {
+      expect(document).toContain('site:ai-check')
+      expect(document).toContain('artifacts/ai-eval/site-ai-eval.json')
     }
   })
 

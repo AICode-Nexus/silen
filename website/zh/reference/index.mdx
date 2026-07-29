@@ -38,10 +38,26 @@ description: Silen 配置默认值、CLI 语法与排错。
 
 ## AI 评测套件
 
-`.silen/ai-evals.json` 是严格 JSON。套件 `"schemaVersion": 1` 在 `topK`
-内匹配每个预期；版本 2 增加可选 `expected.maxRank`，省略时默认等于
-`topK`，且不能大于它。版本 2 JSON 报告包含生效的 `maxRank`、
-`matchedRank` 与完整诊断 Top K。评测仍然只读且不依赖模型。
+`.silen/ai-evals.json` 是严格 JSON。版本 1 在 `topK` 内匹配单一路由与可选
+标题；版本 2 增加可选的 `expected.maxRank`。版本 3 使用以下严格结构：
+
+| 字段                  | 要求                                          |
+| --------------------- | --------------------------------------------- |
+| `schemaVersion`       | 精确整数 `3`                                  |
+| `topK`                | 整数 `1..20`                                  |
+| `cases`               | 1 到 500 个有序案例                           |
+| `expected.acceptable` | 必需数组，包含 0 到 20 个不重复目标           |
+| `expected.forbidden`  | 必需数组，包含 0 到 20 个不重复目标           |
+| `expected.maxRank`    | 必需整数 `1..topK`；纯负例必须精确等于 `topK` |
+| 目标                  | 严格 `{ route, heading? }`；route 以 `/` 开头 |
+
+两个目标数组至少有一个非空。规范化后的重复、数组内部重叠、`acceptable` 与
+`forbidden` 之间的重叠，以及未知字段都无效。版本 3 报告保留有序 `cases`、
+`matchedRank`、`forbiddenMatches` 与完整诊断 Top K；v1/v2 行为保持兼容。
+评测仍然只读且不依赖模型。
+
+仓库维护者运行 `pnpm site:ai-check`；其精确稳定报告位于
+`artifacts/ai-eval/site-ai-eval.json`。
 
 ## 排错
 

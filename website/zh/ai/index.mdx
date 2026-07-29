@@ -85,11 +85,43 @@ pnpm silen ai eval docs
 
 `ai eval` 只读取已提交的 `.silen/ai-evals.json` 与构建生成的
 `.silen/dist/search-index.json`，不会调用模型或网络。退出码 `0`、`1`、`2`
-分别表示通过、检索失败、初始化或配置失败；CI 使用 `--json` 获取稳定输出。
+分别表示通过、检索失败、初始化或配置失败。
 
-已有 `"schemaVersion": 1` 套件保持原有的完整 `topK` 判定。版本 2 可为每个
-案例设置 `expected.maxRank`，省略时默认等于 `topK`。版本 2 JSON 报告输出
-生效的 `maxRank` 与 `matchedRank`，同时保留完整 Top K 作为诊断证据。
+版本 1 保持完整 `topK` 匹配；版本 2 增加可选的 `expected.maxRank`，并报告
+生效值与 `matchedRank`。严格的 `"schemaVersion": 3` 要求两个目标数组与显式
+排名边界：
+
+```json
+{
+  "schemaVersion": 3,
+  "topK": 5,
+  "cases": [
+    {
+      "id": "install-quick-start",
+      "query": "如何安装并启动站点？",
+      "expected": {
+        "acceptable": [
+          { "route": "/zh/guide/", "heading": "快速开始" },
+          { "route": "/zh/guide/cli-deployment/" }
+        ],
+        "forbidden": [{ "route": "/zh/draft-notes/" }],
+        "maxRank": 1
+      }
+    }
+  ]
+}
+```
+
+`acceptable` 与 `forbidden` 都必须出现，每个数组可包含零到 20 个目标，但两者
+不能同时为空。至少一个可接受目标必须在 `maxRank` 以内出现，所有禁止目标都不能
+进入诊断 Top K。纯负例使用 `acceptable: []` 与 `maxRank: topK`。未知字段、
+重叠目标、空目标集合和非法边界都会成为初始化错误。版本 3 保持案例编写顺序，
+并输出 `matchedRank` 与 `forbiddenMatches`；v1/v2 的 JSON 与人类可读输出保持
+兼容。
+
+本仓库使用 `pnpm site:ai-check` 一次完成构建、审计、评测和 source map 检查，
+并把评测器的原始 JSON 保存到
+`artifacts/ai-eval/site-ai-eval.json`，供 CI、Pages 与发布流程比较。
 
 可重建的 `.silen/ai/index.json` 只是可选工作区快照。缺失或过期只会成为 audit
 提示，MCP 搜索仍使用内存索引。

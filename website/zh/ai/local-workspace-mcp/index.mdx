@@ -27,11 +27,20 @@ pnpm silen ai eval docs
 ```
 
 `ai eval` 读取 `.silen/ai-evals.json` 与生产构建的
-`.silen/dist/search-index.json`。`"schemaVersion": 1` 套件在 `topK` 内命中
-预期路由和可选标题即可通过；版本 2 可增加 `expected.maxRank` 作为更严格的
-逐案例边界，省略时默认等于 `topK`。其 JSON 报告包含生效的 `maxRank`、
-`matchedRank` 与完整诊断 Top K。退出码 `0`、`1`、`2` 分别表示通过、检索
-失败、初始化或配置失败；CI 使用 `--json`。
+`.silen/dist/search-index.json`；它不会启动 MCP，也不会调用模型或网络。版本 1
+在 `topK` 内使用单一路由与可选标题；版本 2 增加可选的
+`expected.maxRank`。严格的 `"schemaVersion": 3` 要求同时提供
+`acceptable` 与 `forbidden` 数组、两者至少包含一个目标，并显式设置 1 到
+`topK` 之间的 `maxRank`。纯负例使用 `acceptable: []` 与
+`maxRank: topK`。
+
+版本 3 在没有可接受目标时报告 `matchedRank: null`，并把禁止命中列入
+`forbiddenMatches`。退出码 `0` 表示全部通过，`1` 表示检索预期失败，`2`
+表示套件或输入无效；完整诊断 Top K 保持稳定的案例顺序。
+
+Silen 仓库使用 `pnpm site:ai-check` 组合完整只读门禁，并把评测原始 JSON
+保存到 `artifacts/ai-eval/site-ai-eval.json`。可选的
+`.silen/ai/index.json` 快照仍是非阻断能力，不会替代生产搜索索引。
 
 ## 连接 MCP 客户端
 

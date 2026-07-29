@@ -41,11 +41,28 @@ credentials, path, query, or fragment.
 
 ## AI evaluation suites
 
-`.silen/ai-evals.json` is strict JSON. Suite `"schemaVersion": 1` matches each
-expectation anywhere within `topK`. Version 2 adds optional
-`expected.maxRank`; it defaults to `topK` and must not exceed it. Version 2
-JSON reports include effective `maxRank`, `matchedRank`, and the complete
-diagnostic Top K. Evaluation remains read-only and model-free.
+`.silen/ai-evals.json` is strict JSON. Version 1 matches one route and optional
+heading within `topK`; version 2 adds optional `expected.maxRank`. Version 3
+uses this strict shape:
+
+| Field                 | Requirement                                                      |
+| --------------------- | ---------------------------------------------------------------- |
+| `schemaVersion`       | Exact integer `3`                                                |
+| `topK`                | Integer `1..20`                                                  |
+| `cases`               | One to 500 ordered cases                                         |
+| `expected.acceptable` | Required array of zero to 20 unique targets                      |
+| `expected.forbidden`  | Required array of zero to 20 unique targets                      |
+| `expected.maxRank`    | Required integer `1..topK`; exact `topK` for negative-only cases |
+| Target                | Strict `{ route, heading? }`; route starts with `/`              |
+
+At least one target array must be non-empty. Normalized duplicates, overlap
+within an array, overlap between `acceptable` and `forbidden`, and unknown
+fields are invalid. Version 3 reports preserve ordered `cases`, `matchedRank`,
+`forbiddenMatches`, and full diagnostic Top K; v1/v2 behavior remains
+compatible. Evaluation is read-only and model-free.
+
+Repository maintainers run `pnpm site:ai-check`; its exact stable report is
+`artifacts/ai-eval/site-ai-eval.json`.
 
 ## Troubleshooting
 
