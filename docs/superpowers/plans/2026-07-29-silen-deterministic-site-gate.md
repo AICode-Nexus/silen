@@ -115,7 +115,7 @@ Use `apply_patch` with this exact diff:
 *** Update File: docs/project-map.md
 @@
  ## Active
- 
+
 -No map-selected item is active. With no special user scope, promote and begin
 -`QUAL-002`.
 +### QUAL-002 — Unify the official deterministic site gate
@@ -136,11 +136,11 @@ Use `apply_patch` with this exact diff:
 +  [package scripts](../package.json),
 +  [Pages workflow](../.github/workflows/pages.yml), and
 +  [`0.4.0` quality-loop design](./superpowers/specs/2026-07-22-silen-model-free-ai-quality-loop-design.md).
- 
+
  ## Ready
- 
+
  Items are ordered. Start the first item whose dependencies remain satisfied.
- 
+
 -### QUAL-002 — Unify the official deterministic site gate
 -
 -- Outcome: One documented repository command builds the package and official
@@ -353,7 +353,7 @@ Use `apply_patch`:
 -        run: pnpm check:no-maps dist website/.silen/dist
 +      - name: Build and validate Silen website
 +        run: pnpm site:check
- 
+
        - name: Assert public Agent Contract is present
 *** End Patch
 ```
@@ -369,7 +369,7 @@ Use `apply_patch`:
  The [project map](./docs/project-map.md) is the canonical view of Silen's
  current baseline, executable next work, candidate directions, and watched
  ecosystem signals.
- 
+
 +For official-site changes, run `pnpm site:check`. It builds the package and
 +site, audits the AI artifacts, evaluates production retrieval, and rejects
 +source maps before deployment.
@@ -515,7 +515,7 @@ Use `apply_patch` with this exact diff:
 +- Default next item: `AI-004`
 @@
  ## Active
- 
+
 -### QUAL-002 — Unify the official deterministic site gate
 -
 -- Outcome: One documented repository command builds the package and official
