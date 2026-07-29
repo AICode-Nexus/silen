@@ -26,7 +26,12 @@ pnpm silen ai audit docs
 pnpm silen ai eval docs
 ```
 
-`ai eval` 读取 `.silen/ai-evals.json` 与生产构建的 `.silen/dist/search-index.json`，检查每个问题能否在 Top K 内命中预期路由和可选标题。退出码 `0`、`1`、`2` 分别表示通过、检索失败、初始化或配置失败；CI 使用 `--json`。
+`ai eval` 读取 `.silen/ai-evals.json` 与生产构建的
+`.silen/dist/search-index.json`。`"schemaVersion": 1` 套件在 `topK` 内命中
+预期路由和可选标题即可通过；版本 2 可增加 `expected.maxRank` 作为更严格的
+逐案例边界，省略时默认等于 `topK`。其 JSON 报告包含生效的 `maxRank`、
+`matchedRank` 与完整诊断 Top K。退出码 `0`、`1`、`2` 分别表示通过、检索
+失败、初始化或配置失败；CI 使用 `--json`。
 
 ## 连接 MCP 客户端
 

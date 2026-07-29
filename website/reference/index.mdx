@@ -39,6 +39,14 @@ credentials, path, query, or fragment.
 | `silen ai <init\|index\|audit\|eval> [root]` | Manage and evaluate the local AI workspace    |
 | `silen mcp [root]`                           | Serve read-only MCP; optional `--allow-write` |
 
+## AI evaluation suites
+
+`.silen/ai-evals.json` is strict JSON. Suite `"schemaVersion": 1` matches each
+expectation anywhere within `topK`. Version 2 adds optional
+`expected.maxRank`; it defaults to `topK` and must not exceed it. Version 2
+JSON reports include effective `maxRank`, `matchedRank`, and the complete
+diagnostic Top K. Evaluation remains read-only and model-free.
+
 ## Troubleshooting
 
 **A link works locally but fails after deployment.** Confirm the host mount

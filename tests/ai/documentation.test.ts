@@ -2,6 +2,29 @@ import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
 describe('AI Alpha documentation contract', () => {
+  it('documents versioned rank expectations in every evaluator guide', async () => {
+    const documents = await Promise.all(
+      [
+        'website/ai/index.mdx',
+        'website/zh/ai/index.mdx',
+        'website/ai/local-workspace-mcp/index.mdx',
+        'website/zh/ai/local-workspace-mcp/index.mdx',
+        'website/guide/cli-deployment/index.mdx',
+        'website/zh/guide/cli-deployment/index.mdx',
+        'website/reference/index.mdx',
+        'website/zh/reference/index.mdx',
+      ].map((file) => readFile(file, 'utf8')),
+    )
+
+    for (const document of documents) {
+      expect(document).toContain('.silen/ai-evals.json')
+      expect(document).toContain('schemaVersion')
+      expect(document).toContain('maxRank')
+      expect(document).toContain('topK')
+      expect(document).toContain('matchedRank')
+    }
+  })
+
   it('documents artifacts, MCP permissions, AI commands, and endpoint-only Ask AI', async () => {
     const [artifacts, contract, workspace, integrations] = await Promise.all([
       readFile('website/ai/index.mdx', 'utf8'),

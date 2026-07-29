@@ -38,6 +38,10 @@ The MCP command is read-only unless a trusted user explicitly starts it with
 `.silen/ai-evals.json` and `.silen/dist/search-index.json`; use `--json` for CI.
 It needs no model, API key, endpoint, embeddings service, or network.
 
+Suite `"schemaVersion": 1` retains whole-`topK` matching. Version 2 supports
+case-specific `expected.maxRank`, defaulting to `topK`, and reports
+`matchedRank` while preserving the full diagnostic result list.
+
 ## Static deployment
 
 Publish the contents of `docs/.silen/dist` to any static host. Configure the

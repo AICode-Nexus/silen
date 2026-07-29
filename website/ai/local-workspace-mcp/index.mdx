@@ -34,9 +34,12 @@ pnpm silen ai eval docs
 ```
 
 `ai eval` reads `.silen/ai-evals.json` and the production
-`.silen/dist/search-index.json`. It checks whether each authored question finds
-the expected route and optional heading within Top K. Exit codes `0`, `1`, and
-`2` mean pass, retrieval failure, and setup failure; use `--json` in CI.
+`.silen/dist/search-index.json`. A `"schemaVersion": 1` suite passes when the
+expected route and optional heading appear anywhere within `topK`. Version 2
+can add `expected.maxRank` for a stricter per-case bound; it defaults to
+`topK`. Its JSON report includes effective `maxRank`, `matchedRank`, and the
+complete diagnostic Top K. Exit codes `0`, `1`, and `2` mean pass, retrieval
+failure, and setup failure; use `--json` in CI.
 
 ## Connect an MCP client
 

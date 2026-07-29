@@ -32,6 +32,10 @@ MCP 默认只读，只有可信用户显式加入 `--allow-write` 才会注册�
 `ai eval` 只读取 `.silen/ai-evals.json` 与 `.silen/dist/search-index.json`，
 CI 使用 `--json`；它不需要模型、API key、端点、向量服务或网络。
 
+套件 `"schemaVersion": 1` 保持完整 `topK` 匹配；版本 2 支持逐案例
+`expected.maxRank`，省略时默认等于 `topK`，并在保留完整诊断结果的同时
+报告 `matchedRank`。
+
 ## 静态部署
 
 把 `docs/.silen/dist` 的内容发布到任意静态托管，并让托管平台按生成结果提供 `index.html` 与资源。例如项目地址为 `https://example.github.io/handbook/`：

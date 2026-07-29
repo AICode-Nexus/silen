@@ -36,6 +36,13 @@ description: Silen 配置默认值、CLI 语法与排错。
 | `silen ai <init\|index\|audit\|eval> [root]` | 管理并评测本地 AI 工作区           |
 | `silen mcp [root]`                           | 启动只读 MCP，可选 `--allow-write` |
 
+## AI 评测套件
+
+`.silen/ai-evals.json` 是严格 JSON。套件 `"schemaVersion": 1` 在 `topK`
+内匹配每个预期；版本 2 增加可选 `expected.maxRank`，省略时默认等于
+`topK`，且不能大于它。版本 2 JSON 报告包含生效的 `maxRank`、
+`matchedRank` 与完整诊断 Top K。评测仍然只读且不依赖模型。
+
 ## 排错
 
 **本地链接正常，部署后失败。** 检查托管路径是否匹配 `base`、正文根相对链接是否包含挂载路径，以及托管是否按原样提供嵌套 `index.html`。

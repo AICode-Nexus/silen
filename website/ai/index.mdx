@@ -96,6 +96,11 @@ pnpm silen ai eval docs
 codes `0`, `1`, and `2` mean pass, retrieval failure, and setup failure.
 Add `--json` for stable CI output.
 
+Existing `"schemaVersion": 1` suites keep their original whole-`topK`
+behavior. Version 2 can set `expected.maxRank` per case; it defaults to `topK`
+when omitted. Version 2 JSON reports expose the effective `maxRank` and
+`matchedRank`, while the complete Top K remains diagnostic evidence.
+
 The rebuildable `.silen/ai/index.json` workspace snapshot is optional. A
 missing or stale snapshot appears as an audit notice while MCP search continues
 to run from its in-memory index.
