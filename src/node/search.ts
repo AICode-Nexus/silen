@@ -461,24 +461,29 @@ export function createPageSearchDocuments(
     readonly locales?: readonly ThemeLocaleItem[]
   } = { lang: 'en-US' },
 ): SearchDocument[] {
-  return pages.map((page) => {
-    const content = extractSearchContent(page.source)
-    const lang = resolveCurrentLocale(
-      options.locales,
-      page.route,
-      '/',
-      options.lang,
-    ).lang
-    return {
-      id: page.route,
-      lang,
-      title: page.title,
-      route: page.route,
-      ...(page.description ? { description: page.description } : {}),
-      headings: content.headings
-        .filter((heading) => heading.depth >= 2)
-        .map((heading) => heading.title),
-      text: content.text,
-    }
-  })
+  return pages
+    .filter(
+      (page) =>
+        page.frontmatter.draft !== true && page.frontmatter.ai !== false,
+    )
+    .map((page) => {
+      const content = extractSearchContent(page.source)
+      const lang = resolveCurrentLocale(
+        options.locales,
+        page.route,
+        '/',
+        options.lang,
+      ).lang
+      return {
+        id: page.route,
+        lang,
+        title: page.title,
+        route: page.route,
+        ...(page.description ? { description: page.description } : {}),
+        headings: content.headings
+          .filter((heading) => heading.depth >= 2)
+          .map((heading) => heading.title),
+        text: content.text,
+      }
+    })
 }

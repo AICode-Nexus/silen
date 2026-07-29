@@ -317,6 +317,34 @@ Before <STYLE>private inline style <Nested>private nested inline style</Nested><
       })[0],
     ).toMatchObject({ lang: 'zh-CN', route: '/zh/guide/' })
   })
+
+  it('excludes only draft and AI-opted-out pages from search documents', () => {
+    const page = (route: string, frontmatter: Record<string, boolean>) => ({
+      file: `/docs${route}index.mdx`,
+      route,
+      source: `# ${route}\n\nSearchable content.`,
+      title: route,
+      description: '',
+      frontmatter,
+      headings: [],
+      links: [],
+      data: {},
+    })
+
+    const documents = createPageSearchDocuments([
+      page('/public/', {}),
+      page('/draft/', { draft: true }),
+      page('/draft-false/', { draft: false }),
+      page('/ai-disabled/', { ai: false }),
+      page('/ai-enabled/', { ai: true }),
+    ])
+
+    expect(documents.map(({ route }) => route)).toEqual([
+      '/public/',
+      '/draft-false/',
+      '/ai-enabled/',
+    ])
+  })
 })
 
 describe('client search index loading', () => {
