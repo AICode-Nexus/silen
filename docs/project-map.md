@@ -5,7 +5,7 @@
   [`@aicode-nexus/silen` 0.4.0](../CHANGELOG.md#040---2026-07-22) at
   [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0)
   ([commit `01b95b4`](https://github.com/AICode-Nexus/silen/commit/01b95b4))
-- Default next item: `QUAL-003` (Active)
+- Default next item: None; refine AI-005 before promotion.
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -81,44 +81,12 @@ items remain planning inputs, not release commitments.
 
 ## Active
 
-### QUAL-003 — Release-enforced AI readiness gate
-
-- Outcome: One provider-free official-site gate blocks regressions in Core CI,
-  GitHub Pages, and npm Publish while retaining comparable retrieval evidence.
-- Horizon: `0.4.1`.
-- Depends on: `QUAL-002` and `AI-004`.
-- Entry gate: `QUAL-002` intentionally scoped the composed gate to Pages, and
-  `AI-004` shipped a six-case version 2 suite with per-case `maxRank`; the next
-  release explicitly promotes both capabilities into CI and Publish coverage.
-- Done when: `site:ai-check` composes `site:build`, `ai audit`, `ai eval`, and
-  `check:no-maps` in that order; the existing `site:check` remains a
-  non-divergent compatibility alias; CI, Pages, and Publish each invoke the
-  canonical gate without rebuilding the site twice in one job; the official
-  suite contains at least 20 stable English and Chinese cases covering natural
-  questions, long phrasing, synonyms, typos, cross-language retrieval, and
-  hidden-content negatives; every case authors `maxRank`, critical queries
-  require rank 1, and the schema supports multiple acceptable targets plus
-  forbidden targets; and each workflow uploads the same schema-versioned JSON
-  evaluation report as a CI artifact, including retrieval-failure evidence
-  when a report was produced, so ranking drift can be compared across commits
-  and releases. The complete gate must still pass with provider credentials
-  absent.
-- Evidence:
-  [current composed gate](../package.json),
-  [current six-case suite](../website/.silen/ai-evals.json),
-  [current evaluator](../src/ai/eval.ts),
-  [Pages workflow](../.github/workflows/pages.yml),
-  [Core CI workflow](../.github/workflows/ci.yml),
-  [Publish workflow](../.github/workflows/publish.yml),
-  [release-enforced gate design](./superpowers/specs/2026-07-29-silen-release-enforced-ai-readiness-gate-design.md),
-  [implementation plan](./superpowers/plans/2026-07-29-silen-release-enforced-ai-readiness-gate.md),
-  [site-gate design](./superpowers/specs/2026-07-29-silen-deterministic-site-gate-design.md),
-  and
-  [rank-expectations design](./superpowers/specs/2026-07-29-silen-retrieval-rank-expectations-design.md).
+No map-selected item is active. Refine `AI-005` before considering promotion.
 
 ## Ready
 
-No item is ready for default implementation while `QUAL-003` is Active.
+No item is ready for default implementation. `AI-005` remains a Candidate
+until its MCP v2 migration design satisfies the promotion gate.
 
 ## Candidate
 
@@ -392,6 +360,36 @@ for default implementation.
   [evaluator](../src/ai/eval.ts),
   [focused tests](../tests/ai/eval.test.ts), and
   [official suite](../website/.silen/ai-evals.json).
+
+### QUAL-003 — Release-enforced AI readiness gate
+
+- Outcome: One provider-free official-site gate blocks regressions in Core CI,
+  GitHub Pages, and npm Publish while retaining comparable retrieval evidence.
+- Horizon: `0.4.1`.
+- Depends on: `QUAL-002` and `AI-004`.
+- Entry gate: The composed Pages gate and ranked version 2 evaluator were
+  already shipped; the approved QUAL-003 design bounded their promotion into
+  release enforcement, richer expectations, and retained reports.
+- Done when: Strict schema version 3 supports multiple acceptable and forbidden
+  targets with explicit rank bounds while preserving v1/v2 bytes; the official
+  24-case English/Chinese suite passes, including six Rank-1 critical queries
+  and two AI-excluded negatives; production search honors `draft: true` and
+  `ai: false`; `site:ai-check` saves deterministic JSON and gates CI, Pages,
+  and npm Publish; and the complete provider-free repository verification is
+  green.
+- Evidence:
+  [approved design](./superpowers/specs/2026-07-29-silen-release-enforced-ai-readiness-gate-design.md),
+  [implementation plan](./superpowers/plans/2026-07-29-silen-release-enforced-ai-readiness-gate.md),
+  [gate runner](../tooling/site-ai-check.ts),
+  [evaluator](../src/ai/eval.ts),
+  [official suite](../website/.silen/ai-evals.json),
+  [Core CI](../.github/workflows/ci.yml),
+  [Pages](../.github/workflows/pages.yml),
+  [Publish](../.github/workflows/publish.yml),
+  [evaluator tests](../tests/ai/eval.test.ts),
+  [runner tests](../tests/ai/site-ai-check-runner.test.ts),
+  [official-site tests](../tests/website.test.ts), and
+  [workflow tests](../tests/ai/site-quality-gate.test.ts).
 
 ## Default execution contract
 
