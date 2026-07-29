@@ -69,13 +69,6 @@ labels, not date commitments.
 
 ## Active
 
-No map-selected item is active. With no special user scope, promote and begin
-`QUAL-002`.
-
-## Ready
-
-Items are ordered. Start the first item whose dependencies remain satisfied.
-
 ### QUAL-002 — Unify the official deterministic site gate
 
 - Outcome: One documented repository command builds the package and official
@@ -90,10 +83,14 @@ Items are ordered. Start the first item whose dependencies remain satisfied.
   is exercised by the official-site deployment or CI path, and passes from a
   clean checkout without model credentials or network-dependent evaluation.
 - Evidence:
+  [deterministic site gate design](./superpowers/specs/2026-07-29-silen-deterministic-site-gate-design.md),
   [package scripts](../package.json),
-  [Pages workflow](../.github/workflows/pages.yml),
-  [CI workflow](../.github/workflows/ci.yml), and
+  [Pages workflow](../.github/workflows/pages.yml), and
   [`0.4.0` quality-loop design](./superpowers/specs/2026-07-22-silen-model-free-ai-quality-loop-design.md).
+
+## Ready
+
+Items are ordered. Start the first item whose dependencies remain satisfied.
 
 ### AI-004 — Strengthen official retrieval evaluation precision
 
