@@ -1,4 +1,4 @@
-import { readFile, rm } from 'node:fs/promises'
+import { access, readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { runAiEvaluation } from '../src/ai/eval'
@@ -279,61 +279,148 @@ describe('example website homepage', () => {
     expect(publicContract).not.toContain(path.resolve('website'))
   })
 
-  it('dogfoods the deterministic bilingual AI evaluation suite', async () => {
+  it('dogfoods the 24-case bilingual AI evaluation suite', async () => {
+    type Target = { route: string; heading?: string }
+    type OfficialCase = {
+      id: string
+      lang?: string
+      expected: {
+        acceptable: Target[]
+        forbidden: Target[]
+        maxRank: number
+      }
+    }
     const suite = JSON.parse(
       await readFile(path.resolve('website/.silen/ai-evals.json'), 'utf8'),
     ) as {
       schemaVersion: number
       topK: number
-      cases: Array<{
-        id: string
-        lang?: string
-        expected: { route: string; maxRank?: number }
-      }>
+      cases: OfficialCase[]
     }
-    expect(suite.schemaVersion).toBe(2)
+
+    expect(suite.schemaVersion).toBe(3)
     expect(suite.topK).toBe(5)
-    expect(suite.cases.filter(({ lang }) => lang === 'en-US')).toHaveLength(3)
-    expect(suite.cases.filter(({ lang }) => lang === 'zh-CN')).toHaveLength(3)
+    expect(suite.cases).toHaveLength(24)
+    expect(suite.cases.filter(({ lang }) => lang === 'en-US')).toHaveLength(11)
+    expect(suite.cases.filter(({ lang }) => lang === 'zh-CN')).toHaveLength(11)
+    expect(suite.cases.filter(({ lang }) => lang === undefined)).toHaveLength(2)
+    for (const [prefix, count] of [
+      ['direct-', 6],
+      ['natural-', 4],
+      ['long-', 4],
+      ['synonym-', 4],
+      ['typo-', 2],
+      ['cross-lang-', 2],
+      ['hidden-', 2],
+    ] as const) {
+      expect(
+        suite.cases.filter(({ id }) => id.startsWith(prefix)),
+        prefix,
+      ).toHaveLength(count)
+    }
     expect(
-      suite.cases.every(({ expected }) => expected.maxRank !== undefined),
+      suite.cases
+        .filter(({ id }) => id.startsWith('direct-'))
+        .every(({ expected }) => expected.maxRank === 1),
     ).toBe(true)
     expect(
-      suite.cases.map(({ id, expected }) => ({
-        id,
-        route: expected.route,
-        maxRank: expected.maxRank,
-      })),
+      suite.cases.every(
+        ({ expected }) =>
+          Array.isArray(expected.acceptable) &&
+          Array.isArray(expected.forbidden) &&
+          Number.isInteger(expected.maxRank),
+      ),
+    ).toBe(true)
+    expect(
+      suite.cases.filter(({ expected }) => expected.acceptable.length > 1)
+        .length,
+    ).toBeGreaterThanOrEqual(2)
+    expect(
+      suite.cases
+        .filter(({ id }) => id.startsWith('cross-lang-'))
+        .map(({ id, lang }) => ({ id, lang })),
     ).toEqual([
-      { id: 'en-public-ai-artifacts', route: '/ai/', maxRank: 1 },
-      {
-        id: 'en-model-free-workspace',
-        route: '/ai/local-workspace-mcp/',
-        maxRank: 2,
-      },
-      {
-        id: 'en-agent-contract',
-        route: '/ai/agent-contract/',
-        maxRank: 1,
-      },
-      { id: 'zh-public-ai-artifacts', route: '/zh/ai/', maxRank: 1 },
-      {
-        id: 'zh-model-free-workspace',
-        route: '/zh/ai/local-workspace-mcp/',
-        maxRank: 2,
-      },
-      {
-        id: 'zh-agent-contract',
-        route: '/zh/ai/agent-contract/',
-        maxRank: 1,
-      },
+      { id: 'cross-lang-en-to-zh', lang: undefined },
+      { id: 'cross-lang-zh-to-en', lang: undefined },
     ])
+    const hidden = suite.cases.filter(({ id }) => id.startsWith('hidden-'))
+    expect(
+      hidden.every(
+        ({ expected }) =>
+          expected.acceptable.length === 0 &&
+          expected.forbidden.length === 1 &&
+          expected.maxRank === suite.topK,
+      ),
+    ).toBe(true)
+
+    const [
+      searchSource,
+      aiIndexSource,
+      llmsSummary,
+      llmsFull,
+      draftHtml,
+      disabledHtml,
+    ] = await Promise.all([
+      readFile(path.join(result.outDir, 'search-index.json'), 'utf8'),
+      readFile(path.join(result.outDir, 'ai-index.json'), 'utf8'),
+      readFile(path.join(result.outDir, 'llms.txt'), 'utf8'),
+      readFile(path.join(result.outDir, 'llms-full.txt'), 'utf8'),
+      readFile(
+        path.join(result.outDir, 'eval-fixtures/draft-sentinel/index.html'),
+        'utf8',
+      ),
+      readFile(
+        path.join(
+          result.outDir,
+          'zh/eval-fixtures/ai-disabled-sentinel/index.html',
+        ),
+        'utf8',
+      ),
+    ])
+    const search = JSON.parse(searchSource) as {
+      index: { storedFields: Record<string, { route?: string }> }
+    }
+    const aiIndex = JSON.parse(aiIndexSource) as {
+      pages: Array<{ route: string }>
+    }
+    const excludedRoutes = [
+      '/eval-fixtures/draft-sentinel/',
+      '/zh/eval-fixtures/ai-disabled-sentinel/',
+    ]
+    const searchRoutes = Object.values(search.index.storedFields).map(
+      ({ route }) => route,
+    )
+    const aiRoutes = aiIndex.pages.map(({ route }) => route)
+
+    expect(draftHtml).toContain('Quartz harbor lantern')
+    expect(disabledHtml).toContain('星槎 雾港 灯塔')
+    for (const route of excludedRoutes) {
+      expect(searchRoutes).not.toContain(route)
+      expect(aiRoutes).not.toContain(route)
+    }
+    for (const sentinel of ['Quartz harbor lantern', '星槎 雾港 灯塔']) {
+      expect(aiIndexSource).not.toContain(sentinel)
+      expect(llmsSummary).not.toContain(sentinel)
+      expect(llmsFull).not.toContain(sentinel)
+    }
+    await expect(
+      access(path.join(result.outDir, 'eval-fixtures/draft-sentinel/index.md')),
+    ).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(
+      access(
+        path.join(
+          result.outDir,
+          'zh/eval-fixtures/ai-disabled-sentinel/index.md',
+        ),
+      ),
+    ).rejects.toMatchObject({ code: 'ENOENT' })
+
     await expect(
       runAiEvaluation(path.resolve('website')),
     ).resolves.toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       ok: true,
-      summary: { total: 6, passed: 6, failed: 0 },
+      summary: { total: 24, passed: 24, failed: 0 },
     })
   })
 })

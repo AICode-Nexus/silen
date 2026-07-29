@@ -1,61 +1,356 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "topK": 5,
   "cases": [
     {
-      "id": "en-public-ai-artifacts",
+      "id": "direct-en-public-ai-artifacts",
       "query": "AI artifacts",
       "lang": "en-US",
       "expected": {
-        "route": "/ai/",
-        "heading": "Public AI artifacts",
+        "acceptable": [
+          {
+            "route": "/ai/",
+            "heading": "Public AI artifacts"
+          }
+        ],
+        "forbidden": [],
         "maxRank": 1
       }
     },
     {
-      "id": "en-model-free-workspace",
-      "query": "deterministic model-free workspace",
+      "id": "direct-en-local-workspace",
+      "query": "Local workspace and MCP",
       "lang": "en-US",
       "expected": {
-        "route": "/ai/local-workspace-mcp/",
-        "maxRank": 2
+        "acceptable": [
+          {
+            "route": "/ai/local-workspace-mcp/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 1
       }
     },
     {
-      "id": "en-agent-contract",
+      "id": "direct-en-agent-contract",
       "query": "deployed site Agent Contract manifest",
       "lang": "en-US",
       "expected": {
-        "route": "/ai/agent-contract/",
+        "acceptable": [
+          {
+            "route": "/ai/agent-contract/"
+          }
+        ],
+        "forbidden": [],
         "maxRank": 1
       }
     },
     {
-      "id": "zh-public-ai-artifacts",
+      "id": "direct-zh-public-ai-artifacts",
       "query": "面向 AI 的公开产物",
       "lang": "zh-CN",
       "expected": {
-        "route": "/zh/ai/",
-        "heading": "面向 AI 的公开产物",
+        "acceptable": [
+          {
+            "route": "/zh/ai/",
+            "heading": "面向 AI 的公开产物"
+          }
+        ],
+        "forbidden": [],
         "maxRank": 1
       }
     },
     {
-      "id": "zh-model-free-workspace",
-      "query": "确定性 无模型 工作区",
+      "id": "direct-zh-local-workspace",
+      "query": "本地工作区与 MCP",
       "lang": "zh-CN",
       "expected": {
-        "route": "/zh/ai/local-workspace-mcp/",
+        "acceptable": [
+          {
+            "route": "/zh/ai/local-workspace-mcp/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 1
+      }
+    },
+    {
+      "id": "direct-zh-agent-contract",
+      "query": "部署站点 Agent Contract 清单",
+      "lang": "zh-CN",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/zh/ai/agent-contract/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 1
+      }
+    },
+    {
+      "id": "natural-en-model-free-evaluation",
+      "query": "How can I evaluate documentation retrieval without an AI model?",
+      "lang": "en-US",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/ai/local-workspace-mcp/"
+          }
+        ],
+        "forbidden": [],
         "maxRank": 2
       }
     },
     {
-      "id": "zh-agent-contract",
-      "query": "部署站点 Agent Contract 清单",
+      "id": "natural-en-deployed-manifest",
+      "query": "Where should an agent find the deployed site manifest?",
+      "lang": "en-US",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/ai/agent-contract/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 2
+      }
+    },
+    {
+      "id": "natural-zh-model-free-evaluation",
+      "query": "如何 在没有 模型 的情况下 评测 文档 检索",
       "lang": "zh-CN",
       "expected": {
-        "route": "/zh/ai/agent-contract/",
-        "maxRank": 1
+        "acceptable": [
+          {
+            "route": "/zh/ai/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 2
+      }
+    },
+    {
+      "id": "natural-zh-deployed-manifest",
+      "query": "部署站点 的 Agent Contract 清单 在哪里",
+      "lang": "zh-CN",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/zh/ai/agent-contract/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 2
+      }
+    },
+    {
+      "id": "long-en-read-only-workspace",
+      "query": "I need a deterministic local documentation workspace that stays read only unless I explicitly allow writing",
+      "lang": "en-US",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/ai/local-workspace-mcp/"
+          },
+          {
+            "route": "/ai/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 2
+      }
+    },
+    {
+      "id": "long-en-release-check",
+      "query": "How do I build audit and evaluate the site before publishing static documentation?",
+      "lang": "en-US",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/ai/local-workspace-mcp/"
+          },
+          {
+            "route": "/guide/cli-deployment/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 2
+      }
+    },
+    {
+      "id": "long-zh-read-only-workspace",
+      "query": "我需要 默认只读 只有 显式授权 才允许 写入 的 本地 MCP 文档 工作区",
+      "lang": "zh-CN",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/zh/ai/local-workspace-mcp/"
+          },
+          {
+            "route": "/zh/ai/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 2
+      }
+    },
+    {
+      "id": "long-zh-release-check",
+      "query": "发布 静态文档 之前 如何 完成 构建 审计 评测 并 检查 生成结果",
+      "lang": "zh-CN",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/zh/ai/local-workspace-mcp/"
+          },
+          {
+            "route": "/zh/reference/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 2
+      }
+    },
+    {
+      "id": "synonym-en-machine-readable-output",
+      "query": "machine readable documentation outputs for agents",
+      "lang": "en-US",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/ai/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 3
+      }
+    },
+    {
+      "id": "synonym-en-capability-entry",
+      "query": "versioned capability discovery entry point",
+      "lang": "en-US",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/ai/agent-contract/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 3
+      }
+    },
+    {
+      "id": "synonym-zh-machine-readable-output",
+      "query": "智能体 读取 的 机器可读 文档 产物",
+      "lang": "zh-CN",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/zh/ai/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 3
+      }
+    },
+    {
+      "id": "synonym-zh-capability-entry",
+      "query": "带版本 的 能力 发现 入口",
+      "lang": "zh-CN",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/zh/ai/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 3
+      }
+    },
+    {
+      "id": "typo-en-agent-contract",
+      "query": "deplyed Agent Contrct manfiest",
+      "lang": "en-US",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/ai/agent-contract/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 3
+      }
+    },
+    {
+      "id": "typo-zh-agent-contract",
+      "query": "部署站点 Agent Contarct 清单",
+      "lang": "zh-CN",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/zh/ai/agent-contract/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 3
+      }
+    },
+    {
+      "id": "cross-lang-en-to-zh",
+      "query": "How to use 本地 MCP 工作区 默认只读",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/zh/ai/local-workspace-mcp/"
+          },
+          {
+            "route": "/zh/ai/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 5
+      }
+    },
+    {
+      "id": "cross-lang-zh-to-en",
+      "query": "如何 read the deployed Agent Contract manifest",
+      "expected": {
+        "acceptable": [
+          {
+            "route": "/ai/agent-contract/"
+          }
+        ],
+        "forbidden": [],
+        "maxRank": 5
+      }
+    },
+    {
+      "id": "hidden-en-draft-sentinel",
+      "query": "quartz harbor lantern",
+      "lang": "en-US",
+      "expected": {
+        "acceptable": [],
+        "forbidden": [
+          {
+            "route": "/eval-fixtures/draft-sentinel/"
+          }
+        ],
+        "maxRank": 5
+      }
+    },
+    {
+      "id": "hidden-zh-ai-disabled-sentinel",
+      "query": "星槎 雾港 灯塔",
+      "lang": "zh-CN",
+      "expected": {
+        "acceptable": [],
+        "forbidden": [
+          {
+            "route": "/zh/eval-fixtures/ai-disabled-sentinel/"
+          }
+        ],
+        "maxRank": 5
       }
     }
   ]
