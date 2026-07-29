@@ -5,7 +5,7 @@
   [`@aicode-nexus/silen` 0.4.0](../CHANGELOG.md#040---2026-07-22) at
   [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0)
   ([commit `01b95b4`](https://github.com/AICode-Nexus/silen/commit/01b95b4))
-- Default next item: `AI-004`
+- Default next item: None; refine `AI-005` before promotion.
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -69,29 +69,12 @@ labels, not date commitments.
 
 ## Active
 
-### AI-004 — Strengthen official retrieval evaluation precision
-
-- Outcome: The bilingual official suite covers the main AI-facing workflows
-  and can require an expected page or heading to appear within a case-specific
-  maximum rank.
-- Horizon: `0.4.x`
-- Depends on: `AI-003`.
-- Entry gate: The committed four-case suite and deterministic evaluator are
-  shipped, and the bounded change begins with an approved compatibility design
-  for the suite schema and stable JSON output.
-- Done when: Per-case rank expectations are validated and reported
-  deterministically, the existing schema remains safely migratable, the
-  official bilingual suite covers its documented product surfaces, and
-  regressions fail with actionable ranked evidence.
-- Evidence:
-  [rank-expectations design](./superpowers/specs/2026-07-29-silen-retrieval-rank-expectations-design.md),
-  [official evaluation suite](../website/.silen/ai-evals.json),
-  [`0.4.0` changelog](../CHANGELOG.md#040---2026-07-22), and
-  [quality-loop plan](./superpowers/plans/2026-07-22-silen-model-free-ai-quality-loop.md).
+No map-selected item is active. No Ready item is eligible; refine `AI-005`
+before promotion.
 
 ## Ready
 
-No additional map-selected item is ready while `AI-004` is active.
+No item is ready for default implementation.
 
 ## Candidate
 
@@ -327,6 +310,24 @@ for default implementation.
   [package script](../package.json),
   [focused contract test](../tests/ai/site-quality-gate.test.ts), and
   [Pages workflow](../.github/workflows/pages.yml).
+
+### AI-004 — Ranked retrieval evaluation expectations
+
+- Outcome: Versioned model-free evaluation can enforce a case-specific maximum
+  rank while preserving complete deterministic Top-K evidence.
+- Horizon: `0.4.x`.
+- Depends on: `AI-003`.
+- Entry gate: The shipped four-case version 1 suite and production evaluator
+  passed before the compatibility design was approved.
+- Done when: New Silen versions preserve v1 reports, accept v2 rank policy,
+  the six-case bilingual suite passes its `1/2/1` bounds, and the full
+  repository and official-site gates remain green.
+- Evidence:
+  [rank-expectations design](./superpowers/specs/2026-07-29-silen-retrieval-rank-expectations-design.md),
+  [implementation plan](./superpowers/plans/2026-07-29-silen-retrieval-rank-expectations.md),
+  [evaluator](../src/ai/eval.ts),
+  [focused tests](../tests/ai/eval.test.ts), and
+  [official suite](../website/.silen/ai-evals.json).
 
 ## Default execution contract
 
