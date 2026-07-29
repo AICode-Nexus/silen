@@ -5,7 +5,7 @@
   [`@aicode-nexus/silen` 0.4.0](../CHANGELOG.md#040---2026-07-22) at
   [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0)
   ([commit `01b95b4`](https://github.com/AICode-Nexus/silen/commit/01b95b4))
-- Default next item: None; refine `AI-005` before promotion.
+- Default next item: `QUAL-003`
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -67,14 +67,56 @@ labels, not date commitments.
 | `PLUGIN` | Plugin ecosystem | Extension contracts, hooks, examples, and interoperability |
 | `QUAL` | Quality and release | Tests, deterministic gates, packaging, documentation, and release evidence |
 
+## Planned release path
+
+- `0.4.1`: deliver `QUAL-003` so existing model-free AI quality capabilities
+  become release-blocking evidence with a broader official retrieval suite.
+- `0.5.0`: design and deliver `AI-005`, then `AI-006`, preserving local stdio
+  and read-only defaults while adding MCP v2 and generated Agent Skills.
+- `0.6.x`: keep `AI-007`, `AI-008`, and `AI-009` experimental until their
+  security, host-support, and deployment promotion gates are satisfied.
+
+Only the first eligible `Ready` item is default-executable. Candidate and Watch
+items remain planning inputs, not release commitments.
+
 ## Active
 
-No map-selected item is active. No Ready item is eligible; refine `AI-005`
-before promotion.
+No map-selected item is active. `QUAL-003` is the first eligible Ready item.
 
 ## Ready
 
-No item is ready for default implementation.
+### QUAL-003 — Release-enforced AI readiness gate
+
+- Outcome: One provider-free official-site gate blocks regressions in Core CI,
+  GitHub Pages, and npm Publish while retaining comparable retrieval evidence.
+- Horizon: `0.4.1`.
+- Depends on: `QUAL-002` and `AI-004`.
+- Entry gate: `QUAL-002` intentionally scoped the composed gate to Pages, and
+  `AI-004` shipped a six-case version 2 suite with per-case `maxRank`; the next
+  release explicitly promotes both capabilities into CI and Publish coverage.
+- Done when: `site:ai-check` composes `site:build`, `ai audit`, `ai eval`, and
+  `check:no-maps` in that order; the existing `site:check` remains a
+  non-divergent compatibility alias; CI, Pages, and Publish each invoke the
+  canonical gate without rebuilding the site twice in one job; the official
+  suite contains at least 20 stable English and Chinese cases covering natural
+  questions, long phrasing, synonyms, typos, cross-language retrieval, and
+  hidden-content negatives; every case authors `maxRank`, critical queries
+  require rank 1, and the schema supports multiple acceptable targets plus
+  forbidden targets; and each workflow uploads the same schema-versioned JSON
+  evaluation report as a CI artifact, including retrieval-failure evidence
+  when a report was produced, so ranking drift can be compared across commits
+  and releases. The complete gate must still pass with provider credentials
+  absent.
+- Evidence:
+  [current composed gate](../package.json),
+  [current six-case suite](../website/.silen/ai-evals.json),
+  [current evaluator](../src/ai/eval.ts),
+  [Pages workflow](../.github/workflows/pages.yml),
+  [Core CI workflow](../.github/workflows/ci.yml),
+  [Publish workflow](../.github/workflows/publish.yml),
+  [site-gate design](./superpowers/specs/2026-07-29-silen-deterministic-site-gate-design.md),
+  and
+  [rank-expectations design](./superpowers/specs/2026-07-29-silen-retrieval-rank-expectations-design.md).
 
 ## Candidate
 
@@ -83,38 +125,52 @@ moves to `Ready`.
 
 ### AI-005 — Migrate MCP compatibility to the 2026 protocol and SDK v2
 
-- Outcome: Silen uses the stable split TypeScript SDK v2 packages while
-  preserving local stdio interoperability, the read-only default, bounded
-  inputs, and explicit write opt-in.
-- Horizon: `0.5.x`
-- Depends on: `AI-001` and `AI-002`.
-- Entry gate: Produce and approve a migration design covering dependency
-  changes, legacy and modern protocol behavior, stdio fixtures, tool
-  annotations, shutdown, and package compatibility.
-- Done when: The supported protocol eras and downgrade behavior are explicit,
-  compatibility tests cover built stdio clients and permission gates, public
-  contracts regenerate deterministically, and no remote transport is silently
-  enabled.
+- Outcome: Silen uses the official split TypeScript SDK v2
+  `@modelcontextprotocol/server` package and serves both the shipped legacy
+  protocol era and `2026-07-28` over local stdio, without changing tool names
+  or permission and filesystem boundaries.
+- Horizon: `0.5.0`.
+- Depends on: `AI-001`, `AI-002`, and `QUAL-003`.
+- Entry gate: Produce and approve a migration design that pins a reviewed v2
+  release line, runs `@modelcontextprotocol/codemod` at the repository root,
+  inventories manual rewrites and public-package impact, and specifies
+  legacy/modern stdio fixtures, negotiation, shutdown, and deterministic
+  contract regeneration.
+- Done when: No v1 SDK import, dependency, or unresolved codemod marker remains;
+  built stdio fixtures verify the supported legacy era and `2026-07-28`; the
+  existing tool names, default read-only mode, explicit write opt-in, no-shell
+  policy, bounded inputs, and path confinement remain unchanged; every tool
+  declares a formal output schema and returns validated arbitrary-JSON
+  `structuredContent` alongside its human-readable content; Agent Contract
+  output declares supported protocol eras, transport, and negotiated extension
+  capabilities; and no remote transport is enabled by default.
 - Evidence:
   [current v1 dependency](../package.json),
+  [current stdio-only contract](../src/shared/ai-contract.ts#L50),
+  [official v2 migration and codemod](https://ts.sdk.modelcontextprotocol.io/v2/migration/upgrade-to-v2),
+  [2026-07-28 migration guidance](https://ts.sdk.modelcontextprotocol.io/v2/migration/support-2026-07-28),
+  [v2 protocol versions](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions),
+  [v2 output schemas](https://ts.sdk.modelcontextprotocol.io/v2/advanced/schema-libraries),
   [MCP 2026-07-28 specification](https://modelcontextprotocol.io/specification/2026-07-28),
-  [TypeScript SDK v2](https://ts.sdk.modelcontextprotocol.io/v2/), and
-  [protocol-version guidance](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions)
-  observed 2026-07-29.
+  and [TypeScript SDK v2](https://ts.sdk.modelcontextprotocol.io/v2/), observed
+  2026-07-29.
 
 ### AI-006 — Generate a read-only Agent Skills-compatible surface
 
 - Outcome: Existing Silen task packs and public contracts can emit a standard
-  `SKILL.md`-based read-only guidance surface without creating a second
-  hand-maintained instruction system.
-- Horizon: `0.5.x`
-- Depends on: `AI-002`.
+  `SKILL.md`-based read-only guidance surface deterministically without
+  creating a second hand-maintained instruction system.
+- Horizon: `0.5.0`.
+- Depends on: `AI-002` and `AI-005`.
 - Entry gate: Approve a field-by-field mapping from the existing Agent Contract
   and bilingual task sources to the Agent Skills format, including naming,
-  packaging, validation, and exclusion rules.
+  packaging, validation, exclusion rules, and the boundary of the experimental
+  Skills-over-MCP switch.
 - Done when: Output is generated from canonical Silen sources, passes the
-  official format validator, contains no implicit write permission, remains
-  deterministic, and ships with interoperability fixtures.
+  official format validator, contains no implicit shell, network, or write
+  permission, remains byte-deterministic, and ships with interoperability
+  fixtures; Skills over MCP remains behind an explicit experimental flag that
+  is off by default and is not required for filesystem-based Skills discovery.
 - Evidence:
   [AI Contract design](./superpowers/specs/2026-07-15-silen-ai-contract-layer-design.md),
   [AI Contract plan](./superpowers/plans/2026-07-15-silen-ai-contract-layer.md),
@@ -128,34 +184,39 @@ for default implementation.
 
 ### AI-007 — Optional stateless read-only remote MCP
 
-- Outcome: Observe whether a separately enabled remote transport would make
-  Silen knowledge safely useful beyond local stdio clients.
-- Horizon: Unscheduled.
+- Outcome: Observe whether a separately enabled, stateless, read-only remote
+  adapter would make Silen knowledge safely useful beyond local stdio clients;
+  remote writes remain unsupported.
+- Horizon: `0.6.x` experiment.
 - Depends on: `AI-005` and a demonstrated remote consumer need.
 - Entry gate: Promote only after a threat model, authorization boundary,
-  deployment owner, tenancy model, and local-first compatibility plan are
-  approved.
-- Done when: Either the promotion trigger is met and this moves to `Candidate`,
-  or evidence shows the capability does not belong in Silen and the item is
-  retired with a decision note.
+  deployment owner, tenancy model, OAuth resource-server design, and
+  local-first compatibility plan are approved.
+- Done when: A promoted experiment is explicitly opt-in and implements OAuth,
+  token-audience binding, a strict ban on token passthrough, tool-level
+  authorization, and auditable access decisions while leaving local stdio
+  unchanged; otherwise evidence retires the idea with a decision note.
 - Evidence:
-  [MCP 2026-07-28 specification](https://modelcontextprotocol.io/specification/2026-07-28)
-  and
-  [modern protocol behavior](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions),
+  [MCP 2026-07-28 specification](https://modelcontextprotocol.io/specification/2026-07-28),
+  [MCP security best practices](https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices),
+  and [modern protocol behavior](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions),
   observed 2026-07-29.
 
 ### AI-008 — MCP Tasks and Apps readiness
 
-- Outcome: Observe whether Silen gains a real long-running or interactive MCP
-  workflow that benefits from negotiated Tasks or Apps extensions.
-- Horizon: Unscheduled.
-- Depends on: `AI-005` and a concrete product workflow that synchronous
-  read-only tools cannot serve well.
-- Entry gate: Promote only with verified host support, a bounded use case, and
-  an isolation design that does not enlarge the core MCP surface by default.
-- Done when: Either a qualifying workflow and compatibility matrix justify
-  promotion to `Candidate`, or continued absence of a product need retires the
-  item with a decision note.
+- Outcome: Observe whether long-running audit/evaluation should use negotiated
+  MCP Tasks and whether an MCP App should render an AI-readiness dashboard from
+  the same structured reports.
+- Horizon: `0.6.x` experiment.
+- Depends on: `AI-005`, `QUAL-003`, and verified host support.
+- Entry gate: Promote only with a bounded long-running workflow, a client
+  compatibility matrix, durable task-state and cancellation rules, and an App
+  sandbox, content-security, and read-only data-flow design.
+- Done when: A promoted experiment negotiates both extensions explicitly;
+  Tasks expose durable progress, resume, failure, and cancellation semantics
+  for audit/eval, while the App renders the schema-versioned readiness report
+  without gaining write authority; otherwise the item is retired with a
+  decision note. Neither extension becomes required for the core local path.
 - Evidence:
   [MCP Tasks](https://modelcontextprotocol.io/extensions/tasks/overview) and
   [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview),
@@ -164,16 +225,17 @@ for default implementation.
 ### AI-009 — Reference Ask AI gateway
 
 - Outcome: Observe repeated deployer demand for a separately deployable,
-  provider-neutral gateway reference that keeps credentials and policy outside
-  the Silen core package.
-- Horizon: Unscheduled.
+  provider-neutral reference gateway template that keeps credentials, policy,
+  and hosted operations outside the Silen core package.
+- Horizon: `0.6.x` experiment.
 - Depends on: `AI-001` and evidence from more than one deployment context.
 - Entry gate: Promote only after defining ownership, authentication, abuse
   controls, citation guarantees, streaming compatibility, and a support
   boundary separate from the static-site package.
 - Done when: Either repeated validated deployments justify a separate
-  `Candidate` design, or the endpoint-contract-only product boundary is
-  reaffirmed in a decision note.
+  `Candidate` design whose keys remain server-side and whose absence leaves the
+  core model-free, key-free, and offline-capable, or the endpoint-contract-only
+  product boundary is reaffirmed in a decision note.
 - Evidence:
   [current Ask AI documentation](../website/ai/index.mdx) and
   [AI Alpha plan](./superpowers/plans/2026-07-13-silen-ai-alpha.md), reviewed
