@@ -14,7 +14,7 @@ describe('AI release CI gate', () => {
   it('runs release behavior on every supported Node line and the browser gate once', async () => {
     const workflow = await readFile('.github/workflows/ci.yml', 'utf8')
     const packageJson = JSON.parse(await readFile('package.json', 'utf8')) as {
-      scripts: { test: string }
+      scripts: { test: string; 'test:run': string }
     }
     const quality = job(workflow, 'quality')
     const runtimeRelease = job(workflow, 'runtime-release')
@@ -29,7 +29,8 @@ describe('AI release CI gate', () => {
     expect(runtimeRelease).toContain('run: pnpm test')
     expect(runtimeRelease).not.toContain('--maxWorkers')
     expect(runtimeRelease).not.toContain('--no-file-parallelism')
-    expect(packageJson.scripts.test).toBe(
+    expect(packageJson.scripts.test).toBe('pnpm test:run')
+    expect(packageJson.scripts['test:run']).toBe(
       'vitest run --maxWorkers=1 --no-file-parallelism',
     )
     expect(runtimeRelease).toContain('pnpm exec publint')
