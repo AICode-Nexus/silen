@@ -69,13 +69,6 @@ labels, not date commitments.
 
 ## Active
 
-No map-selected item is active. With no special user scope, promote and begin
-`AI-004`.
-
-## Ready
-
-Items are ordered. Start the first item whose dependencies remain satisfied.
-
 ### AI-004 — Strengthen official retrieval evaluation precision
 
 - Outcome: The bilingual official suite covers the main AI-facing workflows
@@ -91,9 +84,14 @@ Items are ordered. Start the first item whose dependencies remain satisfied.
   official bilingual suite covers its documented product surfaces, and
   regressions fail with actionable ranked evidence.
 - Evidence:
+  [rank-expectations design](./superpowers/specs/2026-07-29-silen-retrieval-rank-expectations-design.md),
   [official evaluation suite](../website/.silen/ai-evals.json),
   [`0.4.0` changelog](../CHANGELOG.md#040---2026-07-22), and
   [quality-loop plan](./superpowers/plans/2026-07-22-silen-model-free-ai-quality-loop.md).
+
+## Ready
+
+No additional map-selected item is ready while `AI-004` is active.
 
 ## Candidate
 
