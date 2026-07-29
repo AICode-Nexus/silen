@@ -161,6 +161,37 @@ describe('CLI dispatch', () => {
     expect(failed.stdout).toContain('0/1 passed (1 failed)')
     expect(failed.stdout).toContain('1. /')
 
+    await writeFile(
+      path.join(site, '.silen/ai-evals.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        topK: 1,
+        cases: [
+          {
+            id: 'ranked-miss',
+            query: 'Built by the packed CLI',
+            expected: { route: '/missing/', maxRank: 1 },
+          },
+        ],
+      }),
+    )
+    const ranked = await execa(cliRunner, [cli, 'ai', 'eval', site, '--json'], {
+      reject: false,
+      all: true,
+    })
+    expect(ranked.exitCode, ranked.all).toBe(1)
+    expect(JSON.parse(ranked.stdout)).toMatchObject({
+      schemaVersion: 2,
+      ok: false,
+      cases: [
+        {
+          id: 'ranked-miss',
+          expected: { route: '/missing/', maxRank: 1 },
+          matchedRank: null,
+        },
+      ],
+    })
+
     const missingSuite = path.join(root, 'missing-suite')
     await mkdir(missingSuite)
     const missing = await execa(cliRunner, [cli, 'ai', 'eval', missingSuite], {

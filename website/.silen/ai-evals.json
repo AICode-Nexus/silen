@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "topK": 5,
   "cases": [
     {
@@ -8,7 +8,8 @@
       "lang": "en-US",
       "expected": {
         "route": "/ai/",
-        "heading": "Public AI artifacts"
+        "heading": "Public AI artifacts",
+        "maxRank": 1
       }
     },
     {
@@ -16,7 +17,17 @@
       "query": "deterministic model-free workspace",
       "lang": "en-US",
       "expected": {
-        "route": "/ai/local-workspace-mcp/"
+        "route": "/ai/local-workspace-mcp/",
+        "maxRank": 2
+      }
+    },
+    {
+      "id": "en-agent-contract",
+      "query": "deployed site Agent Contract manifest",
+      "lang": "en-US",
+      "expected": {
+        "route": "/ai/agent-contract/",
+        "maxRank": 1
       }
     },
     {
@@ -25,7 +36,8 @@
       "lang": "zh-CN",
       "expected": {
         "route": "/zh/ai/",
-        "heading": "面向 AI 的公开产物"
+        "heading": "面向 AI 的公开产物",
+        "maxRank": 1
       }
     },
     {
@@ -33,7 +45,17 @@
       "query": "确定性 无模型 工作区",
       "lang": "zh-CN",
       "expected": {
-        "route": "/zh/ai/local-workspace-mcp/"
+        "route": "/zh/ai/local-workspace-mcp/",
+        "maxRank": 2
+      }
+    },
+    {
+      "id": "zh-agent-contract",
+      "query": "部署站点 Agent Contract 清单",
+      "lang": "zh-CN",
+      "expected": {
+        "route": "/zh/ai/agent-contract/",
+        "maxRank": 1
       }
     }
   ]

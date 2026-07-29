@@ -282,14 +282,58 @@ describe('example website homepage', () => {
   it('dogfoods the deterministic bilingual AI evaluation suite', async () => {
     const suite = JSON.parse(
       await readFile(path.resolve('website/.silen/ai-evals.json'), 'utf8'),
-    ) as { cases: Array<{ lang?: string }> }
-    expect(suite.cases.filter(({ lang }) => lang === 'en-US')).toHaveLength(2)
-    expect(suite.cases.filter(({ lang }) => lang === 'zh-CN')).toHaveLength(2)
+    ) as {
+      schemaVersion: number
+      topK: number
+      cases: Array<{
+        id: string
+        lang?: string
+        expected: { route: string; maxRank?: number }
+      }>
+    }
+    expect(suite.schemaVersion).toBe(2)
+    expect(suite.topK).toBe(5)
+    expect(suite.cases.filter(({ lang }) => lang === 'en-US')).toHaveLength(3)
+    expect(suite.cases.filter(({ lang }) => lang === 'zh-CN')).toHaveLength(3)
+    expect(
+      suite.cases.every(({ expected }) => expected.maxRank !== undefined),
+    ).toBe(true)
+    expect(
+      suite.cases.map(({ id, expected }) => ({
+        id,
+        route: expected.route,
+        maxRank: expected.maxRank,
+      })),
+    ).toEqual([
+      { id: 'en-public-ai-artifacts', route: '/ai/', maxRank: 1 },
+      {
+        id: 'en-model-free-workspace',
+        route: '/ai/local-workspace-mcp/',
+        maxRank: 2,
+      },
+      {
+        id: 'en-agent-contract',
+        route: '/ai/agent-contract/',
+        maxRank: 1,
+      },
+      { id: 'zh-public-ai-artifacts', route: '/zh/ai/', maxRank: 1 },
+      {
+        id: 'zh-model-free-workspace',
+        route: '/zh/ai/local-workspace-mcp/',
+        maxRank: 2,
+      },
+      {
+        id: 'zh-agent-contract',
+        route: '/zh/ai/agent-contract/',
+        maxRank: 1,
+      },
+    ])
     await expect(
       runAiEvaluation(path.resolve('website')),
     ).resolves.toMatchObject({
+      schemaVersion: 2,
       ok: true,
-      summary: { total: 4, passed: 4, failed: 0 },
+      summary: { total: 6, passed: 6, failed: 0 },
     })
   })
 })
