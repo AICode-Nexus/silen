@@ -1,7 +1,8 @@
 # Silen Project Map Design
 
-- Status: Pending written-spec review
+- Status: Approved
 - Date: 2026-07-29
+- Approved: 2026-07-29
 - Repository: `AICode-Nexus/silen`
 - Package: `@aicode-nexus/silen`
 
