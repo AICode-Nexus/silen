@@ -400,6 +400,15 @@ prove the routes are absent from the production search index and AI-readable
 artifacts. Their evaluation cases query the sentinel phrase and forbid the
 corresponding route.
 
+The current AI artifact builders already filter both flags, but
+`createPageSearchDocuments` currently maps every compiled page into
+`search-index.json`. Implementation must align the production search index with
+the documented exclusion contract by filtering pages whose frontmatter has
+`draft === true` or `ai === false` before creating search documents. This is a
+targeted correction required by the approved negative cases; HTML rendering,
+route discovery, sitemap behavior, and other frontmatter values remain
+unchanged.
+
 The fixtures contain no personal data, credential-like string, internal
 endpoint, local absolute path, or text that could be mistaken for confidential
 content. Documentation will continue to warn that private content belongs
@@ -524,6 +533,8 @@ Repository contract tests must assert:
 - at least two multiple-acceptable cases and both hidden negative cases;
 - the two synthetic routes build as HTML but remain absent from the search
   index and AI-readable artifacts;
+- the shared search-document builder excludes `draft: true` and `ai: false`
+  pages while preserving ordinary pages and locale resolution;
 - `site:check` delegates only to `site:ai-check`;
 - every workflow calls canonical `site:ai-check` once and never directly builds
   the site a second time in that job;
@@ -573,6 +584,8 @@ Expected implementation changes are limited to:
 - `.gitignore`: generated report directory.
 - `tooling/site-ai-check.ts`: fixed runner and report persistence.
 - `src/ai/eval.ts`: strict v3 schema, evaluation, report, and diagnostics.
+- `src/node/search.ts`: apply the documented draft and AI-opt-out boundary to
+  the production search index.
 - `website/.silen/ai-evals.json`: official 24-case suite.
 - Two synthetic official-site fixture pages.
 - `.github/workflows/ci.yml`, `pages.yml`, and `publish.yml`: gate and artifact
