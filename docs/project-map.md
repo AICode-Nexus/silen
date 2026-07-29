@@ -5,7 +5,7 @@
   [`@aicode-nexus/silen` 0.4.0](../CHANGELOG.md#040---2026-07-22) at
   [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0)
   ([commit `01b95b4`](https://github.com/AICode-Nexus/silen/commit/01b95b4))
-- Default next item: `QUAL-002`
+- Default next item: `AI-004`
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -69,24 +69,8 @@ labels, not date commitments.
 
 ## Active
 
-### QUAL-002 — Unify the official deterministic site gate
-
-- Outcome: One documented repository command builds the package and official
-  site, runs `silen ai audit` and `silen ai eval` against `website`, and checks
-  package and site output for source maps.
-- Horizon: `0.4.x`
-- Depends on: `QUAL-001` and `AI-003`.
-- Entry gate: The `0.4.0` build, audit, evaluation, and no-map commands already
-  pass independently; the current Pages workflow invokes build and no-map
-  checks but not audit or evaluation.
-- Done when: The aggregate command has stable failure behavior, is documented,
-  is exercised by the official-site deployment or CI path, and passes from a
-  clean checkout without model credentials or network-dependent evaluation.
-- Evidence:
-  [deterministic site gate design](./superpowers/specs/2026-07-29-silen-deterministic-site-gate-design.md),
-  [package scripts](../package.json),
-  [Pages workflow](../.github/workflows/pages.yml), and
-  [`0.4.0` quality-loop design](./superpowers/specs/2026-07-22-silen-model-free-ai-quality-loop-design.md).
+No map-selected item is active. With no special user scope, promote and begin
+`AI-004`.
 
 ## Ready
 
@@ -326,6 +310,25 @@ for default implementation.
   [quality-loop plan](./superpowers/plans/2026-07-22-silen-model-free-ai-quality-loop.md),
   [`0.4.0` changelog](../CHANGELOG.md#040---2026-07-22), and
   [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0).
+
+### QUAL-002 — Unified deterministic site gate
+
+- Outcome: One maintainer command builds the package and official site, audits
+  AI artifacts, evaluates production retrieval, and rejects source maps before
+  GitHub Pages deployment.
+- Horizon: `0.4.x`.
+- Depends on: `QUAL-001` and `AI-003`.
+- Entry gate: The independent `0.4.0` build, audit, evaluation, and no-map
+  commands passed before composition.
+- Done when: `pnpm site:check` passes without provider credentials, Pages uses
+  it once, CI and Publish avoid duplicate site builds, and the full repository
+  gate remains green.
+- Evidence:
+  [deterministic site gate design](./superpowers/specs/2026-07-29-silen-deterministic-site-gate-design.md),
+  [implementation plan](./superpowers/plans/2026-07-29-silen-deterministic-site-gate.md),
+  [package script](../package.json),
+  [focused contract test](../tests/ai/site-quality-gate.test.ts), and
+  [Pages workflow](../.github/workflows/pages.yml).
 
 ## Default execution contract
 
