@@ -192,6 +192,43 @@ describe('CLI dispatch', () => {
       ],
     })
 
+    await writeFile(
+      path.join(site, '.silen/ai-evals.json'),
+      JSON.stringify({
+        schemaVersion: 3,
+        topK: 1,
+        cases: [
+          {
+            id: 'forbidden-built-page',
+            query: 'Built by the packed CLI',
+            expected: {
+              acceptable: [],
+              forbidden: [{ route: '/' }],
+              maxRank: 1,
+            },
+          },
+        ],
+      }),
+    )
+    const forbidden = await execa(
+      cliRunner,
+      [cli, 'ai', 'eval', site, '--json'],
+      { reject: false, all: true },
+    )
+    expect(forbidden.exitCode, forbidden.all).toBe(1)
+    expect(JSON.parse(forbidden.stdout)).toMatchObject({
+      schemaVersion: 3,
+      ok: false,
+      cases: [
+        {
+          id: 'forbidden-built-page',
+          matchedTarget: null,
+          matchedRank: null,
+          forbiddenMatches: [{ target: { route: '/' }, rank: 1 }],
+        },
+      ],
+    })
+
     const missingSuite = path.join(root, 'missing-suite')
     await mkdir(missingSuite)
     const missing = await execa(cliRunner, [cli, 'ai', 'eval', missingSuite], {

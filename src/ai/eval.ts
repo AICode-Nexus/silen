@@ -48,13 +48,26 @@ export interface AiEvalActualResult {
   readonly lang?: string
 }
 
-export interface AiEvalExpectedV1 {
+export interface AiEvalTarget {
   readonly route: string
   readonly heading?: string
 }
 
-export interface AiEvalExpectedV2 extends AiEvalExpectedV1 {
+export type AiEvalExpectedV1 = AiEvalTarget
+
+export interface AiEvalExpectedV2 extends AiEvalTarget {
   readonly maxRank: number
+}
+
+export interface AiEvalExpectedV3 {
+  readonly acceptable: readonly AiEvalTarget[]
+  readonly forbidden: readonly AiEvalTarget[]
+  readonly maxRank: number
+}
+
+export interface AiEvalForbiddenMatch {
+  readonly target: AiEvalTarget
+  readonly rank: number
 }
 
 interface AiEvalCaseResultBase {
@@ -74,7 +87,15 @@ export interface AiEvalCaseResultV2 extends AiEvalCaseResultBase {
   readonly matchedRank: number | null
 }
 
-export type AiEvalCaseResult = AiEvalCaseResultV1 | AiEvalCaseResultV2
+export interface AiEvalCaseResultV3 extends AiEvalCaseResultBase {
+  readonly expected: AiEvalExpectedV3
+  readonly matchedTarget: AiEvalTarget | null
+  readonly matchedRank: number | null
+  readonly forbiddenMatches: readonly AiEvalForbiddenMatch[]
+}
+
+export type AiEvalCaseResult =
+  AiEvalCaseResultV1 | AiEvalCaseResultV2 | AiEvalCaseResultV3
 
 interface AiEvalReportBase {
   readonly ok: boolean
@@ -98,7 +119,12 @@ export interface AiEvalReportV2 extends AiEvalReportBase {
   readonly cases: readonly AiEvalCaseResultV2[]
 }
 
-export type AiEvalReport = AiEvalReportV1 | AiEvalReportV2
+export interface AiEvalReportV3 extends AiEvalReportBase {
+  readonly schemaVersion: 3
+  readonly cases: readonly AiEvalCaseResultV3[]
+}
+
+export type AiEvalReport = AiEvalReportV1 | AiEvalReportV2 | AiEvalReportV3
 
 const normalizedTextSchema = (maximum: number) =>
   z
@@ -136,6 +162,21 @@ const expectedV2Schema = z
   })
   .strict()
 
+const targetSchema = z
+  .object({
+    route: expectedRouteSchema,
+    heading: normalizedTextSchema(500).optional(),
+  })
+  .strict()
+
+const expectedV3Schema = z
+  .object({
+    acceptable: z.array(targetSchema).max(20),
+    forbidden: z.array(targetSchema).max(20),
+    maxRank: z.number().int().min(1).max(20),
+  })
+  .strict()
+
 const caseV1Schema = z
   .object({
     id: normalizedTextSchema(100),
@@ -151,6 +192,15 @@ const caseV2Schema = z
     query: normalizedTextSchema(500),
     lang: normalizedTextSchema(100).optional(),
     expected: expectedV2Schema,
+  })
+  .strict()
+
+const caseV3Schema = z
+  .object({
+    id: normalizedTextSchema(100),
+    query: normalizedTextSchema(500),
+    lang: normalizedTextSchema(100).optional(),
+    expected: expectedV3Schema,
   })
   .strict()
 
@@ -170,8 +220,40 @@ const suiteV2Schema = z
   })
   .strict()
 
+const suiteV3Schema = z
+  .object({
+    schemaVersion: z.literal(3),
+    topK: z.number().int().min(1).max(20).default(5),
+    cases: z.array(caseV3Schema).min(1).max(500),
+  })
+  .strict()
+
+function comparableHeading(value: string | undefined): string | undefined {
+  return value?.replace(/\s+/g, ' ').trim().toLocaleLowerCase('en-US')
+}
+
+function targetsOverlap(
+  left: z.output<typeof targetSchema>,
+  right: z.output<typeof targetSchema>,
+): boolean {
+  if (normalizeSiteRoute(left.route) !== normalizeSiteRoute(right.route)) {
+    return false
+  }
+  const leftHeading = comparableHeading(left.heading)
+  const rightHeading = comparableHeading(right.heading)
+  return (
+    leftHeading === undefined ||
+    rightHeading === undefined ||
+    leftHeading === rightHeading
+  )
+}
+
 const suiteSchema = z
-  .discriminatedUnion('schemaVersion', [suiteV1Schema, suiteV2Schema])
+  .discriminatedUnion('schemaVersion', [
+    suiteV1Schema,
+    suiteV2Schema,
+    suiteV3Schema,
+  ])
   .superRefine((suite, context) => {
     const ids = new Set<string>()
     for (const [index, item] of suite.cases.entries()) {
@@ -197,6 +279,58 @@ const suiteSchema = z
           code: 'custom',
           path: ['cases', index, 'expected', 'maxRank'],
           message: 'maxRank must be less than or equal to topK',
+        })
+      }
+      return
+    }
+
+    if (suite.schemaVersion !== 3) return
+    for (const [caseIndex, item] of suite.cases.entries()) {
+      const { acceptable, forbidden, maxRank } = item.expected
+      if (acceptable.length === 0 && forbidden.length === 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['cases', caseIndex, 'expected', 'acceptable'],
+          message: 'At least one acceptable or forbidden target is required',
+        })
+      }
+      if (maxRank > suite.topK) {
+        context.addIssue({
+          code: 'custom',
+          path: ['cases', caseIndex, 'expected', 'maxRank'],
+          message: 'maxRank must be less than or equal to topK',
+        })
+      }
+      if (acceptable.length === 0 && maxRank !== suite.topK) {
+        context.addIssue({
+          code: 'custom',
+          path: ['cases', caseIndex, 'expected', 'maxRank'],
+          message: 'Negative-only cases must set maxRank equal to topK',
+        })
+      }
+
+      for (const name of ['acceptable', 'forbidden'] as const) {
+        const targets = item.expected[name]
+        for (let current = 0; current < targets.length; current += 1) {
+          for (let previous = 0; previous < current; previous += 1) {
+            if (!targetsOverlap(targets[previous]!, targets[current]!)) continue
+            context.addIssue({
+              code: 'custom',
+              path: ['cases', caseIndex, 'expected', name, current],
+              message: `${name} target overlaps target ${previous}`,
+            })
+          }
+        }
+      }
+
+      for (const [forbiddenIndex, blocked] of forbidden.entries()) {
+        if (!acceptable.some((target) => targetsOverlap(target, blocked))) {
+          continue
+        }
+        context.addIssue({
+          code: 'custom',
+          path: ['cases', caseIndex, 'expected', 'forbidden', forbiddenIndex],
+          message: 'Forbidden target overlaps an acceptable target',
         })
       }
     }
@@ -397,19 +531,14 @@ function parseIndex(source: string): ReadableSearchIndex {
   return candidate as ReadableSearchIndex
 }
 
-function comparableHeading(value: string | undefined): string | undefined {
-  return value?.replace(/\s+/g, ' ').trim().toLocaleLowerCase('en-US')
-}
-
-type EvaluationExpectedInput = {
-  readonly route: string
-  readonly heading?: string | undefined
-}
-
 type EvaluationCaseInput = {
   readonly query: string
   readonly lang?: string | undefined
-  readonly expected: EvaluationExpectedInput
+}
+
+type EvaluationTargetInput = {
+  readonly route: string
+  readonly heading?: string | undefined
 }
 
 function queryActualResults(
@@ -433,7 +562,7 @@ function queryActualResults(
 
 function findMatchedRank(
   actual: readonly AiEvalActualResult[],
-  expected: EvaluationExpectedInput,
+  expected: EvaluationTargetInput,
 ): number | null {
   const expectedRoute = normalizeSiteRoute(expected.route)
   const expectedHeading = comparableHeading(expected.heading)
@@ -494,6 +623,79 @@ function evaluateCaseV2(
   }
 }
 
+function matchesTarget(
+  result: AiEvalActualResult,
+  target: EvaluationTargetInput,
+): boolean {
+  const expectedRoute = normalizeSiteRoute(target.route)
+  const expectedHeading = comparableHeading(target.heading)
+  return (
+    normalizeSiteRoute(result.route) === expectedRoute &&
+    (expectedHeading === undefined ||
+      comparableHeading(result.heading) === expectedHeading)
+  )
+}
+
+function materializeTarget(target: EvaluationTargetInput): AiEvalTarget {
+  return {
+    route: target.route,
+    ...(target.heading === undefined ? {} : { heading: target.heading }),
+  }
+}
+
+function evaluateCaseV3(
+  index: ReadableSearchIndex,
+  item: z.output<typeof caseV3Schema>,
+  topK: number,
+): AiEvalCaseResultV3 {
+  const actual = queryActualResults(index, item, topK)
+  let matched:
+    | { readonly target: z.output<typeof targetSchema>; readonly rank: number }
+    | undefined
+
+  for (const result of actual) {
+    const target = item.expected.acceptable.find((candidate) =>
+      matchesTarget(result, candidate),
+    )
+    if (target !== undefined) {
+      matched = { target, rank: result.rank }
+      break
+    }
+  }
+
+  const forbiddenMatches: AiEvalForbiddenMatch[] = []
+  for (const result of actual) {
+    for (const target of item.expected.forbidden) {
+      if (!matchesTarget(result, target)) continue
+      forbiddenMatches.push({
+        target: materializeTarget(target),
+        rank: result.rank,
+      })
+    }
+  }
+
+  const positiveOk =
+    item.expected.acceptable.length === 0 ||
+    (matched !== undefined && matched.rank <= item.expected.maxRank)
+
+  return {
+    id: item.id,
+    ok: positiveOk && forbiddenMatches.length === 0,
+    query: item.query,
+    ...(item.lang === undefined ? {} : { lang: item.lang }),
+    expected: {
+      acceptable: item.expected.acceptable.map(materializeTarget),
+      forbidden: item.expected.forbidden.map(materializeTarget),
+      maxRank: item.expected.maxRank,
+    },
+    matchedTarget:
+      matched === undefined ? null : materializeTarget(matched.target),
+    matchedRank: matched?.rank ?? null,
+    forbiddenMatches,
+    actual,
+  }
+}
+
 export async function runAiEvaluation(root: string): Promise<AiEvalReport> {
   const suiteSource = await readBoundedFile(
     root,
@@ -529,14 +731,32 @@ export async function runAiEvaluation(root: string): Promise<AiEvalReport> {
     }
   }
 
+  if (suite.schemaVersion === 2) {
+    const cases = suite.cases.map((item) =>
+      evaluateCaseV2(index, item, suite.topK),
+    )
+    const passed = cases.filter((item) => item.ok).length
+    const failed = cases.length - passed
+
+    return {
+      schemaVersion: 2,
+      ok: failed === 0,
+      suite: SUITE_PATH,
+      index: INDEX_PATH,
+      topK: suite.topK,
+      summary: { total: cases.length, passed, failed },
+      cases,
+    }
+  }
+
   const cases = suite.cases.map((item) =>
-    evaluateCaseV2(index, item, suite.topK),
+    evaluateCaseV3(index, item, suite.topK),
   )
   const passed = cases.filter((item) => item.ok).length
   const failed = cases.length - passed
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     ok: failed === 0,
     suite: SUITE_PATH,
     index: INDEX_PATH,
@@ -546,10 +766,25 @@ export async function runAiEvaluation(root: string): Promise<AiEvalReport> {
   }
 }
 
+function targetLabel(target: AiEvalTarget): string {
+  return target.heading === undefined
+    ? target.route
+    : `${target.route} — ${target.heading}`
+}
+
 function expectedLabel(result: AiEvalCaseResult): string {
-  return result.expected.heading === undefined
-    ? result.expected.route
-    : `${result.expected.route} — ${result.expected.heading}`
+  if ('forbiddenMatches' in result) {
+    const acceptable =
+      result.expected.acceptable.length === 0
+        ? '(none)'
+        : result.expected.acceptable.map(targetLabel).join(' | ')
+    const forbidden =
+      result.expected.forbidden.length === 0
+        ? '(none)'
+        : result.expected.forbidden.map(targetLabel).join(' | ')
+    return `Acceptable: ${acceptable}; Forbidden: ${forbidden}`
+  }
+  return targetLabel(result.expected)
 }
 
 function actualLabel(result: AiEvalActualResult): string {
@@ -565,10 +800,38 @@ function rankFailureLabel(
   result: AiEvalCaseResult,
   topK: number,
 ): string | undefined {
-  if (!('matchedRank' in result)) return undefined
+  if ('forbiddenMatches' in result) {
+    if (
+      result.expected.acceptable.length === 0 ||
+      (result.matchedRank !== null &&
+        result.matchedRank <= result.expected.maxRank)
+    ) {
+      return undefined
+    }
+  } else if (!('matchedRank' in result)) {
+    return undefined
+  }
+
   return result.matchedRank === null
     ? `No complete match in Top ${topK}; required rank ${result.expected.maxRank} or better.`
     : `Matched at rank ${result.matchedRank}; required rank ${result.expected.maxRank} or better.`
+}
+
+function forbiddenFailureLabels(result: AiEvalCaseResult): string[] {
+  if (!('forbiddenMatches' in result) || result.forbiddenMatches.length === 0) {
+    return []
+  }
+  return result.forbiddenMatches.map(
+    ({ target, rank }) =>
+      `  Forbidden: ${targetLabel(target)} at rank ${rank}.`,
+  )
+}
+
+function remediationLabel(result: AiEvalCaseResult): string {
+  if ('forbiddenMatches' in result && result.forbiddenMatches.length > 0) {
+    return '  Improve an acceptable target, remove forbidden targets from search results, or correct the authored expectation.'
+  }
+  return '  Improve the relevant title, description, heading, or page text, or correct the authored expectation.'
 }
 
 export function formatAiEvalReport(report: AiEvalReport): string {
@@ -587,6 +850,7 @@ export function formatAiEvalReport(report: AiEvalReport): string {
       `  Query: ${result.query}`,
       `  Expected: ${expectedLabel(result)}`,
       ...(rankFailure === undefined ? [] : [`  Rank: ${rankFailure}`]),
+      ...forbiddenFailureLabels(result),
       '  Actual:',
     )
     if (result.actual.length === 0) {
@@ -594,9 +858,7 @@ export function formatAiEvalReport(report: AiEvalReport): string {
     } else {
       lines.push(...result.actual.map((item) => `    ${actualLabel(item)}`))
     }
-    lines.push(
-      '  Improve the relevant title, description, heading, or page text, or correct the authored expectation.',
-    )
+    lines.push(remediationLabel(result))
   }
 
   return `${lines.join('\n')}\n`

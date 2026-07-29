@@ -78,6 +78,40 @@ async function writeRankedIndex(site: string): Promise<void> {
   )
 }
 
+async function writeTargetIndex(site: string): Promise<void> {
+  await mkdir(path.join(site, '.silen/dist'), { recursive: true })
+  const index = createSearchIndex([
+    {
+      id: '/first',
+      lang: 'en-US',
+      title: 'Shared answer',
+      route: '/first/',
+      headings: ['Primary'],
+      text: 'primary documentation',
+    },
+    {
+      id: '/second',
+      lang: 'en-US',
+      title: 'Secondary',
+      route: '/second/',
+      headings: ['Secondary'],
+      text: 'shared answer',
+    },
+    {
+      id: '/forbidden',
+      lang: 'en-US',
+      title: 'Forbidden',
+      route: '/forbidden/',
+      headings: ['Blocked'],
+      text: 'shared answer',
+    },
+  ])
+  await writeFile(
+    path.join(site, '.silen/dist/search-index.json'),
+    serializeSearchIndex(index),
+  )
+}
+
 async function writeSuite(site: string, value: unknown): Promise<void> {
   await mkdir(path.join(site, '.silen'), { recursive: true })
   await writeFile(
@@ -193,6 +227,69 @@ describe('model-free AI evaluation', () => {
   ]
 }
 `)
+    expect(formatAiEvalReport(report)).toBe('Silen AI eval: 1/1 passed\n')
+  })
+
+  it('keeps the version 2 JSON report byte-identical', async () => {
+    const site = await temporaryRoot()
+    await writeRankedIndex(site)
+    await writeSuite(site, {
+      schemaVersion: 2,
+      topK: 2,
+      cases: [
+        {
+          id: 'at-bound',
+          query: 'shared answer',
+          lang: 'en-US',
+          expected: { route: '/second/', maxRank: 2 },
+        },
+      ],
+    })
+
+    const report = await runAiEvaluation(site)
+    expect(serializeAiEvalReport(report)).toBe(`{
+  "schemaVersion": 2,
+  "ok": true,
+  "suite": ".silen/ai-evals.json",
+  "index": ".silen/dist/search-index.json",
+  "topK": 2,
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0
+  },
+  "cases": [
+    {
+      "id": "at-bound",
+      "ok": true,
+      "query": "shared answer",
+      "lang": "en-US",
+      "expected": {
+        "route": "/second/",
+        "maxRank": 2
+      },
+      "matchedRank": 2,
+      "actual": [
+        {
+          "rank": 1,
+          "route": "/first/",
+          "title": "Shared answer",
+          "score": 15.383395,
+          "lang": "en-US"
+        },
+        {
+          "rank": 2,
+          "route": "/second/",
+          "title": "Secondary",
+          "score": 4.158883,
+          "lang": "en-US"
+        }
+      ]
+    }
+  ]
+}
+`)
+    expect(formatAiEvalReport(report)).toBe('Silen AI eval: 1/1 passed\n')
   })
 
   it('applies explicit and default version 2 rank bounds', async () => {
@@ -273,6 +370,255 @@ describe('model-free AI evaluation', () => {
     )
   })
 
+  it('evaluates version 3 acceptable and forbidden targets in rank order', async () => {
+    const site = await temporaryRoot()
+    await writeTargetIndex(site)
+    await writeSuite(site, {
+      schemaVersion: 3,
+      topK: 3,
+      cases: [
+        {
+          id: 'multiple-acceptable',
+          query: 'shared answer',
+          lang: 'en-US',
+          expected: {
+            acceptable: [{ route: '/second/' }, { route: '/first/' }],
+            forbidden: [],
+            maxRank: 3,
+          },
+        },
+        {
+          id: 'at-bound',
+          query: 'shared answer',
+          lang: 'en-US',
+          expected: {
+            acceptable: [{ route: '/second/' }],
+            forbidden: [],
+            maxRank: 3,
+          },
+        },
+        {
+          id: 'rank-and-forbidden-failure',
+          query: 'shared answer',
+          lang: 'en-US',
+          expected: {
+            acceptable: [{ route: '/second/' }],
+            forbidden: [{ route: '/forbidden/' }],
+            maxRank: 2,
+          },
+        },
+        {
+          id: 'negative-only',
+          query: 'no matching vocabulary',
+          expected: {
+            acceptable: [],
+            forbidden: [{ route: '/forbidden/' }],
+            maxRank: 3,
+          },
+        },
+        {
+          id: 'positive-only-failure',
+          query: 'shared answer',
+          expected: {
+            acceptable: [{ route: '/missing/' }],
+            forbidden: [],
+            maxRank: 3,
+          },
+        },
+      ],
+    })
+
+    const first = await runAiEvaluation(site)
+    const second = await runAiEvaluation(site)
+    expect(first).toMatchObject({
+      schemaVersion: 3,
+      ok: false,
+      summary: { total: 5, passed: 3, failed: 2 },
+      cases: [
+        {
+          id: 'multiple-acceptable',
+          ok: true,
+          matchedTarget: { route: '/first/' },
+          matchedRank: 1,
+          forbiddenMatches: [],
+        },
+        {
+          id: 'at-bound',
+          ok: true,
+          matchedTarget: { route: '/second/' },
+          matchedRank: 3,
+          forbiddenMatches: [],
+        },
+        {
+          id: 'rank-and-forbidden-failure',
+          ok: false,
+          matchedTarget: { route: '/second/' },
+          matchedRank: 3,
+          forbiddenMatches: [{ target: { route: '/forbidden/' }, rank: 2 }],
+        },
+        {
+          id: 'negative-only',
+          ok: true,
+          matchedTarget: null,
+          matchedRank: null,
+          forbiddenMatches: [],
+          actual: [],
+        },
+        {
+          id: 'positive-only-failure',
+          ok: false,
+          matchedTarget: null,
+          matchedRank: null,
+          forbiddenMatches: [],
+        },
+      ],
+    })
+    expect(serializeAiEvalReport(first)).toBe(serializeAiEvalReport(second))
+
+    const human = formatAiEvalReport(first)
+    expect(human).toContain('Matched at rank 3; required rank 2 or better.')
+    expect(human).toContain('Forbidden: /forbidden/ at rank 2.')
+    expect(human).toContain(
+      'No complete match in Top 3; required rank 3 or better.',
+    )
+  })
+
+  it('orders version 3 forbidden evidence by actual rank', async () => {
+    const site = await temporaryRoot()
+    await writeTargetIndex(site)
+    await writeSuite(site, {
+      schemaVersion: 3,
+      topK: 3,
+      cases: [
+        {
+          id: 'ordered-forbidden',
+          query: 'shared answer',
+          lang: 'en-US',
+          expected: {
+            acceptable: [{ route: '/first/' }],
+            forbidden: [{ route: '/second/' }, { route: '/forbidden/' }],
+            maxRank: 1,
+          },
+        },
+      ],
+    })
+
+    const report = await runAiEvaluation(site)
+    const result = report.cases[0]
+    expect(report).toMatchObject({
+      schemaVersion: 3,
+      ok: false,
+      cases: [
+        {
+          matchedTarget: { route: '/first/' },
+          matchedRank: 1,
+          forbiddenMatches: [
+            { target: { route: '/forbidden/' }, rank: 2 },
+            { target: { route: '/second/' }, rank: 3 },
+          ],
+        },
+      ],
+    })
+    expect(Object.keys(report)).toEqual([
+      'schemaVersion',
+      'ok',
+      'suite',
+      'index',
+      'topK',
+      'summary',
+      'cases',
+    ])
+    expect(Object.keys(result!)).toEqual([
+      'id',
+      'ok',
+      'query',
+      'lang',
+      'expected',
+      'matchedTarget',
+      'matchedRank',
+      'forbiddenMatches',
+      'actual',
+    ])
+    expect(Object.keys(result!.expected)).toEqual([
+      'acceptable',
+      'forbidden',
+      'maxRank',
+    ])
+    expect(serializeAiEvalReport(report)).toBe(
+      serializeAiEvalReport(await runAiEvaluation(site)),
+    )
+
+    const human = formatAiEvalReport(report)
+    expect(human).not.toContain('  Rank:')
+    const firstForbidden = human.indexOf('Forbidden: /forbidden/ at rank 2.')
+    const secondForbidden = human.indexOf('Forbidden: /second/ at rank 3.')
+    expect(firstForbidden).toBeGreaterThanOrEqual(0)
+    expect(secondForbidden).toBeGreaterThan(firstForbidden)
+  })
+
+  it('normalizes version 3 acceptable and forbidden targets', async () => {
+    const site = await temporaryRoot()
+    await writeIndex(site)
+    const normalizedTarget = {
+      route: '/ai',
+      heading: ' public   AI ARTIFACTS ',
+    }
+    await writeSuite(site, {
+      schemaVersion: 3,
+      topK: 5,
+      cases: [
+        {
+          id: 'acceptable-normalization',
+          query: 'Public AI artifacts',
+          expected: {
+            acceptable: [normalizedTarget],
+            forbidden: [],
+            maxRank: 1,
+          },
+        },
+        {
+          id: 'forbidden-normalization',
+          query: 'Public AI artifacts',
+          expected: {
+            acceptable: [],
+            forbidden: [normalizedTarget],
+            maxRank: 5,
+          },
+        },
+      ],
+    })
+
+    await expect(runAiEvaluation(site)).resolves.toMatchObject({
+      schemaVersion: 3,
+      ok: false,
+      summary: { total: 2, passed: 1, failed: 1 },
+      cases: [
+        {
+          ok: true,
+          matchedTarget: {
+            route: '/ai',
+            heading: 'public AI ARTIFACTS',
+          },
+          matchedRank: 1,
+        },
+        {
+          ok: false,
+          matchedTarget: null,
+          matchedRank: null,
+          forbiddenMatches: [
+            {
+              target: {
+                route: '/ai',
+                heading: 'public AI ARTIFACTS',
+              },
+              rank: 1,
+            },
+          ],
+        },
+      ],
+    })
+  })
+
   it.each([
     [0, 2],
     [21, 20],
@@ -347,7 +693,246 @@ describe('model-free AI evaluation', () => {
   })
 
   it.each([
-    [{ schemaVersion: 3, cases: [] }, 'schemaVersion'],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'missing-acceptable',
+            query: 'query',
+            expected: {
+              forbidden: [{ route: '/blocked/' }],
+              maxRank: 2,
+            },
+          },
+        ],
+      },
+      'cases.0.expected.acceptable',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'missing-forbidden',
+            query: 'query',
+            expected: {
+              acceptable: [{ route: '/' }],
+              maxRank: 2,
+            },
+          },
+        ],
+      },
+      'cases.0.expected.forbidden',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'missing-max-rank',
+            query: 'query',
+            expected: {
+              acceptable: [{ route: '/' }],
+              forbidden: [],
+            },
+          },
+        ],
+      },
+      'cases.0.expected.maxRank',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'too-many-targets',
+            query: 'query',
+            expected: {
+              acceptable: Array.from({ length: 21 }, (_, index) => ({
+                route: `/target-${index}/`,
+              })),
+              forbidden: [],
+              maxRank: 2,
+            },
+          },
+        ],
+      },
+      'cases.0.expected.acceptable',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'unknown-field',
+            query: 'query',
+            expected: {
+              acceptable: [{ route: '/' }],
+              forbidden: [],
+              maxRank: 2,
+              typo: true,
+            },
+          },
+        ],
+      },
+      'cases.0.expected',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'empty',
+            query: 'query',
+            expected: { acceptable: [], forbidden: [], maxRank: 2 },
+          },
+        ],
+      },
+      'cases.0.expected.acceptable',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'negative-bound',
+            query: 'query',
+            expected: {
+              acceptable: [],
+              forbidden: [{ route: '/blocked/' }],
+              maxRank: 1,
+            },
+          },
+        ],
+      },
+      'cases.0.expected.maxRank',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'above-top-k',
+            query: 'query',
+            expected: {
+              acceptable: [{ route: '/' }],
+              forbidden: [],
+              maxRank: 3,
+            },
+          },
+        ],
+      },
+      'cases.0.expected.maxRank',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'overlapping-acceptable',
+            query: 'query',
+            expected: {
+              acceptable: [
+                { route: '/guide/' },
+                { route: '/guide/', heading: 'Install' },
+              ],
+              forbidden: [],
+              maxRank: 2,
+            },
+          },
+        ],
+      },
+      'cases.0.expected.acceptable.1',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'overlapping-forbidden',
+            query: 'query',
+            expected: {
+              acceptable: [],
+              forbidden: [
+                { route: '/guide/', heading: 'Install' },
+                { route: '/guide/' },
+              ],
+              maxRank: 2,
+            },
+          },
+        ],
+      },
+      'cases.0.expected.forbidden.1',
+    ],
+    [
+      {
+        schemaVersion: 3,
+        topK: 2,
+        cases: [
+          {
+            id: 'cross-list-overlap',
+            query: 'query',
+            expected: {
+              acceptable: [{ route: '/guide/', heading: 'Install' }],
+              forbidden: [{ route: '/guide/' }],
+              maxRank: 2,
+            },
+          },
+        ],
+      },
+      'cases.0.expected.forbidden.0',
+    ],
+  ])('rejects invalid version 3 target policy %#', async (suite, field) => {
+    const site = await temporaryRoot()
+    await writeIndex(site)
+    await writeSuite(site, suite)
+    await expect(runAiEvaluation(site)).rejects.toMatchObject({
+      code: 'SUITE_SCHEMA',
+      field,
+    })
+  })
+
+  it.each([1, 2])(
+    'keeps version 3 target arrays invalid in version %s',
+    async (schemaVersion) => {
+      const site = await temporaryRoot()
+      await writeIndex(site)
+      await writeSuite(site, {
+        schemaVersion,
+        topK: 1,
+        cases: [
+          {
+            id: 'v3-fields-in-old-suite',
+            query: 'query',
+            expected: {
+              route: '/',
+              acceptable: [{ route: '/' }],
+              forbidden: [],
+              maxRank: 1,
+            },
+          },
+        ],
+      })
+      await expect(runAiEvaluation(site)).rejects.toMatchObject({
+        code: 'SUITE_SCHEMA',
+        field: 'cases.0.expected',
+      })
+    },
+  )
+
+  it.each([
+    [{ schemaVersion: 4, cases: [] }, 'schemaVersion'],
     [{ schemaVersion: 1, cases: [] }, 'cases'],
     [
       {
