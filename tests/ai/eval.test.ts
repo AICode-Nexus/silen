@@ -52,6 +52,32 @@ async function writeIndex(site: string): Promise<void> {
   )
 }
 
+async function writeRankedIndex(site: string): Promise<void> {
+  await mkdir(path.join(site, '.silen/dist'), { recursive: true })
+  const index = createSearchIndex([
+    {
+      id: '/first',
+      lang: 'en-US',
+      title: 'Shared answer',
+      route: '/first/',
+      headings: ['Primary'],
+      text: 'primary documentation',
+    },
+    {
+      id: '/second',
+      lang: 'en-US',
+      title: 'Secondary',
+      route: '/second/',
+      headings: ['Secondary'],
+      text: 'shared answer',
+    },
+  ])
+  await writeFile(
+    path.join(site, '.silen/dist/search-index.json'),
+    serializeSearchIndex(index),
+  )
+}
+
 async function writeSuite(site: string, value: unknown): Promise<void> {
   await mkdir(path.join(site, '.silen'), { recursive: true })
   await writeFile(
@@ -112,6 +138,186 @@ describe('model-free AI evaluation', () => {
     expect(result.cases[0]?.actual[0]?.score).toBeGreaterThan(0)
   })
 
+  it('keeps the version 1 JSON report byte-identical', async () => {
+    const site = await temporaryRoot()
+    await writeIndex(site)
+    await writeSuite(site, {
+      schemaVersion: 1,
+      topK: 1,
+      cases: [
+        {
+          id: 'public-artifacts',
+          query: 'Public AI artifacts',
+          lang: 'en-US',
+          expected: {
+            route: '/ai/',
+            heading: 'Public AI artifacts',
+          },
+        },
+      ],
+    })
+
+    const report = await runAiEvaluation(site)
+    expect(serializeAiEvalReport(report)).toBe(`{
+  "schemaVersion": 1,
+  "ok": true,
+  "suite": ".silen/ai-evals.json",
+  "index": ".silen/dist/search-index.json",
+  "topK": 1,
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0
+  },
+  "cases": [
+    {
+      "id": "public-artifacts",
+      "ok": true,
+      "query": "Public AI artifacts",
+      "lang": "en-US",
+      "expected": {
+        "route": "/ai/",
+        "heading": "Public AI artifacts"
+      },
+      "actual": [
+        {
+          "rank": 1,
+          "route": "/ai/",
+          "title": "AI-ready documentation",
+          "score": 25.930289,
+          "heading": "Public AI artifacts",
+          "lang": "en-US"
+        }
+      ]
+    }
+  ]
+}
+`)
+  })
+
+  it('applies explicit and default version 2 rank bounds', async () => {
+    const site = await temporaryRoot()
+    await writeRankedIndex(site)
+    await writeSuite(site, {
+      schemaVersion: 2,
+      topK: 2,
+      cases: [
+        {
+          id: 'at-bound',
+          query: 'shared answer',
+          lang: 'en-US',
+          expected: { route: '/second/', maxRank: 2 },
+        },
+        {
+          id: 'below-bound',
+          query: 'shared answer',
+          lang: 'en-US',
+          expected: { route: '/second/', maxRank: 1 },
+        },
+        {
+          id: 'default-bound',
+          query: 'shared answer',
+          lang: 'en-US',
+          expected: { route: '/second/' },
+        },
+        {
+          id: 'missing',
+          query: 'shared answer',
+          lang: 'en-US',
+          expected: { route: '/missing/', maxRank: 1 },
+        },
+      ],
+    })
+
+    const first = await runAiEvaluation(site)
+    const second = await runAiEvaluation(site)
+    expect(first).toMatchObject({
+      schemaVersion: 2,
+      ok: false,
+      topK: 2,
+      summary: { total: 4, passed: 2, failed: 2 },
+      cases: [
+        {
+          id: 'at-bound',
+          ok: true,
+          expected: { route: '/second/', maxRank: 2 },
+          matchedRank: 2,
+        },
+        {
+          id: 'below-bound',
+          ok: false,
+          expected: { route: '/second/', maxRank: 1 },
+          matchedRank: 2,
+        },
+        {
+          id: 'default-bound',
+          ok: true,
+          expected: { route: '/second/', maxRank: 2 },
+          matchedRank: 2,
+        },
+        {
+          id: 'missing',
+          ok: false,
+          expected: { route: '/missing/', maxRank: 1 },
+          matchedRank: null,
+        },
+      ],
+    })
+    expect(first.cases.every(({ actual }) => actual.length === 2)).toBe(true)
+    expect(serializeAiEvalReport(first)).toBe(serializeAiEvalReport(second))
+
+    const human = formatAiEvalReport(first)
+    expect(human).toContain('Matched at rank 2; required rank 1 or better.')
+    expect(human).toContain(
+      'No complete match in Top 2; required rank 1 or better.',
+    )
+  })
+
+  it.each([
+    [0, 2],
+    [21, 20],
+    [1.5, 2],
+    [3, 2],
+  ])('rejects version 2 maxRank %s with topK %s', async (maxRank, topK) => {
+    const site = await temporaryRoot()
+    await writeRankedIndex(site)
+    await writeSuite(site, {
+      schemaVersion: 2,
+      topK,
+      cases: [
+        {
+          id: 'invalid-rank',
+          query: 'shared answer',
+          expected: { route: '/second/', maxRank },
+        },
+      ],
+    })
+    await expect(runAiEvaluation(site)).rejects.toMatchObject({
+      code: 'SUITE_SCHEMA',
+      field: 'cases.0.expected.maxRank',
+    })
+  })
+
+  it('keeps maxRank invalid in a strict version 1 suite', async () => {
+    const site = await temporaryRoot()
+    await writeRankedIndex(site)
+    await writeSuite(site, {
+      schemaVersion: 1,
+      topK: 2,
+      cases: [
+        {
+          id: 'v1-extra-field',
+          query: 'shared answer',
+          expected: { route: '/second/', maxRank: 1 },
+        },
+      ],
+    })
+    await expect(runAiEvaluation(site)).rejects.toMatchObject({
+      code: 'SUITE_SCHEMA',
+      field: 'cases.0.expected',
+    })
+  })
+
   it('collects all misses and keeps identical serialized output', async () => {
     const site = await temporaryRoot()
     await writeIndex(site)
@@ -141,7 +347,7 @@ describe('model-free AI evaluation', () => {
   })
 
   it.each([
-    [{ schemaVersion: 2, cases: [] }, 'schemaVersion'],
+    [{ schemaVersion: 3, cases: [] }, 'schemaVersion'],
     [{ schemaVersion: 1, cases: [] }, 'cases'],
     [
       {
