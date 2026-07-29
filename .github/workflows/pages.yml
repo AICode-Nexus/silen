@@ -8,6 +8,7 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'src/**'
+      - 'tooling/**'
       - 'tsconfig*.json'
       - 'tsup.config.ts'
       - 'website/**'
@@ -43,8 +44,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and validate Silen website
-        run: pnpm site:check
+      - name: Run official AI readiness gate
+        run: pnpm site:ai-check
+
+      - name: Upload AI evaluation report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: silen-ai-eval-pages
+          path: artifacts/ai-eval/site-ai-eval.json
+          if-no-files-found: ignore
+          retention-days: 90
 
       - name: Assert public Agent Contract is present
         run: test -f website/.silen/dist/.well-known/silen/manifest.json

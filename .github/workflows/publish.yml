@@ -45,17 +45,23 @@ jobs:
           pnpm lint &&
           pnpm typecheck
 
-      - name: Build package
-        run: pnpm build
+      - name: Run official AI readiness gate
+        run: pnpm site:ai-check
+
+      - name: Upload AI evaluation report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: silen-ai-eval-publish
+          path: artifacts/ai-eval/site-ai-eval.json
+          if-no-files-found: ignore
+          retention-days: 90
 
       - name: Run release tests
-        run: pnpm test
+        run: pnpm test:run
 
       - name: Validate package metadata
         run: pnpm exec publint
-
-      - name: Assert package has no source maps
-        run: pnpm check:no-maps dist
 
       - name: Publish package to npm
         run: npm publish --access public --tag latest

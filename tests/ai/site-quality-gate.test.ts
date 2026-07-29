@@ -6,6 +6,10 @@ import {
   SITE_AI_STAGES,
 } from '../../tooling/site-ai-check'
 
+function occurrenceCount(source: string, token: string): number {
+  return source.split(token).length - 1
+}
+
 describe('official deterministic site quality gate', () => {
   it('defines one canonical local runner and one compatibility alias', async () => {
     const [packageSource, runnerSource] = await Promise.all([
@@ -54,14 +58,41 @@ describe('official deterministic site quality gate', () => {
     }
   })
 
-  it('keeps the existing Pages alias until workflow promotion', async () => {
+  it('enforces the canonical gate and uploads its report in every workflow', async () => {
     const [pages, ci, publish] = await Promise.all([
       readFile('.github/workflows/pages.yml', 'utf8'),
       readFile('.github/workflows/ci.yml', 'utf8'),
       readFile('.github/workflows/publish.yml', 'utf8'),
     ])
-    expect(pages).toContain('run: pnpm site:check')
-    expect(ci).not.toContain('pnpm site:ai-check')
-    expect(publish).not.toContain('pnpm site:ai-check')
+
+    for (const [name, artifactName, workflow] of [
+      ['Pages', 'silen-ai-eval-pages', pages],
+      ['CI', 'silen-ai-eval-ci', ci],
+      ['publish', 'silen-ai-eval-publish', publish],
+    ] as const) {
+      expect(occurrenceCount(workflow, 'pnpm site:ai-check'), name).toBe(1)
+      expect(workflow, name).toContain('if: ${{ always() }}')
+      expect(workflow, name).toContain('uses: actions/upload-artifact@v7')
+      expect(workflow, name).toContain(
+        'path: artifacts/ai-eval/site-ai-eval.json',
+      )
+      expect(workflow, name).toContain(`name: ${artifactName}`)
+      expect(workflow, name).toContain('if-no-files-found: ignore')
+      expect(workflow, name).toContain('retention-days: 90')
+      expect(workflow.indexOf('pnpm site:ai-check'), name).toBeLessThan(
+        workflow.indexOf('uses: actions/upload-artifact@v7'),
+      )
+    }
+
+    expect(pages).not.toContain('run: pnpm site:check')
+    expect(pages).not.toContain('run: pnpm site:build')
+    expect(pages).toContain("- 'tooling/**'")
+    expect(pages.indexOf('pnpm site:ai-check')).toBeLessThan(
+      pages.indexOf(
+        'test -f website/.silen/dist/.well-known/silen/manifest.json',
+      ),
+    )
+    expect(ci).not.toContain('run: pnpm site:check')
+    expect(publish).not.toContain('run: pnpm site:check')
   })
 })

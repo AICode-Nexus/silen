@@ -18,6 +18,7 @@ describe('AI release CI gate', () => {
     }
     const quality = job(workflow, 'quality')
     const runtimeRelease = job(workflow, 'runtime-release')
+    const aiReadiness = job(workflow, 'ai-readiness')
     const browser = job(workflow, 'browser')
 
     expect(quality).toContain('node-version: 20.19.0')
@@ -35,6 +36,20 @@ describe('AI release CI gate', () => {
     )
     expect(runtimeRelease).toContain('pnpm exec publint')
 
+    expect(aiReadiness).toContain('needs: quality')
+    expect(aiReadiness).toContain('node-version: 22.12.0')
+    expect(aiReadiness).toContain('run: pnpm site:ai-check')
+    expect(aiReadiness).not.toContain('pnpm site:build')
+    expect(aiReadiness).toContain('if: ${{ always() }}')
+    expect(aiReadiness).toContain('uses: actions/upload-artifact@v7')
+    expect(aiReadiness).toContain('name: silen-ai-eval-ci')
+    expect(aiReadiness).toContain('path: artifacts/ai-eval/site-ai-eval.json')
+    expect(aiReadiness).toContain('if-no-files-found: ignore')
+    expect(aiReadiness).toContain('retention-days: 90')
+    expect(aiReadiness.indexOf('pnpm site:ai-check')).toBeLessThan(
+      aiReadiness.indexOf('actions/upload-artifact@v7'),
+    )
+
     expect(browser).toContain('node-version: 20.19.0')
     expect(browser).toContain('pnpm build')
     expect(browser).toContain(
@@ -44,13 +59,14 @@ describe('AI release CI gate', () => {
     expect(browser).not.toContain('pnpm test')
 
     expect(workflow.match(/npm install --global pnpm@10\.34\.0/g)).toHaveLength(
-      3,
+      4,
     )
     expect(workflow.match(/pnpm format:check/g)).toHaveLength(1)
     expect(workflow.match(/pnpm lint/g)).toHaveLength(1)
     expect(workflow.match(/pnpm typecheck/g)).toHaveLength(1)
     expect(workflow.match(/pnpm build/g)).toHaveLength(2)
     expect(workflow.match(/pnpm test/g)).toHaveLength(1)
+    expect(workflow.match(/pnpm site:ai-check/g)).toHaveLength(1)
     expect(workflow.match(/pnpm exec playwright test/g)).toHaveLength(1)
     expect(workflow).toContain('run: pnpm exec playwright test tests/e2e')
     expect(workflow).not.toContain('playwright test tests/e2e/ai.spec.ts')

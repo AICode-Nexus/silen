@@ -75,6 +75,39 @@ jobs:
       - name: Validate published package metadata
         run: pnpm exec publint
 
+  ai-readiness:
+    name: Official AI readiness gate (Node 22.12.0)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@10.34.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run official AI readiness gate
+        run: pnpm site:ai-check
+
+      - name: Upload AI evaluation report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: silen-ai-eval-ci
+          path: artifacts/ai-eval/site-ai-eval.json
+          if-no-files-found: ignore
+          retention-days: 90
+
   browser:
     name: Full browser gate (Node 20.19.0)
     needs: quality
