@@ -86,6 +86,10 @@ exposed with `aria-current` and emphasized through the theme's primary token.
 
 ## Contributing
 
+The [project map](./docs/project-map.md) is the canonical view of Silen's
+current baseline, executable next work, candidate directions, and watched
+ecosystem signals.
+
 Focused bug reports and pull requests are welcome. Open an
 [issue](https://github.com/AICode-Nexus/silen/issues) to describe observable
 behavior, or submit a pull request with tests and the relevant documentation.
