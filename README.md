@@ -90,6 +90,10 @@ The [project map](./docs/project-map.md) is the canonical view of Silen's
 current baseline, executable next work, candidate directions, and watched
 ecosystem signals.
 
+For official-site changes, run `pnpm site:check`. It builds the package and
+site, audits the AI artifacts, evaluates production retrieval, and rejects
+source maps before deployment.
+
 Focused bug reports and pull requests are welcome. Open an
 [issue](https://github.com/AICode-Nexus/silen/issues) to describe observable
 behavior, or submit a pull request with tests and the relevant documentation.
