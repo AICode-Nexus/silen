@@ -44,6 +44,10 @@ function text(result: Awaited<ReturnType<Client['callTool']>>): string {
   return block?.type === 'text' ? (block.text ?? '') : ''
 }
 
+function structured(result: Awaited<ReturnType<Client['callTool']>>): unknown {
+  return result.structuredContent
+}
+
 function jsonResult(
   result: Awaited<ReturnType<Client['callTool']>>,
 ): Record<string, unknown> {
@@ -89,12 +93,14 @@ describe('read-only MCP server', () => {
     expect(jsonResult(search)).toMatchObject({
       results: [{ path: 'guide/getting-started.mdx' }],
     })
+    expect(structured(search)).toEqual(JSON.parse(text(search)))
 
     const read = await client.callTool({
       name: 'read',
       arguments: { path: 'index.mdx', startLine: 1, endLine: 8 },
     })
     expect(jsonResult(read)).toMatchObject({ path: 'index.mdx', route: '/' })
+    expect(structured(read)).toEqual(JSON.parse(text(read)))
 
     const built = await client.callTool({ name: 'build', arguments: {} })
     const builtResult = jsonResult(built)
@@ -106,6 +112,7 @@ describe('read-only MCP server', () => {
         ({ code }) => code === 'index-cache',
       ),
     ).toBe(true)
+    expect(structured(built)).toEqual(JSON.parse(text(built)))
     expect(text(built)).not.toContain(fixture)
   }, 30_000)
 

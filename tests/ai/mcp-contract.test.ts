@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import { createMcpApiContract } from '../../src/ai/contract/mcp-api'
 import {
   readToolDescriptors,
@@ -21,6 +22,18 @@ describe('MCP Agent Contract registry', () => {
       'link',
       'append',
     ])
+
+    const descriptors = [...readToolDescriptors, ...writeToolDescriptors]
+    expect(descriptors).toHaveLength(10)
+    for (const descriptor of descriptors) {
+      expect(descriptor.outputSchema).toBeDefined()
+    }
+    expect(
+      z.toJSONSchema(
+        readToolDescriptors.find(({ name }) => name === 'guide')!.outputSchema,
+        { io: 'output' },
+      ),
+    ).toMatchObject({ type: 'string' })
   })
 
   it('marks every write descriptor as explicitly authorized', () => {

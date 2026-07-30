@@ -1,17 +1,19 @@
 import type {
+  CallToolResult,
   McpServer,
   ToolCallback,
-  CallToolResult,
 } from '@modelcontextprotocol/server'
 import { z } from 'zod'
 import type { SilenMcpToolAnnotations } from '../../shared/ai-contract.js'
 import { WorkspaceError, type Workspace } from '../workspace.js'
+import { mcpOutputSchemas } from './output-schemas.js'
 
 export interface McpToolDescriptor {
   readonly name: string
   readonly title: string
   readonly description: string
   readonly inputSchema: z.ZodType<Record<string, unknown>>
+  readonly outputSchema: z.ZodType
   readonly annotations: SilenMcpToolAnnotations
   readonly requiresExplicitAuthorization: boolean
   register(server: McpServer, workspace: Workspace): void
@@ -38,24 +40,6 @@ const additiveAnnotations = {
   openWorldHint: false,
 } as const
 
-function textResult(
-  text: string,
-  structuredContent?: Record<string, unknown>,
-): CallToolResult {
-  return {
-    content: [{ type: 'text' as const, text }],
-    ...(structuredContent ? { structuredContent } : {}),
-  }
-}
-
-function jsonResult(value: unknown): CallToolResult {
-  const structuredContent =
-    typeof value === 'object' && value !== null && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : { value }
-  return textResult(JSON.stringify(value, null, 2), structuredContent)
-}
-
 function safeFailure(error: unknown): CallToolResult {
   const failure =
     error instanceof WorkspaceError
@@ -74,36 +58,53 @@ function safeFailure(error: unknown): CallToolResult {
   }
 }
 
-interface DescriptorOptions<Schema extends z.ZodType<Record<string, unknown>>> {
+interface DescriptorOptions<
+  InputSchema extends z.ZodType<Record<string, unknown>>,
+  OutputSchema extends z.ZodType,
+> {
   readonly name: string
   readonly title: string
   readonly description: string
-  readonly inputSchema: Schema
+  readonly inputSchema: InputSchema
+  readonly outputSchema: OutputSchema
   readonly annotations: SilenMcpToolAnnotations
   readonly requiresExplicitAuthorization: boolean
-  readonly result?: 'json' | 'text'
-  execute(workspace: Workspace, input: z.output<Schema>): Promise<unknown>
+  readonly renderText?: (value: z.output<OutputSchema>) => string
+  execute(
+    workspace: Workspace,
+    input: z.output<InputSchema>,
+  ): Promise<z.output<OutputSchema>>
 }
 
 function createToolDescriptor<
-  Schema extends z.ZodType<Record<string, unknown>>,
->(options: DescriptorOptions<Schema>): McpToolDescriptor {
+  InputSchema extends z.ZodType<Record<string, unknown>>,
+  OutputSchema extends z.ZodType,
+>(options: DescriptorOptions<InputSchema, OutputSchema>): McpToolDescriptor {
   return {
     name: options.name,
     title: options.title,
     description: options.description,
     inputSchema: options.inputSchema,
+    outputSchema: options.outputSchema,
     annotations: options.annotations,
     requiresExplicitAuthorization: options.requiresExplicitAuthorization,
     register(server, workspace) {
       const callback = async (
-        input: z.output<Schema>,
+        input: z.output<InputSchema>,
       ): Promise<CallToolResult> => {
         try {
           const value = await options.execute(workspace, input)
-          return options.result === 'text'
-            ? textResult(String(value))
-            : jsonResult(value)
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: options.renderText
+                  ? options.renderText(value)
+                  : JSON.stringify(value, null, 2),
+              },
+            ],
+            structuredContent: value,
+          }
         } catch (error) {
           return safeFailure(error)
         }
@@ -114,9 +115,10 @@ function createToolDescriptor<
           title: options.title,
           description: options.description,
           inputSchema: options.inputSchema,
+          outputSchema: options.outputSchema,
           annotations: options.annotations,
         },
-        callback as ToolCallback<Schema>,
+        callback as ToolCallback<InputSchema>,
       )
     },
   }
@@ -128,9 +130,10 @@ export const readToolDescriptors: readonly McpToolDescriptor[] = [
     title: 'Guide to the Silen workspace',
     description: 'Explain the Silen workspace and safe read-only workflow.',
     inputSchema: z.object({}).strict(),
+    outputSchema: mcpOutputSchemas.guide,
     annotations: readOnlyAnnotations,
     requiresExplicitAuthorization: false,
-    result: 'text',
+    renderText: (value) => value,
     execute: (workspace) => workspace.guide(),
   }),
   createToolDescriptor({
@@ -139,6 +142,7 @@ export const readToolDescriptors: readonly McpToolDescriptor[] = [
     description:
       'List documentation files and routes below a workspace-relative path.',
     inputSchema: z.object({ path: z.string().max(1024).default('.') }).strict(),
+    outputSchema: mcpOutputSchemas.list,
     annotations: readOnlyAnnotations,
     requiresExplicitAuthorization: false,
     execute: (workspace, input) => workspace.list(input.path),
@@ -154,6 +158,7 @@ export const readToolDescriptors: readonly McpToolDescriptor[] = [
         limit: z.number().int().min(1).max(50).default(10),
       })
       .strict(),
+    outputSchema: mcpOutputSchemas.search,
     annotations: readOnlyAnnotations,
     requiresExplicitAuthorization: false,
     execute: (workspace, input) => workspace.search(input.query, input.limit),
@@ -170,6 +175,7 @@ export const readToolDescriptors: readonly McpToolDescriptor[] = [
         endLine: z.number().int().positive().max(4000).optional(),
       })
       .strict(),
+    outputSchema: mcpOutputSchemas.read,
     annotations: readOnlyAnnotations,
     requiresExplicitAuthorization: false,
     execute: (workspace, input) =>
@@ -186,6 +192,7 @@ export const readToolDescriptors: readonly McpToolDescriptor[] = [
     inputSchema: z
       .object({ route: z.string().max(1024).startsWith('/') })
       .strict(),
+    outputSchema: mcpOutputSchemas.backlinks,
     annotations: readOnlyAnnotations,
     requiresExplicitAuthorization: false,
     execute: (workspace, input) => workspace.backlinks(input.route),
@@ -196,6 +203,7 @@ export const readToolDescriptors: readonly McpToolDescriptor[] = [
     description:
       'Inspect citation links and footnote references in one file or the workspace.',
     inputSchema: z.object({ path: z.string().max(1024).optional() }).strict(),
+    outputSchema: mcpOutputSchemas.citations,
     annotations: readOnlyAnnotations,
     requiresExplicitAuthorization: false,
     execute: (workspace, input) => workspace.citations(input.path),
@@ -206,6 +214,7 @@ export const readToolDescriptors: readonly McpToolDescriptor[] = [
     description:
       'Run a read-only build preflight over bounded Markdown inputs and existing artifacts. This never executes workspace code, invokes Vite, or writes files.',
     inputSchema: z.object({}).strict(),
+    outputSchema: mcpOutputSchemas.build,
     annotations: readOnlyAnnotations,
     requiresExplicitAuthorization: false,
     execute: (workspace) => workspace.build(),
@@ -224,6 +233,7 @@ export const writeToolDescriptors: readonly McpToolDescriptor[] = [
         content: z.string().max(2 * 1024 * 1024),
       })
       .strict(),
+    outputSchema: mcpOutputSchemas.write,
     annotations: writeAnnotations,
     requiresExplicitAuthorization: true,
     execute: (workspace, input) =>
@@ -241,6 +251,7 @@ export const writeToolDescriptors: readonly McpToolDescriptor[] = [
         label: z.string().min(1).max(500),
       })
       .strict(),
+    outputSchema: mcpOutputSchemas.link,
     annotations: additiveAnnotations,
     requiresExplicitAuthorization: true,
     execute: (workspace, input) =>
@@ -261,6 +272,7 @@ export const writeToolDescriptors: readonly McpToolDescriptor[] = [
         content: z.string().max(2 * 1024 * 1024),
       })
       .strict(),
+    outputSchema: mcpOutputSchemas.append,
     annotations: additiveAnnotations,
     requiresExplicitAuthorization: true,
     execute: (workspace, input) =>

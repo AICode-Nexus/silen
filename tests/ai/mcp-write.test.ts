@@ -44,6 +44,10 @@ function text(result: Awaited<ReturnType<Client['callTool']>>): string {
   return block?.type === 'text' ? (block.text ?? '') : ''
 }
 
+function structured(result: Awaited<ReturnType<Client['callTool']>>): unknown {
+  return result.structuredContent
+}
+
 function jsonResult(
   result: Awaited<ReturnType<Client['callTool']>>,
 ): Record<string, unknown> {
@@ -117,16 +121,19 @@ describe('MCP write permission gate', () => {
       path: 'docs/page.md',
       created: true,
     })
+    expect(structured(created)).toEqual(JSON.parse(text(created)))
     const replaced = await client.callTool({
       name: 'write',
       arguments: { path: 'docs/page.md', content: '# Replaced\n' },
     })
     expect(jsonResult(replaced)).toMatchObject({ created: false })
-    await client.callTool({
+    expect(structured(replaced)).toEqual(JSON.parse(text(replaced)))
+    const appended = await client.callTool({
       name: 'append',
       arguments: { path: 'docs/page.md', content: 'Details' },
     })
-    await client.callTool({
+    expect(structured(appended)).toEqual(JSON.parse(text(appended)))
+    const linked = await client.callTool({
       name: 'link',
       arguments: {
         path: 'docs/page.md',
@@ -134,6 +141,7 @@ describe('MCP write permission gate', () => {
         label: 'Target',
       },
     })
+    expect(structured(linked)).toEqual(JSON.parse(text(linked)))
 
     expect(await readFile(path.join(root, 'docs/page.md'), 'utf8')).toBe(
       '# Replaced\nDetails\n[Target](../target.mdx)',
