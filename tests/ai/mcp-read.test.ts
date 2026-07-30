@@ -1,6 +1,5 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio'
+import { Client, InMemoryTransport } from '@modelcontextprotocol/client'
 import { cp, mkdtemp, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'

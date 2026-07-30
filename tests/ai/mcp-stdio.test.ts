@@ -1,4 +1,4 @@
-import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/sdk/types.js'
+import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/server'
 import { execa } from 'execa'
 import { createInterface } from 'node:readline'
 import path from 'node:path'
@@ -15,7 +15,7 @@ vi.mock('../../src/ai/mcp/server.js', () => ({
   createMcpServer: () => ({ close: mocks.close, connect: mocks.connect }),
 }))
 
-vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
+vi.mock('@modelcontextprotocol/server/stdio', () => ({
   StdioServerTransport: class StdioServerTransport {
     onclose?: () => void
 

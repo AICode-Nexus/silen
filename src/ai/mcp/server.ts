@@ -1,4 +1,4 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { McpServer } from '@modelcontextprotocol/server'
 import { SILEN_VERSION } from '../../shared/version.js'
 import type { Workspace } from '../workspace.js'
 import { registerReadTools } from './read-tools.js'

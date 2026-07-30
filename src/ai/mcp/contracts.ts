@@ -1,8 +1,8 @@
 import type {
   McpServer,
   ToolCallback,
-} from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+  CallToolResult,
+} from '@modelcontextprotocol/server'
 import { z } from 'zod'
 import type { SilenMcpToolAnnotations } from '../../shared/ai-contract.js'
 import { WorkspaceError, type Workspace } from '../workspace.js'
