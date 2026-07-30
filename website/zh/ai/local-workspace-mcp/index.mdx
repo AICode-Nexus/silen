@@ -70,6 +70,20 @@ legacy `2025-11-25` 与 modern `2026-07-28` 客户端；版本规则见
 字符串结果的 `guide` 在 modern 客户端中保持原生字符串，在 legacy 客户端中由
 SDK 兼容包装为 `{ result: ... }`；对象结果工具在两个协议时代保持原有结构。
 
+## 实验性 Skills over MCP
+
+文件系统安装不依赖 MCP。明确支持 Resources 草案绑定的 Host 可以选择暴露同一份
+包内字节：
+
+```sh
+pnpm silen mcp docs --experimental-skills-over-mcp
+```
+
+该实验声明 `io.modelcontextprotocol/skills`，提供 `skill://index.json`，并把五个
+文件映射到 `skill://silen-docs-readonly/` 下。它只使用本地 stdio 并保持只读；该
+实验默认关闭，不增加工具、脚本、订阅、网络传输或写权限；`--allow-write` 仍是
+独立的显式工具注册开关。
+
 ## 谨慎授权写入
 
 ```sh

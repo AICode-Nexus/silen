@@ -30,8 +30,14 @@ pnpm silen ai init docs
 pnpm silen ai index docs
 pnpm silen ai audit docs
 pnpm silen ai eval docs
+pnpm silen ai skills ./agent-skills
 pnpm silen mcp docs
 ```
+
+`ai skills` requires the parent destination, creates only
+`silen-docs-readonly`, and never overwrites it; optional MCP Resource exposure
+uses `pnpm silen mcp docs --experimental-skills-over-mcp` and remains
+experimental and off by default.
 
 The MCP command is read-only unless a trusted user explicitly starts it with
 `--allow-write`. The model-free `ai eval` command reads

@@ -58,6 +58,26 @@ they declare the protocol versions, an empty extension set, and each tool's
 `outputSchema`. Silen does not enable remote MCP, models, provider keys, or a
 shell through this local server.
 
+## Read-only Agent Skill
+
+Every package includes one deterministic `silen-docs-readonly` Skill at
+`dist/agent/skills/silen-docs-readonly`. Materialize the exact packaged files
+only into an explicit parent directory:
+
+```sh
+pnpm silen ai skills ./agent-skills
+```
+
+This creates `./agent-skills/silen-docs-readonly` and fails without changing it
+if that directory already exists. The Skill contains the canonical English and
+Chinese read/audit workflows, no scripts or write tasks, and does not grant
+shell, network, filesystem-write, commit, push, or deployment permission.
+
+`pnpm silen mcp docs --experimental-skills-over-mcp` exposes the same files at
+`skill://silen-docs-readonly/SKILL.md` over local stdio Resources. This adapter
+is experimental and off by default; the normal MCP server and generated Agent
+Contract keep `extensions: []`.
+
 ## Minimal configuration
 
 ```ts

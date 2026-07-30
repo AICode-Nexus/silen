@@ -84,6 +84,22 @@ For the string-valued `guide` tool, modern clients receive the native string;
 legacy clients receive the SDK's compatibility `{ result: ... }` object. The
 object-valued tools keep their existing structured shape in both eras.
 
+## Experimental Skills over MCP
+
+Filesystem installation does not require MCP. Hosts that explicitly support
+the draft Resources binding can opt into the same packaged bytes:
+
+```sh
+pnpm silen mcp docs --experimental-skills-over-mcp
+```
+
+The experiment declares `io.modelcontextprotocol/skills`, serves
+`skill://index.json`, and maps the five files beneath
+`skill://silen-docs-readonly/`. It is local stdio only and read-only. The
+experiment is off by default. It adds no tools, scripts, subscriptions, network
+transport, or write authority; `--allow-write` remains a separate explicit
+tool-registration flag.
+
 ## Grant writes deliberately
 
 ```sh

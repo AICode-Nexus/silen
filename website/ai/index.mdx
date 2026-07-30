@@ -36,6 +36,22 @@ The current manifest and API use `schemaVersion: 2`. They declare local
 `stdio`, verified protocol versions `2025-11-25` and `2026-07-28`, an empty
 extension set, and every MCP tool's `outputSchema`.
 
+## Read-only Agent Skill
+
+The npm package deterministically generates one `silen-docs-readonly` Agent
+Skill from the canonical English and Chinese `read-site` and `audit-site` task
+packs. Its package root is `dist/agent/skills/silen-docs-readonly`; it contains
+`SKILL.md` plus four progressively loaded references and no scripts, assets,
+write tasks, model calls, credentials, or implied permissions.
+
+```sh
+pnpm silen ai skills ./agent-skills
+```
+
+The command creates only `./agent-skills/silen-docs-readonly` and refuses to
+overwrite an existing directory. The filesystem form is the supported portable
+surface and remains usable offline.
+
 ## Add public project instructions
 
 Only publish instructions that are safe for every site visitor:

@@ -25,8 +25,13 @@ pnpm silen ai init docs
 pnpm silen ai index docs
 pnpm silen ai audit docs
 pnpm silen ai eval docs
+pnpm silen ai skills ./agent-skills
 pnpm silen mcp docs
 ```
+
+`ai skills` 必须指定父目录，只创建 `silen-docs-readonly` 且绝不覆盖；可选的 MCP
+Resource 暴露使用 `pnpm silen mcp docs --experimental-skills-over-mcp`，仍是实验能力
+并默认关闭。
 
 MCP 默认只读，只有可信用户显式加入 `--allow-write` 才会注册写工具。无模型的
 `ai eval` 只读取 `.silen/ai-evals.json` 与 `.silen/dist/search-index.json`，

@@ -27,14 +27,20 @@ description: Silen 配置默认值、CLI 语法与排错。
 
 ## CLI
 
-| 命令                                         | 作用                               |
-| -------------------------------------------- | ---------------------------------- |
-| `silen init <root>`                          | 安全创建起始配置与首页             |
-| `silen dev [root]`                           | 启动开发，支持 `--host`、`--port`  |
-| `silen build [root]`                         | 校验并生成静态产物                 |
-| `silen preview [root]`                       | 预览产物，支持 `--host`、`--port`  |
-| `silen ai <init\|index\|audit\|eval> [root]` | 管理并评测本地 AI 工作区           |
-| `silen mcp [root]`                           | 启动只读 MCP，可选 `--allow-write` |
+| 命令                                         | 作用                                                                         |
+| -------------------------------------------- | ---------------------------------------------------------------------------- |
+| `silen init <root>`                          | 安全创建起始配置与首页                                                       |
+| `silen dev [root]`                           | 启动开发，支持 `--host`、`--port`                                            |
+| `silen build [root]`                         | 校验并生成静态产物                                                           |
+| `silen preview [root]`                       | 预览产物，支持 `--host`、`--port`                                            |
+| `silen ai <init\|index\|audit\|eval> [path]` | 管理并评测本地 AI 工作区                                                     |
+| `silen ai skills <destination>`              | 无覆盖地写出包内 `silen-docs-readonly` Skill                                 |
+| `silen mcp [root]`                           | 启动只读 MCP；可选 `--allow-write` 与实验性 `--experimental-skills-over-mcp` |
+
+包内可移植 Skill 位于 `dist/agent/skills/silen-docs-readonly`。只有显式使用
+`--experimental-skills-over-mcp` 时才会提供
+`skill://silen-docs-readonly/SKILL.md`；默认 Agent Contract 仍是
+`extensions: []`。
 
 ## MCP 与 Agent Contract
 

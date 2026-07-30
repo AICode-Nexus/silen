@@ -31,6 +31,20 @@ Codex、Claude Code 与 Cursor 都应读取同一份 manifest，并使用同一�
 `2025-11-25` 与 `2026-07-28` 协议版本、空扩展集合，以及每个 MCP 工具的
 `outputSchema`。
 
+## 只读 Agent Skill
+
+npm 包会从规范的中英文 `read-site` 与 `audit-site` 任务包确定性生成唯一的
+`silen-docs-readonly` Agent Skill。包内路径是
+`dist/agent/skills/silen-docs-readonly`，其中只有 `SKILL.md` 和四个按需读取的
+参考文件，不包含脚本、资产、写任务、模型调用、凭据或隐含权限。
+
+```sh
+pnpm silen ai skills ./agent-skills
+```
+
+该命令只创建 `./agent-skills/silen-docs-readonly`；如果目录已经存在就直接失败，
+不会覆盖。文件系统形式是受支持的可移植能力，并且可离线使用。
+
 ## 添加公开项目指令
 
 只发布对所有站点访问者都安全的内容：

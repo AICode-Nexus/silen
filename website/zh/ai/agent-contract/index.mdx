@@ -42,6 +42,12 @@ ai: {
 
 该契约不声明远程传输或可选 MCP 扩展；这些能力需要独立设计和授权。
 
+包内还包含生成的文件系统 Skill：
+`dist/agent/skills/silen-docs-readonly`；CLI API 会记录 `silen ai skills` 和
+`--experimental-skills-over-mcp`。默认 manifest 仍声明 `extensions: []`，因为可选
+运行参数不等于站点能力。Skill 文本只是流程知识，不授予 Host 运行命令、访问
+网络、写文件、提交、推送或部署的权限。
+
 ## 客户端行为
 
 Codex、Claude Code、Cursor 等客户端应使用同一份清单，不要维护各自的 API 副本。若客户端不支持声明的契约 schema，应退回到链接的公开 Markdown，并保持只读。读取部署内容时以站点清单为准；针对已安装包生成代码时以包契约为准。

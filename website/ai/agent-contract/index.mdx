@@ -58,6 +58,13 @@ tool. Successful MCP calls expose the corresponding schema-validated
 This contract does not advertise remote transport or optional MCP extensions.
 Those capabilities require separate designs and authorization.
 
+The package also contains the generated filesystem Skill at
+`dist/agent/skills/silen-docs-readonly`, and the CLI API records `silen ai
+skills` plus `--experimental-skills-over-mcp`. The default manifest still says
+`extensions: []` because an optional runtime flag is not a site capability.
+Skill text is procedural knowledge: it does not grant a host permission to run
+commands, use the network, write files, commit, push, or deploy.
+
 ## Client behavior
 
 Codex, Claude Code, Cursor, and other clients should consume the same manifest

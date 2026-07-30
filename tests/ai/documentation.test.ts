@@ -146,6 +146,70 @@ describe('AI Alpha documentation contract', () => {
     expect(chineseMcp).toContain('不启用远程传输')
   })
 
+  it('documents the deterministic read-only Agent Skill and experimental MCP switch', async () => {
+    const [
+      readme,
+      englishAi,
+      chineseAi,
+      englishMcp,
+      chineseMcp,
+      englishContract,
+      chineseContract,
+      englishCli,
+      chineseCli,
+      englishReference,
+      chineseReference,
+    ] = await Promise.all(
+      [
+        'README.md',
+        'website/ai/index.mdx',
+        'website/zh/ai/index.mdx',
+        'website/ai/local-workspace-mcp/index.mdx',
+        'website/zh/ai/local-workspace-mcp/index.mdx',
+        'website/ai/agent-contract/index.mdx',
+        'website/zh/ai/agent-contract/index.mdx',
+        'website/guide/cli-deployment/index.mdx',
+        'website/zh/guide/cli-deployment/index.mdx',
+        'website/reference/index.mdx',
+        'website/zh/reference/index.mdx',
+      ].map((file) => readFile(file, 'utf8')),
+    )
+
+    const corpus = [
+      readme,
+      englishAi,
+      chineseAi,
+      englishMcp,
+      chineseMcp,
+      englishContract,
+      chineseContract,
+      englishCli,
+      chineseCli,
+      englishReference,
+      chineseReference,
+    ].join('\n')
+    for (const value of [
+      'silen-docs-readonly',
+      'silen ai skills',
+      '--experimental-skills-over-mcp',
+      'dist/agent/skills/silen-docs-readonly',
+      'skill://silen-docs-readonly/SKILL.md',
+      'io.modelcontextprotocol/skills',
+    ]) {
+      expect(corpus).toContain(value)
+    }
+
+    expect(englishAi).toMatch(/read-only Agent Skill/i)
+    expect(chineseAi).toContain('只读 Agent Skill')
+    expect(englishMcp).toMatch(/experimental.*off by default/is)
+    expect(chineseMcp).toMatch(/实验.*默认关闭/is)
+    expect(englishContract).toContain('extensions: []')
+    expect(chineseContract).toContain('extensions: []')
+    expect(englishContract).toMatch(/does not grant.*permission/is)
+    expect(chineseContract).toMatch(/不授予.*权限/is)
+    expect(readme).not.toContain('.well-known/agent-skills')
+  })
+
   it('documents the exact bilingual Ask AI request and streaming protocol', async () => {
     const [english, chinese] = await Promise.all([
       readFile('website/integrations/index.mdx', 'utf8'),
