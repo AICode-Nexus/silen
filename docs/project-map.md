@@ -1,11 +1,11 @@
 # Silen Project Map
 
-- Last reviewed: 2026-07-29
+- Last reviewed: 2026-07-30
 - Baseline:
   [`@aicode-nexus/silen` 0.4.0](../CHANGELOG.md#040---2026-07-22) at
   [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0)
   ([commit `01b95b4`](https://github.com/AICode-Nexus/silen/commit/01b95b4))
-- Default next item: None; refine AI-005 before promotion.
+- Default next item: AI-005.
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -81,18 +81,6 @@ items remain planning inputs, not release commitments.
 
 ## Active
 
-No map-selected item is active. Refine `AI-005` before considering promotion.
-
-## Ready
-
-No item is ready for default implementation. `AI-005` remains a Candidate
-until its MCP v2 migration design satisfies the promotion gate.
-
-## Candidate
-
-Candidate order is informative. An item must satisfy its entry gate before it
-moves to `Ready`.
-
 ### AI-005 — Migrate MCP compatibility to the 2026 protocol and SDK v2
 
 - Outcome: Silen uses the official split TypeScript SDK v2
@@ -101,29 +89,36 @@ moves to `Ready`.
   or permission and filesystem boundaries.
 - Horizon: `0.5.0`.
 - Depends on: `AI-001`, `AI-002`, and `QUAL-003`.
-- Entry gate: Produce and approve a migration design that pins a reviewed v2
-  release line, runs `@modelcontextprotocol/codemod` at the repository root,
-  inventories manual rewrites and public-package impact, and specifies
-  legacy/modern stdio fixtures, negotiation, shutdown, and deterministic
-  contract regeneration.
+- Entry gate: Satisfied by the approved migration design, which pins stable SDK
+  v2 `2.0.0`, records the repository-root codemod dry run and manual rewrites,
+  bounds the public-package impact, and specifies legacy/modern stdio fixtures,
+  negotiation, shutdown, and deterministic contract regeneration.
 - Done when: No v1 SDK import, dependency, or unresolved codemod marker remains;
-  built stdio fixtures verify the supported legacy era and `2026-07-28`; the
-  existing tool names, default read-only mode, explicit write opt-in, no-shell
-  policy, bounded inputs, and path confinement remain unchanged; every tool
-  declares a formal output schema and returns validated arbitrary-JSON
-  `structuredContent` alongside its human-readable content; Agent Contract
-  output declares supported protocol eras, transport, and negotiated extension
-  capabilities; and no remote transport is enabled by default.
+  built stdio fixtures verify `2025-11-25` and `2026-07-28`; the existing tool
+  names, default read-only mode, explicit write opt-in, no-shell policy, bounded
+  inputs, and path confinement remain unchanged; every tool declares a formal
+  output schema and returns validated arbitrary-JSON `structuredContent`
+  alongside its human-readable content; Agent Contract output declares the
+  verified protocol versions, stdio transport, empty extension set, and output
+  schemas; and no remote transport is enabled by default.
 - Evidence:
+  [approved design](./superpowers/specs/2026-07-30-silen-mcp-v2-dual-protocol-design.md),
+  [implementation plan](./superpowers/plans/2026-07-30-silen-mcp-v2-dual-protocol.md),
   [current v1 dependency](../package.json),
   [current stdio-only contract](../src/shared/ai-contract.ts#L50),
   [official v2 migration and codemod](https://ts.sdk.modelcontextprotocol.io/v2/migration/upgrade-to-v2),
-  [2026-07-28 migration guidance](https://ts.sdk.modelcontextprotocol.io/v2/migration/support-2026-07-28),
   [v2 protocol versions](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions),
-  [v2 output schemas](https://ts.sdk.modelcontextprotocol.io/v2/advanced/schema-libraries),
-  [MCP 2026-07-28 specification](https://modelcontextprotocol.io/specification/2026-07-28),
-  and [TypeScript SDK v2](https://ts.sdk.modelcontextprotocol.io/v2/), observed
-  2026-07-29.
+  and [v2 output schemas](https://ts.sdk.modelcontextprotocol.io/v2/advanced/schema-libraries),
+  reviewed 2026-07-30.
+
+## Ready
+
+No item is ready while `AI-005` is active.
+
+## Candidate
+
+Candidate order is informative. An item must satisfy its entry gate before it
+moves to `Ready`.
 
 ### AI-006 — Generate a read-only Agent Skills-compatible surface
 
