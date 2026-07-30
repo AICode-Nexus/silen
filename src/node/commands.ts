@@ -369,6 +369,13 @@ export function createCommandDescriptors(
           required: false,
           default: false,
         },
+        {
+          name: '--experimental-skills-over-mcp',
+          description:
+            'Expose the packaged read-only Agent Skill as MCP Resources',
+          required: false,
+          default: false,
+        },
       ],
       async execute(root: unknown, options: unknown) {
         const provided =
@@ -379,6 +386,8 @@ export function createCommandDescriptors(
         await dependencies.serveMcp({
           workspace,
           allowWrite: provided.allowWrite === true,
+          experimentalSkillsOverMcp:
+            provided.experimentalSkillsOverMcp === true,
         })
       },
     },

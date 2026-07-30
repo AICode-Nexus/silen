@@ -12,10 +12,23 @@ const mocks = vi.hoisted(() => ({
   options: undefined as
     | { legacy?: 'serve' | 'reject'; onerror?: (error: Error) => void }
     | undefined,
+  loadSkill: vi.fn(),
+  skillBundle: {
+    name: 'silen-docs-readonly',
+    files: { 'SKILL.md': 'fixture\n' },
+  },
+  serverOptions: [] as unknown[],
+}))
+
+vi.mock('../../src/ai/contract/package-assets.js', () => ({
+  loadPackagedReadOnlyAgentSkill: mocks.loadSkill,
 }))
 
 vi.mock('../../src/ai/mcp/server.js', () => ({
-  createMcpServer: vi.fn(() => ({})),
+  createMcpServer: vi.fn((options: unknown) => {
+    mocks.serverOptions.push(options)
+    return {}
+  }),
 }))
 
 vi.mock('@modelcontextprotocol/server/stdio', () => ({
@@ -71,6 +84,9 @@ describe('MCP stdio lifecycle', () => {
     mocks.close.mockResolvedValue()
     mocks.factory = undefined
     mocks.options = undefined
+    mocks.loadSkill.mockReset()
+    mocks.loadSkill.mockResolvedValue(mocks.skillBundle)
+    mocks.serverOptions.length = 0
   })
 
   it('uses the dual-era entry and removes listeners when it reports an error', async () => {
@@ -78,6 +94,7 @@ describe('MCP stdio lifecycle', () => {
     const sigterm = process.listenerCount('SIGTERM')
     const serving = serveMcp({ workspace: {} as never, allowWrite: false })
     await vi.waitFor(() => expect(mocks.factory).toBeTypeOf('function'))
+    expect(mocks.loadSkill).not.toHaveBeenCalled()
     expect(mocks.options?.legacy).toBe('serve')
     expect(mocks.options?.onerror).toBeTypeOf('function')
     expect(process.listenerCount('SIGINT')).toBe(sigint + 1)
@@ -89,6 +106,29 @@ describe('MCP stdio lifecycle', () => {
     expect(mocks.close).toHaveBeenCalledOnce()
     expect(process.listenerCount('SIGINT')).toBe(sigint)
     expect(process.listenerCount('SIGTERM')).toBe(sigterm)
+  })
+
+  it('loads the experimental packaged Skill once before creating stdio servers', async () => {
+    mocks.loadSkill.mockResolvedValue(mocks.skillBundle)
+    const serving = serveMcp({
+      workspace: {} as never,
+      allowWrite: false,
+      experimentalSkillsOverMcp: true,
+    })
+
+    await vi.waitFor(() => expect(mocks.factory).toBeTypeOf('function'))
+    expect(mocks.loadSkill).toHaveBeenCalledOnce()
+    mocks.factory?.()
+    mocks.factory?.()
+    expect(mocks.loadSkill).toHaveBeenCalledOnce()
+    expect(mocks.serverOptions).toEqual([
+      expect.objectContaining({ readOnlyAgentSkill: mocks.skillBundle }),
+      expect.objectContaining({ readOnlyAgentSkill: mocks.skillBundle }),
+    ])
+
+    process.emit('SIGTERM', 'SIGTERM')
+    await serving
+    expect(mocks.close).toHaveBeenCalledOnce()
   })
 
   it('closes the stdio handle once when both shutdown signals arrive', async () => {

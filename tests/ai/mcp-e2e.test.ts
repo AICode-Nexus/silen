@@ -17,6 +17,11 @@ const verifiedEras = [
 const LEGACY_PROTOCOL_VERSION = '2025-11-25'
 const MODERN_PROTOCOL_VERSION = '2026-07-28'
 
+interface BuiltClientOptions {
+  readonly allowWrite?: boolean
+  readonly experimentalSkills?: boolean
+}
+
 afterEach(async () => {
   await Promise.all(openClients.splice(0).map((client) => client.close()))
   await Promise.all(
@@ -53,7 +58,7 @@ function createVerifiedClient(era: VerifiedEra): Client {
 async function startBuiltClient(
   root: string,
   era: VerifiedEra,
-  allowWrite = false,
+  options: BuiltClientOptions = {},
 ) {
   const transport = new StdioClientTransport({
     command: process.execPath,
@@ -61,7 +66,8 @@ async function startBuiltClient(
       path.resolve('dist/node/cli.js'),
       'mcp',
       root,
-      ...(allowWrite ? ['--allow-write'] : []),
+      ...(options.allowWrite ? ['--allow-write'] : []),
+      ...(options.experimentalSkills ? ['--experimental-skills-over-mcp'] : []),
     ],
     cwd: process.cwd(),
     stderr: 'pipe',
@@ -111,6 +117,13 @@ describe('built MCP CLI interoperability', () => {
       const root = await temporaryWorkspace()
       const session = await startBuiltClient(root, era)
       const listed = await session.client.listTools()
+
+      expect(
+        session.client.getServerCapabilities()?.extensions?.[
+          'io.modelcontextprotocol/skills'
+        ],
+      ).toBeUndefined()
+      expect(session.client.getServerCapabilities()?.resources).toBeUndefined()
 
       expect(listed.tools.map((tool) => tool.name)).toEqual([
         'guide',
@@ -173,7 +186,7 @@ describe('built MCP CLI interoperability', () => {
     async (era) => {
       const root = await temporaryWorkspace()
       await mkdir(path.join(root, 'wiki'), { recursive: true })
-      const session = await startBuiltClient(root, era, true)
+      const session = await startBuiltClient(root, era, { allowWrite: true })
 
       expect(
         (await session.client.listTools()).tools.map((tool) => tool.name),
@@ -207,6 +220,45 @@ describe('built MCP CLI interoperability', () => {
       expect(
         await readFile(path.join(root, 'wiki/interoperability.md'), 'utf8'),
       ).toBe('# Interoperability\n\nWritten through explicit MCP permission.\n')
+
+      await session.assertClean()
+    },
+    60_000,
+  )
+
+  it.each(verifiedEras)(
+    'serves only the packaged read-only Skill Resources over the %s protocol era when opted in',
+    async (era) => {
+      const root = await temporaryWorkspace()
+      const session = await startBuiltClient(root, era, {
+        experimentalSkills: true,
+      })
+
+      expect(
+        session.client.getServerCapabilities()?.extensions?.[
+          'io.modelcontextprotocol/skills'
+        ],
+      ).toEqual({})
+      const listed = await session.client.listResources()
+      expect(listed.resources).toHaveLength(6)
+      expect(listed.resources.map(({ uri }) => uri)).toContain(
+        'skill://silen-docs-readonly/SKILL.md',
+      )
+      const skill = await session.client.readResource({
+        uri: 'skill://silen-docs-readonly/SKILL.md',
+      })
+      const skillContent = skill.contents[0]
+      if (skillContent === undefined || !('text' in skillContent)) {
+        throw new TypeError('Expected a text Skill Resource')
+      }
+      expect(skillContent.text).toBe(
+        await readFile(
+          path.resolve('dist/agent/skills/silen-docs-readonly/SKILL.md'),
+          'utf8',
+        ),
+      )
+      expect(JSON.stringify([listed, skill])).not.toContain(root)
+      expect((await session.client.listTools()).tools).toHaveLength(7)
 
       await session.assertClean()
     },

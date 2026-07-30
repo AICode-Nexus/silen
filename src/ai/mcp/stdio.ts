@@ -1,13 +1,18 @@
 import { serveStdio } from '@modelcontextprotocol/server/stdio'
+import { loadPackagedReadOnlyAgentSkill } from '../contract/package-assets.js'
 import type { Workspace } from '../workspace.js'
 import { createMcpServer } from './server.js'
 
 export interface CreateMcpOptions {
   workspace: Workspace
   allowWrite: boolean
+  experimentalSkillsOverMcp?: boolean
 }
 
 export async function serveMcp(options: CreateMcpOptions): Promise<void> {
+  const readOnlyAgentSkill = options.experimentalSkillsOverMcp
+    ? await loadPackagedReadOnlyAgentSkill()
+    : undefined
   let resolveStopped!: () => void
   let rejectStopped!: (error: unknown) => void
   const stopped = new Promise<void>((resolve, reject) => {
@@ -15,10 +20,18 @@ export async function serveMcp(options: CreateMcpOptions): Promise<void> {
     rejectStopped = reject
   })
 
-  const handle = serveStdio(() => createMcpServer(options), {
-    legacy: 'serve',
-    onerror: rejectStopped,
-  })
+  const handle = serveStdio(
+    () =>
+      createMcpServer({
+        workspace: options.workspace,
+        allowWrite: options.allowWrite,
+        ...(readOnlyAgentSkill === undefined ? {} : { readOnlyAgentSkill }),
+      }),
+    {
+      legacy: 'serve',
+      onerror: rejectStopped,
+    },
+  )
 
   let closePromise: Promise<void> | undefined
   const close = (): void => {

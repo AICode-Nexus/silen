@@ -70,6 +70,11 @@ describe('CLI Agent Contract registry', () => {
           default: false,
           required: false,
         },
+        {
+          name: '--experimental-skills-over-mcp',
+          default: false,
+          required: false,
+        },
       ],
     })
     expect(JSON.stringify(contract)).not.toContain('execute')
