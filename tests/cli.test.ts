@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { execa } from 'execa'
@@ -49,7 +49,7 @@ describe('CLI dispatch', () => {
     expect(help.stdout).toContain('dev [root]')
     expect(help.stdout).toContain('build [root]')
     expect(help.stdout).toContain('preview [root]')
-    expect(help.stdout).toContain('ai <action> [root]')
+    expect(help.stdout).toContain('ai <action> [path]')
     expect(help.stdout).toContain('mcp [root]')
 
     const version = await execa(cliRunner, [cli, '--version'])
@@ -136,6 +136,43 @@ describe('CLI dispatch', () => {
       ok: true,
       summary: { total: 1, passed: 1, failed: 0 },
     })
+  }, 30_000)
+
+  it('materializes the packaged read-only Agent Skill only at an explicit destination', async () => {
+    const destination = path.join(root, 'agent-skills')
+    const installed = await execa(
+      cliRunner,
+      [cli, 'ai', 'skills', destination],
+      { reject: false, all: true },
+    )
+    const skill = path.join(destination, 'silen-docs-readonly')
+
+    expect(installed.exitCode, installed.all).toBe(0)
+    expect(installed.stdout).toContain(`Created ${skill}`)
+    expect(await readFile(path.join(skill, 'SKILL.md'), 'utf8')).toContain(
+      'name: silen-docs-readonly',
+    )
+    expect(
+      await readFile(path.join(skill, 'references/read-site.md'), 'utf8'),
+    ).toContain('# Read a deployed Silen site')
+    await expect(stat(path.join(destination, '.silen'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+
+    const repeated = await execa(
+      cliRunner,
+      [cli, 'ai', 'skills', destination],
+      { reject: false, all: true },
+    )
+    expect(repeated.exitCode).not.toBe(0)
+    expect(repeated.all).toContain('SILEN_AGENT_SKILL_TARGET_EXISTS')
+
+    const missing = await execa(cliRunner, [cli, 'ai', 'skills'], {
+      reject: false,
+      all: true,
+    })
+    expect(missing.exitCode).not.toBe(0)
+    expect(missing.all).toContain('Silen ai skills requires a destination path')
   }, 30_000)
 
   it('uses stable AI eval failure and setup exit codes', async () => {

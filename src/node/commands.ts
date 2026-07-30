@@ -7,6 +7,7 @@ import {
   serializeAiEvalSetupError,
 } from '../ai/eval.js'
 import { serveMcp } from '../ai/mcp/stdio.js'
+import { materializeReadOnlyAgentSkill } from '../ai/skills.js'
 import { createWorkspace } from '../ai/workspace.js'
 import type {
   SilenCliCommandContract,
@@ -37,6 +38,7 @@ interface CommandDependencies {
   createPreviewServer: ServerFactory
   createWorkspace: typeof createWorkspace
   initializeSite: typeof initializeSite
+  materializeReadOnlyAgentSkill: typeof materializeReadOnlyAgentSkill
   resolveConfig: typeof resolveConfig
   runAiEvaluation: typeof runAiEvaluation
   serveMcp: typeof serveMcp
@@ -117,6 +119,7 @@ const defaultDependencies: CommandDependencies = {
   createPreviewServer,
   createWorkspace,
   initializeSite,
+  materializeReadOnlyAgentSkill,
   resolveConfig,
   runAiEvaluation,
   serveMcp,
@@ -152,6 +155,13 @@ const rootArgument = {
   name: 'root',
   required: false,
   description: 'Documentation content root; defaults to the current directory.',
+} as const
+
+const aiPathArgument = {
+  name: 'path',
+  required: false,
+  description:
+    'Documentation content root, or the required parent destination for skills.',
 } as const
 
 const serverOptions: readonly SilenCliOptionContract[] = [
@@ -257,17 +267,17 @@ export function createCommandDescriptors(
     },
     {
       id: 'ai',
-      syntax: 'ai <action> [root]',
+      syntax: 'ai <action> [path]',
       description:
-        'Initialize, index, audit, or evaluate the local AI workspace',
+        'Initialize, index, audit, evaluate, or materialize the local AI surface',
       sideEffect: 'write',
       arguments: [
         {
           name: 'action',
           required: true,
-          description: 'One of init, index, audit, or eval.',
+          description: 'One of init, index, audit, eval, or skills.',
         },
-        rootArgument,
+        aiPathArgument,
       ],
       options: [
         {
@@ -282,13 +292,22 @@ export function createCommandDescriptors(
           action !== 'init' &&
           action !== 'index' &&
           action !== 'audit' &&
-          action !== 'eval'
+          action !== 'eval' &&
+          action !== 'skills'
         ) {
           throw new Error(
             'Unknown AI command ' +
               JSON.stringify(action) +
-              '; expected init, index, audit, or eval',
+              '; expected init, index, audit, eval, or skills',
           )
+        }
+        if (action === 'skills') {
+          if (typeof root !== 'string' || root.trim() === '') {
+            throw new TypeError('Silen ai skills requires a destination path')
+          }
+          const result = await dependencies.materializeReadOnlyAgentSkill(root)
+          dependencies.output('Created ' + result.directory)
+          return
         }
         const resolvedRoot = commandRoot(root)
         const options = commandAiOptions(rawOptions)

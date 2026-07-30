@@ -47,6 +47,15 @@ describe('framework Agent Contract', () => {
       'ai',
       'mcp',
     ])
+    expect(bundle.api.cli.commands.find(({ id }) => id === 'ai')).toMatchObject(
+      {
+        syntax: 'ai <action> [path]',
+        arguments: [
+          { name: 'action', required: true },
+          { name: 'path', required: false },
+        ],
+      },
+    )
     expect(bundle.api.mcp.tools).toHaveLength(10)
     expect(
       bundle.api.mcp.tools.every((tool) => tool.outputSchema !== undefined),

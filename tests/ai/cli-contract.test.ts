@@ -38,8 +38,20 @@ describe('CLI Agent Contract registry', () => {
     const contract = createCliApiContract(commandDescriptors)
     expect(contract.commands).toHaveLength(commandDescriptors.length)
     expect(commandDescriptors.find(({ id }) => id === 'ai')).toMatchObject({
+      syntax: 'ai <action> [path]',
       description:
-        'Initialize, index, audit, or evaluate the local AI workspace',
+        'Initialize, index, audit, evaluate, or materialize the local AI surface',
+      arguments: [
+        {
+          name: 'action',
+          required: true,
+          description: 'One of init, index, audit, eval, or skills.',
+        },
+        {
+          name: 'path',
+          required: false,
+        },
+      ],
       options: [
         {
           name: '--json',
@@ -81,7 +93,7 @@ describe('CLI Agent Contract registry', () => {
     })
     expect(result.exitCode).not.toBe(0)
     expect(result.all).toContain(
-      'Unknown AI command "unknown"; expected init, index, audit, or eval',
+      'Unknown AI command "unknown"; expected init, index, audit, eval, or skills',
     )
   })
 })
