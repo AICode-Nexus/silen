@@ -4,7 +4,8 @@
 - Baseline:
   [`@aicode-nexus/silen` 0.5.0](../CHANGELOG.md#050---2026-07-30) at
   [`v0.5.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.5.0).
-- Default next item: None; `0.6.x` items remain Watch-only experiments.
+- Default next item: `QUAL-004` (Active); `0.6.x` items remain Watch-only
+  experiments.
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -81,7 +82,27 @@ items remain planning inputs, not release commitments.
 
 ## Active
 
-No map-selected item is active.
+### QUAL-004 — Real-client Agent Skills and MCP compatibility evidence
+
+- Outcome: Validate the published `0.5.0` Skill and local MCP surface against
+  installed Agent hosts, with the official MCP client as a deterministic
+  protocol control, before considering any `0.6.x` promotion.
+- Horizon: `0.5.x` validation.
+- Depends on: `QUAL-003`, `AI-005`, and `AI-006`.
+- Entry gate: `0.5.0` is published and live, its package/Pages/CI gates are
+  green, and the user approved a validation-only compatibility round that does
+  not add runtime behavior or install clients.
+- Done when: Installed hosts and versions are inventoried; Codex and Claude are
+  probed without persistent configuration for filesystem Skill discovery and
+  one read-only MCP call; Cursor is reported honestly if its terminal Agent is
+  absent; the published npm package passes default-off, opt-in six-Resource,
+  byte-equality, and dual-era controls; limitations and the `AI-008` promotion
+  decision are recorded; no write tool, Remote MCP, Tasks, Apps, model
+  dependency, credential, global configuration, or product code is added.
+- Evidence:
+  [approved design](./superpowers/specs/2026-07-30-silen-real-client-compatibility-validation-design.md)
+  and
+  [implementation plan](./superpowers/plans/2026-07-30-silen-real-client-compatibility-validation.md).
 
 ## Ready
 
