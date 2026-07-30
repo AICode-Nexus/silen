@@ -7,6 +7,40 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-30
+
+### Added
+
+- Added one deterministic `silen-docs-readonly` Agent Skill generated from the
+  canonical English and Chinese read/audit task packs, shipped as five package
+  files and materialized explicitly with `silen ai skills <destination>` without
+  overwrite.
+- Added optional local Skills over MCP Resources behind
+  `--experimental-skills-over-mcp`, including `skill://index.json` and
+  `skill://silen-docs-readonly/SKILL.md`; the experiment is read-only and off by
+  default.
+- Expanded the official model-free retrieval gate to a 24-case bilingual suite
+  with Rank-1 critical queries, multiple acceptable targets, forbidden targets,
+  hidden-content negatives, and retained JSON reports in CI, Pages, and npm
+  Publish.
+
+### Changed
+
+- Migrated local MCP to the split SDK v2 packages while verifying both
+  `2025-11-25` and `2026-07-28`, preserving seven default read tools and three
+  separately authorized write tools.
+- Published formal MCP output schemas and validated native
+  `structuredContent`, and advanced Agent Contract manifests and API documents
+  to `schemaVersion: 2` with explicit stdio protocol facts.
+- Made the canonical `site:ai-check` build, audit, evaluation, and source-map
+  sequence release-blocking in Core CI, GitHub Pages, and npm Publish.
+
+### Security
+
+- Kept Agent Skills free of scripts, write tasks, `allowed-tools`, models,
+  credentials, local paths, and implicit shell, network, filesystem-write, Git,
+  or deployment permission. Remote MCP remains disabled.
+
 ## [0.4.0] - 2026-07-22
 
 ### Added
@@ -218,7 +252,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Published Silen under the `@aicode-nexus` organization scope.
 
-[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.4.0...HEAD
+[unreleased]: https://github.com/AICode-Nexus/silen/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/AICode-Nexus/silen/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/AICode-Nexus/silen/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/AICode-Nexus/silen/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/AICode-Nexus/silen/compare/v0.2.1...v0.3.0

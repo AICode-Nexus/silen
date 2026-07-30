@@ -2,10 +2,9 @@
 
 - Last reviewed: 2026-07-30
 - Baseline:
-  [`@aicode-nexus/silen` 0.4.0](../CHANGELOG.md#040---2026-07-22) at
-  [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0)
-  ([commit `01b95b4`](https://github.com/AICode-Nexus/silen/commit/01b95b4))
-- Default next item: `AI-006` (Active).
+  [`@aicode-nexus/silen` 0.5.0](../CHANGELOG.md#050---2026-07-30) at
+  [`v0.5.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.5.0).
+- Default next item: None; `0.6.x` items remain Watch-only experiments.
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -67,12 +66,13 @@ labels, not date commitments.
 | `PLUGIN` | Plugin ecosystem | Extension contracts, hooks, examples, and interoperability |
 | `QUAL` | Quality and release | Tests, deterministic gates, packaging, documentation, and release evidence |
 
-## Planned release path
+## Release path
 
-- `0.4.1`: deliver `QUAL-003` so existing model-free AI quality capabilities
-  become release-blocking evidence with a broader official retrieval suite.
-- `0.5.0`: design and deliver `AI-005`, then `AI-006`, preserving local stdio
-  and read-only defaults while adding MCP v2 and generated Agent Skills.
+- `0.4.x`: shipped the deterministic model-free quality loop, ranked
+  expectations, and release-enforced 24-case AI readiness gate.
+- `0.5.0`: shipped MCP v2 dual-protocol compatibility and the generated
+  read-only Agent Skills surface while preserving local stdio and default
+  read-only behavior.
 - `0.6.x`: keep `AI-007`, `AI-008`, and `AI-009` experimental until their
   security, host-support, and deployment promotion gates are satisfied.
 
@@ -81,29 +81,11 @@ items remain planning inputs, not release commitments.
 
 ## Active
 
-### AI-006 — Generate a read-only Agent Skills-compatible surface
-
-- Outcome: Existing Silen task packs and public contracts can emit a standard
-  `SKILL.md`-based read-only guidance surface deterministically without
-  creating a second hand-maintained instruction system.
-- Horizon: `0.5.0`.
-- Depends on: `AI-002` and `AI-005`.
-- Entry gate: The field-by-field mapping, packaging, validation, exclusion
-  rules, explicit filesystem command, and experimental Skills-over-MCP boundary
-  are approved.
-- Done when: Output is generated from canonical Silen sources, passes the
-  official format validator, contains no implicit shell, network, or write
-  permission, remains byte-deterministic, and ships with interoperability
-  fixtures; Skills over MCP remains behind an explicit experimental flag that
-  is off by default and is not required for filesystem-based Skills discovery.
-- Evidence:
-  [approved design](./superpowers/specs/2026-07-30-silen-read-only-agent-skills-design.md)
-  and
-  [implementation plan](./superpowers/plans/2026-07-30-silen-read-only-agent-skills.md).
+No map-selected item is active.
 
 ## Ready
 
-No item is ready for default implementation while `AI-006` is Active.
+No item is ready for default implementation.
 
 ## Candidate
 
@@ -385,6 +367,38 @@ for default implementation.
   `pnpm pack --dry-run`. Two clean builds produced identical SHA-256 hashes:
   manifest `c5afa5c100b4b0c93048326376aa36c01992ca59f3074b512e7efc5e665f6820`
   and API `f1da47d115ad55decbb6053323139a5ce8ea0b24f574a5a17b33cf2f0984d0de`.
+
+### AI-006 — Read-only Agent Skills-compatible surface
+
+- Outcome: Canonical bilingual Silen read/audit task packs generate one
+  deterministic `silen-docs-readonly` Skill for npm and explicit filesystem
+  materialization, with an optional read-only MCP Resources adapter.
+- Horizon: `0.5.0`.
+- Depends on: `AI-002` and `AI-005`.
+- Entry gate: The approved mapping design fixed the allowlist, five-file
+  package, validation rules, non-overwrite CLI, and default-off experimental
+  MCP boundary.
+- Done when: The npm, CLI, and MCP surfaces use identical validated package
+  bytes; official `skills-ref` validation passes; write tasks, scripts,
+  implicit permission, local paths, models, and remote services remain absent;
+  both MCP eras pass; default MCP and Agent Contract extensions remain
+  unchanged; and repository, package, site, browser, and release gates are
+  green.
+- Evidence:
+  [approved design](./superpowers/specs/2026-07-30-silen-read-only-agent-skills-design.md),
+  [implementation plan](./superpowers/plans/2026-07-30-silen-read-only-agent-skills.md),
+  [generator](../src/ai/contract/agent-skills.ts),
+  [filesystem materializer](../src/ai/skills.ts),
+  [MCP Resources adapter](../src/ai/mcp/skill-resources.ts),
+  [generator tests](../tests/ai/agent-skills.test.ts),
+  [dual-era interoperability](../tests/ai/mcp-e2e.test.ts),
+  [package smoke test](../tests/package-smoke.test.ts),
+  [Core CI](../.github/workflows/ci.yml), and
+  [npm Publish](../.github/workflows/publish.yml). Verification on 2026-07-30
+  passed formatting, lint, typecheck, complete single-worker tests, browser
+  tests, package build and smoke, `publint`, the 24/24 official AI evaluation,
+  source-map rejection, pinned official Skill validation, package dry-run, and
+  byte-identical repeated Skill builds.
 
 ## Default execution contract
 

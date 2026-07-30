@@ -306,9 +306,14 @@ describe('0.2.0 product documentation', () => {
     }
   })
 
-  it('records the dated 0.4.x, 0.3.x, and 0.2.x documentation checkpoints', async () => {
+  it('records the dated 0.5.x, 0.4.x, 0.3.x, and 0.2.x documentation checkpoints', async () => {
     const changelog = await source('CHANGELOG.md')
 
+    expect(changelog).toContain('## [0.5.0] - 2026-07-30')
+    expect(changelog).toContain('silen-docs-readonly')
+    expect(changelog).toContain('--experimental-skills-over-mcp')
+    expect(changelog).toContain('2026-07-28')
+    expect(changelog).toContain('24-case')
     expect(changelog).toContain('## [0.4.0] - 2026-07-22')
     expect(changelog).toContain('silen ai eval')
     expect(changelog).toContain('model-free retrieval quality gate')
