@@ -130,9 +130,17 @@ describe('built MCP CLI interoperability', () => {
         expect(guide.structuredContent).toContain('read-only')
         expect(guideTool?.outputSchema).toMatchObject({ type: 'string' })
       } else {
-        expect(guide.structuredContent).toMatchObject({
-          result: expect.stringContaining('read-only'),
-        })
+        const legacyGuide = guide.structuredContent
+        if (
+          typeof legacyGuide !== 'object' ||
+          legacyGuide === null ||
+          Array.isArray(legacyGuide)
+        ) {
+          throw new TypeError('Expected a legacy guide result wrapper')
+        }
+        const result = (legacyGuide as Record<string, unknown>).result
+        expect(result).toBeTypeOf('string')
+        expect(result).toContain('read-only')
         expect(guideTool?.outputSchema).toMatchObject({
           type: 'object',
           properties: { result: { type: 'string' } },

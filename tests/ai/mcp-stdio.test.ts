@@ -78,10 +78,8 @@ describe('MCP stdio lifecycle', () => {
     const sigterm = process.listenerCount('SIGTERM')
     const serving = serveMcp({ workspace: {} as never, allowWrite: false })
     await vi.waitFor(() => expect(mocks.factory).toBeTypeOf('function'))
-    expect(mocks.options).toMatchObject({
-      legacy: 'serve',
-      onerror: expect.any(Function),
-    })
+    expect(mocks.options?.legacy).toBe('serve')
+    expect(mocks.options?.onerror).toBeTypeOf('function')
     expect(process.listenerCount('SIGINT')).toBe(sigint + 1)
     expect(process.listenerCount('SIGTERM')).toBe(sigterm + 1)
 
