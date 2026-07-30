@@ -4,8 +4,7 @@
 - Baseline:
   [`@aicode-nexus/silen` 0.5.0](../CHANGELOG.md#050---2026-07-30) at
   [`v0.5.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.5.0).
-- Default next item: `QUAL-004` (Active); `0.6.x` items remain Watch-only
-  experiments.
+- Default next item: None; `0.6.x` items remain Watch-only experiments.
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -82,27 +81,7 @@ items remain planning inputs, not release commitments.
 
 ## Active
 
-### QUAL-004 — Real-client Agent Skills and MCP compatibility evidence
-
-- Outcome: Validate the published `0.5.0` Skill and local MCP surface against
-  installed Agent hosts, with the official MCP client as a deterministic
-  protocol control, before considering any `0.6.x` promotion.
-- Horizon: `0.5.x` validation.
-- Depends on: `QUAL-003`, `AI-005`, and `AI-006`.
-- Entry gate: `0.5.0` is published and live, its package/Pages/CI gates are
-  green, and the user approved a validation-only compatibility round that does
-  not add runtime behavior or install clients.
-- Done when: Installed hosts and versions are inventoried; Codex and Claude are
-  probed without persistent configuration for filesystem Skill discovery and
-  one read-only MCP call; Cursor is reported honestly if its terminal Agent is
-  absent; the published npm package passes default-off, opt-in six-Resource,
-  byte-equality, and dual-era controls; limitations and the `AI-008` promotion
-  decision are recorded; no write tool, Remote MCP, Tasks, Apps, model
-  dependency, credential, global configuration, or product code is added.
-- Evidence:
-  [approved design](./superpowers/specs/2026-07-30-silen-real-client-compatibility-validation-design.md)
-  and
-  [implementation plan](./superpowers/plans/2026-07-30-silen-real-client-compatibility-validation.md).
+No map-selected item is active.
 
 ## Ready
 
@@ -420,6 +399,32 @@ for default implementation.
   tests, package build and smoke, `publint`, the 24/24 official AI evaluation,
   source-map rejection, pinned official Skill validation, package dry-run, and
   byte-identical repeated Skill builds.
+
+### QUAL-004 — Real-client Agent Skills and MCP compatibility evidence
+
+- Outcome: Validate the published `0.5.0` Skill and local MCP surface against
+  installed Agent hosts, with the official MCP client as a deterministic
+  protocol control, before considering any `0.6.x` promotion.
+- Horizon: `0.5.x` validation.
+- Depends on: `QUAL-003`, `AI-005`, and `AI-006`.
+- Entry gate: `0.5.0` was published and live, its package/Pages/CI gates were
+  green, and the user approved a validation-only compatibility round that did
+  not add runtime behavior or install clients.
+- Done when: Installed hosts and versions are inventoried; Codex and Claude are
+  probed without persistent configuration; Cursor is reported honestly when
+  its terminal Agent is absent; the published npm package passes default-off,
+  opt-in six-Resource, byte-equality, and dual-era controls; limitations and
+  the `AI-008` promotion decision are recorded; and no product behavior or
+  external system is changed.
+- Evidence:
+  [approved design](./superpowers/specs/2026-07-30-silen-real-client-compatibility-validation-design.md),
+  [implementation plan](./superpowers/plans/2026-07-30-silen-real-client-compatibility-validation.md),
+  and
+  [dated compatibility report](./quality/2026-07-30-agent-client-compatibility.md).
+  Verification on 2026-07-30 found the published package and both MCP protocol
+  eras compatible; Codex CLI and Claude Code were partial because their local
+  Skill/MCP loading succeeded but model connectivity prevented the final read
+  call; Cursor's terminal Agent was unavailable. `AI-008` remains Watch-only.
 
 ## Default execution contract
 

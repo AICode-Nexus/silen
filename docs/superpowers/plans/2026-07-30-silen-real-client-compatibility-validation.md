@@ -76,7 +76,7 @@ git commit -m "docs: plan real-client compatibility validation"
 - Consumes: executable paths and local application bundles.
 - Produces: exact version rows and the executable two-host test set.
 
-- [ ] **Step 1: Capture executable and application presence**
+- [x] **Step 1: Capture executable and application presence**
 
 Run:
 
@@ -93,7 +93,7 @@ find /Applications /Users/admin/Applications -maxdepth 1 -type d \
 Expected: Codex CLI, Claude Code, and Cursor IDE are present. Missing clients
 remain uninstalled.
 
-- [ ] **Step 2: Capture the installed versions and non-mutating help surfaces**
+- [x] **Step 2: Capture the installed versions and non-mutating help surfaces**
 
 Run:
 
@@ -123,7 +123,7 @@ terminal Agent remains absent and is not installed.
 - Produces: a synthetic consumer root used by both Agent hosts and the SDK
   control.
 
-- [ ] **Step 1: Create and verify an isolated temporary root**
+- [x] **Step 1: Create and verify an isolated temporary root**
 
 Run:
 
@@ -143,7 +143,7 @@ Expected: the resolved working directory is the newly created temporary root
 and Silen reports `0.5.0`. The `printf` writes only the new synthetic fixture,
 not a repository or user document.
 
-- [ ] **Step 2: Materialize host-local Skill copies and compare bytes**
+- [x] **Step 2: Materialize host-local Skill copies and compare bytes**
 
 Run:
 
@@ -166,34 +166,35 @@ Expected: both diffs are empty and no existing directory is overwritten.
   invocation-scoped stdio MCP configuration.
 - Produces: actual-host Skill discovery and one read-only MCP call per host.
 
-- [ ] **Step 1: Run an ephemeral read-only Codex Skill probe**
+- [x] **Step 1: Run an ephemeral read-only Codex Skill probe**
 
 From the guarded consumer root, run:
 
 ```bash
-codex exec --ephemeral --ignore-user-config --ignore-rules \
-  --skip-git-repo-check --sandbox read-only --ask-for-approval never \
+codex --sandbox read-only --ask-for-approval never exec \
+  --ephemeral --ignore-user-config --ignore-rules --skip-git-repo-check \
   'Do not run commands or call tools. Read the available project Skill metadata and return exactly: CODEX_SKILL_OK silen-docs-readonly 0.5.0'
 ```
 
 Expected: final output contains
 `CODEX_SKILL_OK silen-docs-readonly 0.5.0` and contains no tool call.
 
-- [ ] **Step 2: Run Codex with invocation-only Silen MCP configuration**
+- [x] **Step 2: Run Codex with invocation-only Silen MCP configuration**
 
 Run:
 
 ```bash
-codex exec --ephemeral --ignore-user-config --ignore-rules \
-  --skip-git-repo-check --sandbox read-only --ask-for-approval never \
-  -c 'mcp_servers.silen.command="node_modules/.bin/silen"' \
+codex --sandbox read-only --ask-for-approval never \
+  -c "mcp_servers.silen.command=\"$PWD/node_modules/.bin/silen\"" \
   -c 'mcp_servers.silen.args=["mcp","docs"]' \
+  exec --ephemeral --ignore-user-config --ignore-rules \
+  --skip-git-repo-check \
   'Call only the silen guide MCP tool. Return exactly CODEX_MCP_OK when its result states that Silen is read-only by default.'
 ```
 
 Expected: output contains `CODEX_MCP_OK`; no shell or write tool is invoked.
 
-- [ ] **Step 3: Run a non-persistent Claude Skill probe**
+- [x] **Step 3: Run a non-persistent Claude Skill probe**
 
 Run:
 
@@ -206,14 +207,15 @@ claude --print --no-session-persistence --setting-sources project \
 Expected: output contains
 `CLAUDE_SKILL_OK silen-docs-readonly 0.5.0`; no tool is available.
 
-- [ ] **Step 4: Run Claude with strict invocation-only Silen MCP configuration**
+- [x] **Step 4: Run Claude with strict invocation-only Silen MCP configuration**
 
 Run:
 
 ```bash
+silen_command="$PWD/node_modules/.bin/silen"
 claude --print --no-session-persistence --setting-sources project \
-  --strict-mcp-config \
-  --mcp-config '{"mcpServers":{"silen":{"command":"node_modules/.bin/silen","args":["mcp","docs"]}}}' \
+  --mcp-config "{\"mcpServers\":{\"silen\":{\"command\":\"$silen_command\",\"args\":[\"mcp\",\"docs\"]}}}" \
+  --strict-mcp-config --tools 'mcp__silen__guide' \
   --allowedTools 'mcp__silen__guide' --permission-mode dontAsk \
   --max-budget-usd 0.05 \
   'Call only the silen guide MCP tool. Return exactly CLAUDE_MCP_OK when its result states that Silen is read-only by default.'
@@ -231,7 +233,7 @@ Expected: output contains `CLAUDE_MCP_OK`; no shell or write tool is exposed.
 - Produces: stable counts, byte equality, default-off proof, and clean legacy
   and modern protocol shutdown.
 
-- [ ] **Step 1: Execute the SDK control**
+- [x] **Step 1: Execute the SDK control**
 
 From the guarded consumer root, run this exact Node ESM control:
 
@@ -343,26 +345,26 @@ Expected: `dual-era-client-control-ok` and zero write calls.
 - Produces: the durable compatibility matrix, limitations, `AI-008` decision,
   and completed `QUAL-004` map evidence.
 
-- [ ] **Step 1: Write the dated compatibility report**
+- [x] **Step 1: Write the dated compatibility report**
 
 Record exact client versions, result grades, tested surfaces, protocol-control
 counts, any failed probe without reinterpretation, and the temporary consumer
 path. Do not include credentials, auth details, absolute home paths, or model
 transcripts beyond the expected markers.
 
-- [ ] **Step 2: Apply the `AI-008` promotion rule**
+- [x] **Step 2: Apply the `AI-008` promotion rule**
 
 Keep `AI-008` in Watch unless the probes explicitly demonstrate Tasks and Apps
 negotiation and the other entry gates. Ordinary Skills, tools, or Resources do
 not satisfy the rule.
 
-- [ ] **Step 3: Move `QUAL-004` from Active to Shipped with evidence**
+- [x] **Step 3: Move `QUAL-004` from Active to Shipped with evidence**
 
 Restore an empty Active section, set the default-next header to `None`, and
 link the design, plan, and dated report. State the exact verified and partial
 host rows.
 
-- [ ] **Step 4: Run the final repository gate**
+- [x] **Step 4: Run the final repository gate**
 
 Run:
 
@@ -379,9 +381,10 @@ git status --short --branch
 Expected: every command exits zero, 76 test files and 735 tests pass, and only
 the planned documentation files are modified.
 
-- [ ] **Step 5: Commit the evidence**
+- [x] **Step 5: Commit the evidence**
 
 ```bash
-git add docs/project-map.md docs/quality/2026-07-30-agent-client-compatibility.md
+git add docs/project-map.md docs/quality/2026-07-30-agent-client-compatibility.md \
+  docs/superpowers/plans/2026-07-30-silen-real-client-compatibility-validation.md
 git commit -m "docs: record real-client compatibility evidence"
 ```
