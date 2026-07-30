@@ -126,6 +126,17 @@ describe('published package smoke test', () => {
     expect(files).toContain(
       'package/dist/agent/locales/zh-CN/tasks/create-site.md',
     )
+    for (const relativePath of [
+      'SKILL.md',
+      'references/audit-site.md',
+      'references/audit-site-zh-cn.md',
+      'references/read-site.md',
+      'references/read-site-zh-cn.md',
+    ]) {
+      expect(files).toContain(
+        `package/dist/agent/skills/silen-docs-readonly/${relativePath}`,
+      )
+    }
     expect(files.some((file) => file.endsWith('.d.ts'))).toBe(true)
     expect(
       files.filter(
@@ -312,6 +323,7 @@ const specifiers = [
   '@aicode-nexus/silen/agent/manifest.json',
   '@aicode-nexus/silen/agent/api.json',
   '@aicode-nexus/silen/agent/tasks/create-site.md',
+  '@aicode-nexus/silen/agent/skills/silen-docs-readonly/SKILL.md',
 ]
 const values = await Promise.all(specifiers.map(async (specifier) =>
   readFile(new URL(import.meta.resolve(specifier)), 'utf8')
@@ -321,9 +333,8 @@ console.log(JSON.stringify(values))`,
       { cwd: consumer, reject: false, all: true },
     )
     expect(agentContract.exitCode, agentContract.all).toBe(0)
-    const [frameworkManifest, frameworkApi, createSiteTask] = JSON.parse(
-      agentContract.stdout,
-    ) as string[]
+    const [frameworkManifest, frameworkApi, createSiteTask, readOnlySkill] =
+      JSON.parse(agentContract.stdout) as string[]
     expect(JSON.parse(frameworkManifest!)).toMatchObject({
       kind: 'silen-framework',
       generator: { version: expectedManifest.version },
@@ -339,6 +350,8 @@ console.log(JSON.stringify(values))`,
       ),
     ).toBe(true)
     expect(createSiteTask).toContain('id: create-site')
+    expect(readOnlySkill).toContain('name: silen-docs-readonly')
+    expect(readOnlySkill).not.toContain('allowed-tools')
 
     const themeTypecheck = await execa(
       path.resolve('node_modules/.bin/tsc'),
@@ -376,6 +389,41 @@ console.log(JSON.stringify(values))`,
     expect(help.all).toContain('build [root]')
     expect(version.exitCode, version.all).toBe(0)
     expect(version.all).toContain(`silen/${expectedManifest.version}`)
+
+    const installedSkills = await execa(
+      executable,
+      ['ai', 'skills', 'installed-skills'],
+      { cwd: consumer, reject: false, all: true },
+    )
+    expect(installedSkills.exitCode, installedSkills.all).toBe(0)
+    for (const relativePath of [
+      'SKILL.md',
+      'references/audit-site.md',
+      'references/audit-site-zh-cn.md',
+      'references/read-site.md',
+      'references/read-site-zh-cn.md',
+    ]) {
+      expect(
+        await readFile(
+          path.join(
+            consumer,
+            'installed-skills',
+            'silen-docs-readonly',
+            relativePath,
+          ),
+          'utf8',
+        ),
+      ).toBe(
+        await readFile(
+          path.join(
+            consumer,
+            'node_modules/@aicode-nexus/silen/dist/agent/skills/silen-docs-readonly',
+            relativePath,
+          ),
+          'utf8',
+        ),
+      )
+    }
 
     const built = await execa(executable, ['build', 'docs'], {
       cwd: consumer,

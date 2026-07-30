@@ -90,6 +90,11 @@ jobs:
         with:
           node-version: 22.12.0
 
+      - name: Set up Python for the pinned Agent Skills reference validator
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
       - name: Install pinned pnpm
         run: npm install --global pnpm@10.34.0
 
@@ -98,6 +103,16 @@ jobs:
 
       - name: Run official AI readiness gate
         run: pnpm site:ai-check
+
+      - name: Install the pinned Agent Skills reference validator
+        run: >-
+          python -m pip install
+          "git+https://github.com/agentskills/agentskills.git@38a2ff82958afee88dadf4831509e6f7e9d8ef4e#subdirectory=skills-ref"
+
+      - name: Validate the packaged read-only Agent Skill
+        run: |
+          skills-ref validate dist/agent/skills/silen-docs-readonly
+          skills-ref read-properties dist/agent/skills/silen-docs-readonly
 
       - name: Upload AI evaluation report
         if: ${{ always() }}
