@@ -5,7 +5,7 @@
   [`@aicode-nexus/silen` 0.4.0](../CHANGELOG.md#040---2026-07-22) at
   [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0)
   ([commit `01b95b4`](https://github.com/AICode-Nexus/silen/commit/01b95b4))
-- Default next item: AI-005.
+- Default next item: None; refine AI-006 before promotion.
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -81,39 +81,12 @@ items remain planning inputs, not release commitments.
 
 ## Active
 
-### AI-005 — Migrate MCP compatibility to the 2026 protocol and SDK v2
-
-- Outcome: Silen uses the official split TypeScript SDK v2
-  `@modelcontextprotocol/server` package and serves both the shipped legacy
-  protocol era and `2026-07-28` over local stdio, without changing tool names
-  or permission and filesystem boundaries.
-- Horizon: `0.5.0`.
-- Depends on: `AI-001`, `AI-002`, and `QUAL-003`.
-- Entry gate: Satisfied by the approved migration design, which pins stable SDK
-  v2 `2.0.0`, records the repository-root codemod dry run and manual rewrites,
-  bounds the public-package impact, and specifies legacy/modern stdio fixtures,
-  negotiation, shutdown, and deterministic contract regeneration.
-- Done when: No v1 SDK import, dependency, or unresolved codemod marker remains;
-  built stdio fixtures verify `2025-11-25` and `2026-07-28`; the existing tool
-  names, default read-only mode, explicit write opt-in, no-shell policy, bounded
-  inputs, and path confinement remain unchanged; every tool declares a formal
-  output schema and returns validated arbitrary-JSON `structuredContent`
-  alongside its human-readable content; Agent Contract output declares the
-  verified protocol versions, stdio transport, empty extension set, and output
-  schemas; and no remote transport is enabled by default.
-- Evidence:
-  [approved design](./superpowers/specs/2026-07-30-silen-mcp-v2-dual-protocol-design.md),
-  [implementation plan](./superpowers/plans/2026-07-30-silen-mcp-v2-dual-protocol.md),
-  [current v1 dependency](../package.json),
-  [current stdio-only contract](../src/shared/ai-contract.ts#L50),
-  [official v2 migration and codemod](https://ts.sdk.modelcontextprotocol.io/v2/migration/upgrade-to-v2),
-  [v2 protocol versions](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions),
-  and [v2 output schemas](https://ts.sdk.modelcontextprotocol.io/v2/advanced/schema-libraries),
-  reviewed 2026-07-30.
+No map-selected item is active.
 
 ## Ready
 
-No item is ready while `AI-005` is active.
+No item is ready. `AI-006` remains a Candidate until its mapping and packaging
+design is approved.
 
 ## Candidate
 
@@ -385,6 +358,39 @@ for default implementation.
   [runner tests](../tests/ai/site-ai-check-runner.test.ts),
   [official-site tests](../tests/website.test.ts), and
   [workflow tests](../tests/ai/site-quality-gate.test.ts).
+
+### AI-005 — MCP SDK v2 dual-protocol compatibility
+
+- Outcome: Silen uses the official split TypeScript SDK v2 packages and serves
+  both `2025-11-25` and `2026-07-28` over local stdio without changing tool
+  names, default permissions, or filesystem boundaries.
+- Horizon: `0.5.0`.
+- Depends on: `AI-001`, `AI-002`, and `QUAL-003`.
+- Entry gate: The approved migration design pinned SDK v2 `2.0.0`, bounded the
+  codemod and manual rewrites, and specified dual-era interoperability and
+  deterministic contract regeneration.
+- Done when: No v1 SDK dependency or unresolved codemod marker remains; built
+  stdio fixtures negotiate both protocol eras; all ten tools expose formal
+  output schemas and validated native JSON `structuredContent`; Agent Contract
+  schema version 2 declares protocol versions, stdio transport, empty
+  extensions, and read-only defaults; write tools still require
+  `--allow-write`; no shell or remote transport is introduced; and the package
+  and official-site gates pass.
+- Evidence:
+  [approved design](./superpowers/specs/2026-07-30-silen-mcp-v2-dual-protocol-design.md),
+  [implementation plan](./superpowers/plans/2026-07-30-silen-mcp-v2-dual-protocol.md),
+  [split SDK dependencies](../package.json),
+  [dual-era stdio runtime](../src/ai/mcp/stdio.ts),
+  [formal output schemas](../src/ai/mcp/output-schemas.ts),
+  [Agent Contract declaration](../src/shared/ai-contract.ts),
+  [migration guard](../tests/ai/mcp-v2-migration.test.ts),
+  [built dual-era interoperability tests](../tests/ai/mcp-e2e.test.ts), and
+  [stdio lifecycle tests](../tests/ai/mcp-stdio.test.ts). Verification on
+  2026-07-30 passed format, lint, typecheck, build, 72 test files with 714
+  tests, `publint`, the 24/24 official AI evaluation, source-map rejection, and
+  `pnpm pack --dry-run`. Two clean builds produced identical SHA-256 hashes:
+  manifest `c5afa5c100b4b0c93048326376aa36c01992ca59f3074b512e7efc5e665f6820`
+  and API `f1da47d115ad55decbb6053323139a5ce8ea0b24f574a5a17b33cf2f0984d0de`.
 
 ## Default execution contract
 
