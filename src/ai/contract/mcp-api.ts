@@ -6,11 +6,13 @@ import type {
 import type { McpToolDescriptor } from '../mcp/contracts.js'
 
 function publicJsonSchema(
-  descriptor: McpToolDescriptor,
+  schema: z.ZodType,
+  io: 'input' | 'output',
 ): Record<string, SilenJsonValue> {
-  return JSON.parse(
-    JSON.stringify(z.toJSONSchema(descriptor.inputSchema, { io: 'input' })),
-  ) as Record<string, SilenJsonValue>
+  return JSON.parse(JSON.stringify(z.toJSONSchema(schema, { io }))) as Record<
+    string,
+    SilenJsonValue
+  >
 }
 
 export function createMcpApiContract(
@@ -21,7 +23,8 @@ export function createMcpApiContract(
       name: descriptor.name,
       title: descriptor.title,
       description: descriptor.description,
-      inputSchema: publicJsonSchema(descriptor),
+      inputSchema: publicJsonSchema(descriptor.inputSchema, 'input'),
+      outputSchema: publicJsonSchema(descriptor.outputSchema, 'output'),
       annotations: { ...descriptor.annotations },
       requiresExplicitAuthorization: descriptor.requiresExplicitAuthorization,
     })),

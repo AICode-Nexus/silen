@@ -84,6 +84,7 @@ function normalizeApi(input: SilenApiContract): SilenApiContract {
         .map((tool) => ({
           ...tool,
           inputSchema: normalizeJsonRecord(tool.inputSchema),
+          outputSchema: normalizeJsonRecord(tool.outputSchema),
         })),
     },
     exports: [...api.exports].sort(

@@ -15,7 +15,7 @@ it('exports the promised workspace and MCP interfaces from @aicode-nexus/silen/a
   try {
     const workspace: Workspace = await createWorkspace(root)
     const manifest: SilenContractManifest = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       kind: 'silen-framework',
       generator: { name: 'Silen', version: 'test' },
       capabilities: {
@@ -25,6 +25,8 @@ it('exports the promised workspace and MCP interfaces from @aicode-nexus/silen/a
         index: true,
         mcp: {
           transport: 'stdio',
+          protocolVersions: ['2025-11-25', '2026-07-28'],
+          extensions: [],
           localOnly: true,
           readOnlyByDefault: true,
           writeRequiresFlag: '--allow-write',

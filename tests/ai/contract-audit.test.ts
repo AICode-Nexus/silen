@@ -24,7 +24,7 @@ beforeAll(async () => {
 
 function manifest(): SilenSiteContractManifest {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: 'silen-site',
     generator: { name: 'Silen', version: SILEN_VERSION },
     site: {
@@ -41,6 +41,8 @@ function manifest(): SilenSiteContractManifest {
       index: false,
       mcp: {
         transport: 'stdio',
+        protocolVersions: ['2025-11-25', '2026-07-28'],
+        extensions: [],
         localOnly: true,
         readOnlyByDefault: true,
         writeRequiresFlag: '--allow-write',
@@ -104,20 +106,26 @@ describe('Agent Contract audit', () => {
     await expect(audit(new Map(), '# Documentation only')).resolves.toEqual([])
   })
 
-  it('reports a missing advertised manifest and unsupported schema fallback', async () => {
+  it('reports a missing advertised manifest', async () => {
     expect(await audit(new Map())).toEqual([
       expect.objectContaining({
         code: 'contract-missing',
         path: manifestPath,
       }),
     ])
-    const files = contractFiles()
-    files.set(manifestPath, '{"schemaVersion":2}\n')
-    const result = await audit(files)
-    expect(result).toHaveLength(1)
-    expect(result[0]).toMatchObject({ code: 'contract-fallback' })
-    expect(result[0]?.message).toContain('read-only Markdown fallback')
   })
+
+  it.each([1, 3])(
+    'falls back safely for unsupported schema version %i',
+    async (schemaVersion) => {
+      const files = contractFiles()
+      files.set(manifestPath, `${JSON.stringify({ schemaVersion })}\n`)
+      const result = await audit(files)
+      expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({ code: 'contract-fallback' })
+      expect(result[0]?.message).toContain('read-only Markdown fallback')
+    },
+  )
 
   it('reports stale versions, missing resources, locales, and removed references safely', async () => {
     const current = manifest()

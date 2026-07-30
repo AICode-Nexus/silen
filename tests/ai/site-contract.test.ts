@@ -33,20 +33,41 @@ describe('Site Agent Contract', () => {
         readFile(path.join(result.outDir, 'llms.txt'), 'utf8'),
       ])
     const manifest = JSON.parse(manifestSource) as {
+      schemaVersion: number
       kind: string
       generator: { version: string }
+      capabilities: {
+        mcp: {
+          transport: string
+          protocolVersions: string[]
+          extensions: string[]
+          localOnly: boolean
+          readOnlyByDefault: boolean
+          writeRequiresFlag: string
+        }
+      }
       resources: Array<{ id: string; url: string }>
       tasks: Array<{ id: string; url: string }>
     }
     const api = JSON.parse(apiSource) as {
+      schemaVersion: number
       config: { fields: unknown[] }
       cli: { commands: unknown[] }
-      mcp: { tools: unknown[] }
+      mcp: { tools: Array<{ outputSchema?: unknown }> }
       exports: unknown[]
     }
 
+    expect(manifest.schemaVersion).toBe(2)
     expect(manifest.kind).toBe('silen-site')
     expect(manifest.generator.version).toBe(SILEN_VERSION)
+    expect(manifest.capabilities.mcp).toEqual({
+      transport: 'stdio',
+      protocolVersions: ['2025-11-25', '2026-07-28'],
+      extensions: [],
+      localOnly: true,
+      readOnlyByDefault: true,
+      writeRequiresFlag: '--allow-write',
+    })
     expect(manifest.resources).toContainEqual(
       expect.objectContaining({
         id: 'silen-manifest',
@@ -66,8 +87,12 @@ describe('Site Agent Contract', () => {
       }),
     )
     expect(api.config.fields).toHaveLength(17)
+    expect(api.schemaVersion).toBe(2)
     expect(api.cli.commands).toHaveLength(6)
     expect(api.mcp.tools).toHaveLength(10)
+    expect(api.mcp.tools.every((tool) => tool.outputSchema !== undefined)).toBe(
+      true,
+    )
     expect(api.exports.length).toBeGreaterThan(100)
     expect(guide).toContain('# Public site instructions')
     expect(customTask).toContain('id: summarize-site')

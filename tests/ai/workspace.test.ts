@@ -18,7 +18,7 @@ const fixture = path.resolve('tests/fixtures/ai-workspace')
 
 function siteManifest(base: string): unknown {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: 'silen-site',
     generator: { name: 'Silen', version: SILEN_VERSION },
     site: {
@@ -35,6 +35,8 @@ function siteManifest(base: string): unknown {
       index: true,
       mcp: {
         transport: 'stdio',
+        protocolVersions: ['2025-11-25', '2026-07-28'],
+        extensions: [],
         localOnly: true,
         readOnlyByDefault: true,
         writeRequiresFlag: '--allow-write',

@@ -80,6 +80,7 @@ describe('MCP Agent Contract registry', () => {
       'title',
       'description',
       'inputSchema',
+      'outputSchema',
       'annotations',
       'requiresExplicitAuthorization',
     ])

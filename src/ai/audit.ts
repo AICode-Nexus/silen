@@ -149,7 +149,7 @@ export async function auditAgentContract(
     typeof rawManifest === 'object' &&
     rawManifest !== null &&
     'schemaVersion' in rawManifest &&
-    (rawManifest as { schemaVersion?: unknown }).schemaVersion !== 1
+    (rawManifest as { schemaVersion?: unknown }).schemaVersion !== 2
   ) {
     return [
       contractIssue(
@@ -168,7 +168,7 @@ export async function auditAgentContract(
       contractIssue(
         'contract-schema',
         manifestPath,
-        'The Silen Agent Contract manifest does not match schema v1',
+        'The Silen Agent Contract manifest does not match schema v2',
       ),
     ]
   }
@@ -215,7 +215,7 @@ export async function auditAgentContract(
         contractIssue(
           'contract-schema',
           apiPath,
-          'The Agent Contract API does not match schema v1',
+          'The Agent Contract API does not match schema v2',
         ),
       )
     }

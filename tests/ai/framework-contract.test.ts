@@ -24,9 +24,19 @@ describe('framework Agent Contract', () => {
     const bundle = await assembleFrameworkContract({ publicExports })
 
     expect(bundle.manifest).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       kind: 'silen-framework',
       generator: { name: 'Silen', version: packageManifest.version },
+      capabilities: {
+        mcp: {
+          transport: 'stdio',
+          protocolVersions: ['2025-11-25', '2026-07-28'],
+          extensions: [],
+          localOnly: true,
+          readOnlyByDefault: true,
+          writeRequiresFlag: '--allow-write',
+        },
+      },
     })
     expect(bundle.api.config.fields).toHaveLength(17)
     expect(bundle.api.cli.commands.map((command) => command.id)).toEqual([
@@ -38,6 +48,9 @@ describe('framework Agent Contract', () => {
       'mcp',
     ])
     expect(bundle.api.mcp.tools).toHaveLength(10)
+    expect(
+      bundle.api.mcp.tools.every((tool) => tool.outputSchema !== undefined),
+    ).toBe(true)
     expect(bundle.api.exports).toEqual(publicExports)
 
     const [english, chinese] = bundle.packs

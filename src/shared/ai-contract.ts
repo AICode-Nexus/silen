@@ -49,6 +49,8 @@ export type SilenContractTask = SilenTaskMetadata & {
 
 export interface SilenMcpCapability {
   readonly transport: 'stdio'
+  readonly protocolVersions: readonly ['2025-11-25', '2026-07-28']
+  readonly extensions: readonly []
   readonly localOnly: true
   readonly readOnlyByDefault: true
   readonly writeRequiresFlag: '--allow-write'
@@ -71,7 +73,7 @@ export interface SilenContractSite {
 }
 
 interface SilenContractManifestBase {
-  readonly schemaVersion: 1
+  readonly schemaVersion: 2
   readonly generator: SilenContractGenerator
   readonly capabilities: SilenContractCapabilities
   readonly resources: readonly SilenContractResource[]
@@ -137,6 +139,7 @@ export interface SilenMcpToolContract {
   readonly title: string
   readonly description: string
   readonly inputSchema: { readonly [key: string]: SilenJsonValue }
+  readonly outputSchema: { readonly [key: string]: SilenJsonValue }
   readonly annotations: SilenMcpToolAnnotations
   readonly requiresExplicitAuthorization: boolean
 }
@@ -150,7 +153,7 @@ export interface SilenPublicExportContract {
 }
 
 export interface SilenApiContract {
-  readonly schemaVersion: 1
+  readonly schemaVersion: 2
   readonly generator: SilenContractGenerator
   readonly config: {
     readonly fields: readonly SilenConfigApiField[]

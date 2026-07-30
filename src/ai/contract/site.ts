@@ -239,7 +239,7 @@ export async function generateSiteContract(
         }
   })
   const manifest = parseContractManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: 'silen-site',
     generator: { name: 'Silen', version: SILEN_VERSION },
     site: {
@@ -256,6 +256,8 @@ export async function generateSiteContract(
       index: options.config.ai.index,
       mcp: {
         transport: 'stdio',
+        protocolVersions: ['2025-11-25', '2026-07-28'],
+        extensions: [],
         localOnly: true,
         readOnlyByDefault: true,
         writeRequiresFlag: '--allow-write',

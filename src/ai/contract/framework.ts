@@ -106,7 +106,7 @@ export async function assembleFrameworkContract(
     loadBuiltInTaskPack('zh-CN'),
   ])
   const api = parseApiContract({
-    schemaVersion: 1,
+    schemaVersion: 2,
     generator: { name: 'Silen', version: SILEN_VERSION },
     config: createConfigApiContract(),
     cli: createCliApiContract(createCommandDescriptors()),
@@ -119,7 +119,7 @@ export async function assembleFrameworkContract(
   assertTaskReferences(packs, api)
 
   const manifest = parseContractManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: 'silen-framework',
     generator: { name: 'Silen', version: SILEN_VERSION },
     capabilities: {
@@ -129,6 +129,8 @@ export async function assembleFrameworkContract(
       index: true,
       mcp: {
         transport: 'stdio',
+        protocolVersions: ['2025-11-25', '2026-07-28'],
+        extensions: [],
         localOnly: true,
         readOnlyByDefault: true,
         writeRequiresFlag: '--allow-write',

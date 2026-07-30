@@ -15,7 +15,7 @@ const generator = { name: 'Silen' as const, version: SILEN_VERSION }
 
 function frameworkManifest(): SilenContractManifest {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: 'silen-framework',
     generator,
     capabilities: {
@@ -25,6 +25,8 @@ function frameworkManifest(): SilenContractManifest {
       index: true,
       mcp: {
         transport: 'stdio',
+        protocolVersions: ['2025-11-25', '2026-07-28'],
+        extensions: [],
         localOnly: true,
         readOnlyByDefault: true,
         writeRequiresFlag: '--allow-write',
@@ -53,7 +55,7 @@ function frameworkManifest(): SilenContractManifest {
 
 function apiContract(): SilenApiContract {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generator,
     config: {
       fields: [
@@ -86,6 +88,7 @@ function apiContract(): SilenApiContract {
           title: 'Read documentation',
           description: 'Read a bounded Markdown range.',
           inputSchema: { type: 'object' },
+          outputSchema: { type: 'object' },
           annotations: {
             readOnlyHint: true,
             destructiveHint: false,
@@ -108,7 +111,7 @@ function apiContract(): SilenApiContract {
   }
 }
 
-describe('Silen Agent Contract v1', () => {
+describe('Silen Agent Contract v2', () => {
   it('accepts a framework manifest', () => {
     expect(parseContractManifest(frameworkManifest())).toEqual(
       frameworkManifest(),
@@ -141,9 +144,9 @@ describe('Silen Agent Contract v1', () => {
     expect(parseContractManifest(manifest)).toEqual(manifest)
   })
 
-  it('rejects contract versions other than v1', () => {
+  it.each([1, 3])('rejects contract schema version %i', (schemaVersion) => {
     expect(() =>
-      parseContractManifest({ ...frameworkManifest(), schemaVersion: 2 }),
+      parseContractManifest({ ...frameworkManifest(), schemaVersion }),
     ).toThrow()
   })
 
@@ -220,6 +223,13 @@ describe('Silen Agent Contract v1', () => {
               },
               type: 'object',
             },
+            outputSchema: {
+              properties: {
+                results: { type: 'array' },
+                query: { type: 'string' },
+              },
+              type: 'object',
+            },
           },
         ],
       },
@@ -245,6 +255,13 @@ describe('Silen Agent Contract v1', () => {
               properties: {
                 query: { type: 'string' },
                 limit: { type: 'number' },
+              },
+            },
+            outputSchema: {
+              type: 'object',
+              properties: {
+                query: { type: 'string' },
+                results: { type: 'array' },
               },
             },
           },

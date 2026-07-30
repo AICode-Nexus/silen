@@ -112,6 +112,11 @@ const capabilitiesSchema = z
     mcp: z
       .object({
         transport: z.literal('stdio'),
+        protocolVersions: z.tuple([
+          z.literal('2025-11-25'),
+          z.literal('2026-07-28'),
+        ]),
+        extensions: z.tuple([]),
         localOnly: z.literal(true),
         readOnlyByDefault: z.literal(true),
         writeRequiresFlag: z.literal('--allow-write'),
@@ -149,7 +154,7 @@ function uniqueKeys(
 }
 
 const manifestBaseShape = {
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   generator: generatorSchema,
   capabilities: capabilitiesSchema,
   resources: z
@@ -234,6 +239,7 @@ const mcpToolSchema = z
     title: z.string().min(1).max(500),
     description: z.string().min(1).max(2000),
     inputSchema: z.record(z.string(), jsonValueSchema),
+    outputSchema: z.record(z.string(), jsonValueSchema),
     annotations: z
       .object({
         readOnlyHint: z.boolean(),
@@ -258,7 +264,7 @@ const publicExportSchema = z
 
 export const silenApiContractSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     generator: generatorSchema,
     config: z.object({ fields: z.array(configFieldSchema) }).strict(),
     cli: z.object({ commands: z.array(cliCommandSchema) }).strict(),
