@@ -32,6 +32,10 @@ single API reference.
 If a client does not support the declared schema version, it must fall back to
 the linked public Markdown and remain read-only.
 
+The current manifest and API use `schemaVersion: 2`. They declare local
+`stdio`, verified protocol versions `2025-11-25` and `2026-07-28`, an empty
+extension set, and every MCP tool's `outputSchema`.
+
 ## Add public project instructions
 
 Only publish instructions that are safe for every site visitor:
@@ -77,9 +81,10 @@ pnpm silen ai eval docs
 pnpm silen mcp docs
 ```
 
-The MCP server is read-only by default. Write tools appear only when it is
-started explicitly with `--allow-write`, and all writes remain inside the
-Markdown workspace.
+The MCP server uses the split SDK v2 and is read-only by default. Write tools
+appear only when it is started explicitly with `--allow-write`, and all writes
+remain inside the Markdown workspace. Successful calls return text plus
+schema-validated `structuredContent`; remote transport is not enabled.
 
 ## Model-free quality gate
 

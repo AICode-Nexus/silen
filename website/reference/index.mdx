@@ -39,6 +39,17 @@ credentials, path, query, or fragment.
 | `silen ai <init\|index\|audit\|eval> [root]` | Manage and evaluate the local AI workspace    |
 | `silen mcp [root]`                           | Serve read-only MCP; optional `--allow-write` |
 
+## MCP and Agent Contract
+
+The local MCP command uses SDK v2 over `stdio` and verifies `2025-11-25` and
+`2026-07-28`. It exposes seven read-only tools by default and three additional
+write tools with `--allow-write`; successful calls include text and validated
+`structuredContent`. Remote transport is not enabled.
+
+Agent Contract manifest and API files use `schemaVersion: 2`. The manifest
+declares the protocol versions and empty extensions; the API declares each
+tool's `outputSchema`.
+
 ## AI evaluation suites
 
 `.silen/ai-evals.json` is strict JSON. Version 1 matches one route and optional

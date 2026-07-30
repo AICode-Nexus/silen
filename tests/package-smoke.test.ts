@@ -328,7 +328,16 @@ console.log(JSON.stringify(values))`,
       kind: 'silen-framework',
       generator: { version: expectedManifest.version },
     })
-    expect(JSON.parse(frameworkApi!)).toMatchObject({ schemaVersion: 1 })
+    const parsedFrameworkApi = JSON.parse(frameworkApi!) as {
+      schemaVersion: number
+      mcp: { tools: Array<{ outputSchema?: unknown }> }
+    }
+    expect(parsedFrameworkApi.schemaVersion).toBe(2)
+    expect(
+      parsedFrameworkApi.mcp.tools.every(
+        (tool) => tool.outputSchema !== undefined,
+      ),
+    ).toBe(true)
     expect(createSiteTask).toContain('id: create-site')
 
     const themeTypecheck = await execa(

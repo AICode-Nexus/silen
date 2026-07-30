@@ -71,6 +71,19 @@ The default server registers seven read-only tools: `guide`, `list`, `search`,
 preflight: it reads Markdown inputs and existing artifacts but does not load
 project config, execute MDX, invoke Vite, or write files.
 
+## Protocol and structured results
+
+The command uses the stable split TypeScript SDK v2. One `stdio` entry accepts
+verified legacy `2025-11-25` and modern `2026-07-28` clients; see the
+[official protocol-version guide](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions).
+The server is read-only by default. Every successful tool call includes text
+and schema-validated `structuredContent`, and every listed tool declares an
+`outputSchema`. Remote transport is not enabled.
+
+For the string-valued `guide` tool, modern clients receive the native string;
+legacy clients receive the SDK's compatibility `{ result: ... }` object. The
+object-valued tools keep their existing structured shape in both eras.
+
 ## Grant writes deliberately
 
 ```sh

@@ -33,6 +33,15 @@ ai: {
 
 指令与任务都是显式公开构建输入。不要包含本地绝对路径、密钥、私有端点、凭证或未公开运行信息。
 
+## Schema 版本 2
+
+当前 manifest 与 API 文档使用 `schemaVersion: 2`。manifest 的 MCP 能力声明
+`stdio`、协议版本 `2025-11-25` 与 `2026-07-28`、空扩展列表、本地运行、
+默认只读和 `--allow-write` 门禁。API 文档为每个工具增加 `outputSchema`；MCP
+成功调用会同时返回文本与对应的、经过 schema 校验的 `structuredContent`。
+
+该契约不声明远程传输或可选 MCP 扩展；这些能力需要独立设计和授权。
+
 ## 客户端行为
 
 Codex、Claude Code、Cursor 等客户端应使用同一份清单，不要维护各自的 API 副本。若客户端不支持声明的契约 schema，应退回到链接的公开 Markdown，并保持只读。读取部署内容时以站点清单为准；针对已安装包生成代码时以包契约为准。

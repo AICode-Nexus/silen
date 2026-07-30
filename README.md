@@ -45,6 +45,19 @@ pnpm silen ai eval docs
 `ai eval --json` provides stable CI output. Exit codes `0`, `1`, and `2` mean
 pass, retrieval failure, and setup failure.
 
+## Local MCP compatibility
+
+`pnpm silen mcp docs` uses the split TypeScript SDK v2 over local `stdio`. One
+entry accepts verified `2025-11-25` and `2026-07-28` clients, exposes seven
+read-only tools by default, and adds three write tools only with
+`--allow-write`. Successful calls include human-readable text and
+schema-validated `structuredContent`.
+
+Generated Agent Contract manifests and API documents use `schemaVersion: 2`;
+they declare the protocol versions, an empty extension set, and each tool's
+`outputSchema`. Silen does not enable remote MCP, models, provider keys, or a
+shell through this local server.
+
 ## Minimal configuration
 
 ```ts

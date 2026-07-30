@@ -46,6 +46,18 @@ Instructions and tasks are explicit public build input. Do not include local
 absolute paths, secrets, private endpoints, credentials, or unpublished
 operating details.
 
+## Schema version 2
+
+The current manifest and API documents use `schemaVersion: 2`. The manifest's
+MCP capability declares `stdio`, protocol versions `2025-11-25` and
+`2026-07-28`, an empty extension list, local-only operation, read-only default,
+and the `--allow-write` gate. The API document adds an `outputSchema` for every
+tool. Successful MCP calls expose the corresponding schema-validated
+`structuredContent` alongside text.
+
+This contract does not advertise remote transport or optional MCP extensions.
+Those capabilities require separate designs and authorization.
+
 ## Client behavior
 
 Codex, Claude Code, Cursor, and other clients should consume the same manifest

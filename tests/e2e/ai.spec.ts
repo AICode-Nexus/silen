@@ -115,11 +115,18 @@ test('serves the site Agent Contract from its advertised base route', async ({
   )
   expect(response.ok()).toBe(true)
   expect(await response.json()).toMatchObject({
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: 'silen-site',
     site: { base: '/project/' },
     capabilities: {
-      mcp: { readOnlyByDefault: true, writeRequiresFlag: '--allow-write' },
+      mcp: {
+        transport: 'stdio',
+        protocolVersions: ['2025-11-25', '2026-07-28'],
+        extensions: [],
+        localOnly: true,
+        readOnlyByDefault: true,
+        writeRequiresFlag: '--allow-write',
+      },
     },
   })
 })

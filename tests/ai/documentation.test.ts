@@ -109,6 +109,43 @@ describe('AI Alpha documentation contract', () => {
     expect(integrations).toMatch(/no endpoint.*no Ask AI.*bundle/is)
   })
 
+  it('documents MCP v2 dual-protocol output and Agent Contract v2', async () => {
+    const [readme, englishMcp, chineseMcp, englishContract, chineseContract] =
+      await Promise.all(
+        [
+          'README.md',
+          'website/ai/local-workspace-mcp/index.mdx',
+          'website/zh/ai/local-workspace-mcp/index.mdx',
+          'website/ai/agent-contract/index.mdx',
+          'website/zh/ai/agent-contract/index.mdx',
+        ].map((file) => readFile(file, 'utf8')),
+      )
+    const corpus = [
+      readme,
+      englishMcp,
+      chineseMcp,
+      englishContract,
+      chineseContract,
+    ].join('\n')
+
+    for (const value of [
+      '2025-11-25',
+      '2026-07-28',
+      'schemaVersion: 2',
+      'outputSchema',
+      'structuredContent',
+      'stdio',
+    ]) {
+      expect(corpus).toContain(value)
+    }
+    expect(englishMcp).toContain('--allow-write')
+    expect(chineseMcp).toContain('--allow-write')
+    expect(englishMcp).toMatch(/read-only by default/i)
+    expect(chineseMcp).toContain('默认只读')
+    expect(englishMcp).toMatch(/remote transport is not enabled/i)
+    expect(chineseMcp).toContain('不启用远程传输')
+  })
+
   it('documents the exact bilingual Ask AI request and streaming protocol', async () => {
     const [english, chinese] = await Promise.all([
       readFile('website/integrations/index.mdx', 'utf8'),

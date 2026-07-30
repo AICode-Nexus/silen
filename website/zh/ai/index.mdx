@@ -27,6 +27,10 @@ Codex、Claude Code 与 Cursor 都应读取同一份 manifest，并使用同一�
 
 如果客户端不支持声明的契约版本，必须退回链接的公开 Markdown，并保持只读。
 
+当前 manifest 与 API 使用 `schemaVersion: 2`，声明本地 `stdio`、已验证的
+`2025-11-25` 与 `2026-07-28` 协议版本、空扩展集合，以及每个 MCP 工具的
+`outputSchema`。
+
 ## 添加公开项目指令
 
 只发布对所有站点访问者都安全的内容：
@@ -70,8 +74,9 @@ pnpm silen ai eval docs
 pnpm silen mcp docs
 ```
 
-MCP 服务默认只读。只有显式使用 `--allow-write` 启动时，写入工具才会出现；
-所有写入仍被限制在 Markdown 工作区内。
+MCP 服务使用拆分后的 SDK v2，并且默认只读。只有显式使用 `--allow-write`
+启动时，写入工具才会出现；所有写入仍被限制在 Markdown 工作区内。成功调用会
+同时返回文本和经过 schema 校验的 `structuredContent`，不启用远程传输。
 
 ## 无模型质量门禁
 

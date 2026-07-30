@@ -59,6 +59,17 @@ Silen 仓库使用 `pnpm site:ai-check` 组合完整只读门禁，并把评测�
 
 默认服务注册七个只读工具：`guide`、`list`、`search`、`read`、`backlinks`、`citations`、`build`。`build` 是有边界的预检，只读取 Markdown 输入与现有产物，不加载项目配置、不执行 MDX、不调用 Vite，也不写文件。
 
+## 协议与结构化结果
+
+该命令使用稳定的拆分版 TypeScript SDK v2。同一个 `stdio` 入口接受已验证的
+legacy `2025-11-25` 与 modern `2026-07-28` 客户端；版本规则见
+[官方协议版本指南](https://ts.sdk.modelcontextprotocol.io/v2/protocol-versions)。
+服务默认只读。每次成功调用都同时返回文本与经过 schema 校验的
+`structuredContent`，每个工具都声明 `outputSchema`；不启用远程传输。
+
+字符串结果的 `guide` 在 modern 客户端中保持原生字符串，在 legacy 客户端中由
+SDK 兼容包装为 `{ result: ... }`；对象结果工具在两个协议时代保持原有结构。
+
 ## 谨慎授权写入
 
 ```sh

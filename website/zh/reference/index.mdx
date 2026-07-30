@@ -36,6 +36,15 @@ description: Silen 配置默认值、CLI 语法与排错。
 | `silen ai <init\|index\|audit\|eval> [root]` | 管理并评测本地 AI 工作区           |
 | `silen mcp [root]`                           | 启动只读 MCP，可选 `--allow-write` |
 
+## MCP 与 Agent Contract
+
+本地 MCP 命令使用 SDK v2 与 `stdio`，验证 `2025-11-25` 和 `2026-07-28`。
+默认提供七个只读工具，加入 `--allow-write` 后增加三个写工具；成功调用同时返回
+文本与经过校验的 `structuredContent`，不启用远程传输。
+
+Agent Contract manifest 与 API 使用 `schemaVersion: 2`。manifest 声明协议版本
+和空扩展集合，API 为每个工具声明 `outputSchema`。
+
 ## AI 评测套件
 
 `.silen/ai-evals.json` 是严格 JSON。版本 1 在 `topK` 内匹配单一路由与可选
