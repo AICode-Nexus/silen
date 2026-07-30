@@ -71,6 +71,18 @@ describe('framework Agent Contract', () => {
     expect(first).toEqual(second)
     expect(Object.keys(first)).toContain('tasks/create-site.md')
     expect(Object.keys(first)).toContain('locales/zh-CN/tasks/create-site.md')
+    expect(Object.keys(first)).toEqual(
+      expect.arrayContaining([
+        'skills/silen-docs-readonly/SKILL.md',
+        'skills/silen-docs-readonly/references/audit-site.md',
+        'skills/silen-docs-readonly/references/audit-site-zh-cn.md',
+        'skills/silen-docs-readonly/references/read-site.md',
+        'skills/silen-docs-readonly/references/read-site-zh-cn.md',
+      ]),
+    )
+    expect(first['skills/silen-docs-readonly/SKILL.md']).toContain(
+      'name: silen-docs-readonly',
+    )
 
     const content = Object.values(first).join('\n')
     expect(content).not.toContain(process.cwd())

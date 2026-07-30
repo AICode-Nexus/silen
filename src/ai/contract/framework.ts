@@ -13,6 +13,7 @@ import { readToolDescriptors, writeToolDescriptors } from '../mcp/contracts.js'
 import { parseApiContract, parseContractManifest } from './schema.js'
 import { serializeContractJson } from './serialize.js'
 import { loadBuiltInTaskPack, type TaskPack } from './tasks.js'
+import { renderReadOnlyAgentSkill } from './agent-skills.js'
 
 const artifactReferences = [
   'ai-index',
@@ -172,6 +173,13 @@ export function renderFrameworkContract(
   }
   for (const task of chinese.tasks) {
     files[`locales/zh-CN/tasks/${task.path.split('/').at(-1)!}`] = task.markdown
+  }
+  const skill = renderReadOnlyAgentSkill({
+    version: bundle.manifest.generator.version,
+    packs: bundle.packs,
+  })
+  for (const [relativePath, content] of Object.entries(skill.files)) {
+    files[`skills/${skill.name}/${relativePath}`] = content
   }
   return Object.fromEntries(
     Object.entries(files).sort(([left], [right]) =>

@@ -5,7 +5,7 @@
   [`@aicode-nexus/silen` 0.4.0](../CHANGELOG.md#040---2026-07-22) at
   [`v0.4.0`](https://github.com/AICode-Nexus/silen/releases/tag/v0.4.0)
   ([commit `01b95b4`](https://github.com/AICode-Nexus/silen/commit/01b95b4))
-- Default next item: None; refine AI-006 before promotion.
+- Default next item: `AI-006` (Active).
 - Governance:
   [Silen Project Map Design](./superpowers/specs/2026-07-29-silen-project-map-design.md)
 
@@ -81,18 +81,6 @@ items remain planning inputs, not release commitments.
 
 ## Active
 
-No map-selected item is active.
-
-## Ready
-
-No item is ready. `AI-006` remains a Candidate until its mapping and packaging
-design is approved.
-
-## Candidate
-
-Candidate order is informative. An item must satisfy its entry gate before it
-moves to `Ready`.
-
 ### AI-006 — Generate a read-only Agent Skills-compatible surface
 
 - Outcome: Existing Silen task packs and public contracts can emit a standard
@@ -100,20 +88,26 @@ moves to `Ready`.
   creating a second hand-maintained instruction system.
 - Horizon: `0.5.0`.
 - Depends on: `AI-002` and `AI-005`.
-- Entry gate: Approve a field-by-field mapping from the existing Agent Contract
-  and bilingual task sources to the Agent Skills format, including naming,
-  packaging, validation, exclusion rules, and the boundary of the experimental
-  Skills-over-MCP switch.
+- Entry gate: The field-by-field mapping, packaging, validation, exclusion
+  rules, explicit filesystem command, and experimental Skills-over-MCP boundary
+  are approved.
 - Done when: Output is generated from canonical Silen sources, passes the
   official format validator, contains no implicit shell, network, or write
   permission, remains byte-deterministic, and ships with interoperability
   fixtures; Skills over MCP remains behind an explicit experimental flag that
   is off by default and is not required for filesystem-based Skills discovery.
 - Evidence:
-  [AI Contract design](./superpowers/specs/2026-07-15-silen-ai-contract-layer-design.md),
-  [AI Contract plan](./superpowers/plans/2026-07-15-silen-ai-contract-layer.md),
-  and [Agent Skills specification](https://agentskills.io/specification)
-  observed 2026-07-29.
+  [approved design](./superpowers/specs/2026-07-30-silen-read-only-agent-skills-design.md)
+  and
+  [implementation plan](./superpowers/plans/2026-07-30-silen-read-only-agent-skills.md).
+
+## Ready
+
+No item is ready for default implementation while `AI-006` is Active.
+
+## Candidate
+
+No item is currently a Candidate.
 
 ## Watch
 
