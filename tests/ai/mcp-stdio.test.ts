@@ -1,9 +1,10 @@
-import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/server'
 import { execa } from 'execa'
 import { createInterface } from 'node:readline'
 import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SILEN_VERSION } from '../../src/shared/version'
+
+const LEGACY_PROTOCOL_VERSION = '2025-11-25'
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(() => Promise.resolve()),
@@ -158,7 +159,7 @@ describe('MCP stdio lifecycle', () => {
             id: 1,
             method: 'initialize',
             params: {
-              protocolVersion: LATEST_PROTOCOL_VERSION,
+              protocolVersion: LEGACY_PROTOCOL_VERSION,
               capabilities: {},
               clientInfo: { name: 'silen-signal-test', version: '1.0.0' },
             },

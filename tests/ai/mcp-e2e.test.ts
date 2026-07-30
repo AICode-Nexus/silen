@@ -8,6 +8,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const temporaryRoots: string[] = []
 const openClients: Client[] = []
+type VerifiedEra = 'legacy' | 'modern'
+
+const verifiedEras = [
+  'legacy',
+  'modern',
+] as const satisfies readonly VerifiedEra[]
+const LEGACY_PROTOCOL_VERSION = '2025-11-25'
+const MODERN_PROTOCOL_VERSION = '2026-07-28'
 
 afterEach(async () => {
   await Promise.all(openClients.splice(0).map((client) => client.close()))
@@ -27,7 +35,26 @@ async function temporaryWorkspace(): Promise<string> {
   return root
 }
 
-async function startBuiltClient(root: string, allowWrite = false) {
+function createVerifiedClient(era: VerifiedEra): Client {
+  return new Client(
+    { name: `silen-${era}-test`, version: '1.0.0' },
+    era === 'legacy'
+      ? { supportedProtocolVersions: [LEGACY_PROTOCOL_VERSION] }
+      : {
+          supportedProtocolVersions: [
+            LEGACY_PROTOCOL_VERSION,
+            MODERN_PROTOCOL_VERSION,
+          ],
+          versionNegotiation: { mode: { pin: MODERN_PROTOCOL_VERSION } },
+        },
+  )
+}
+
+async function startBuiltClient(
+  root: string,
+  era: VerifiedEra,
+  allowWrite = false,
+) {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [
@@ -49,10 +76,14 @@ async function startBuiltClient(root: string, allowWrite = false) {
     stderr += chunk
   })
   const protocolErrors: Error[] = []
-  const client = new Client({ name: 'silen-dist-test', version: '1.0.0' })
+  const client = createVerifiedClient(era)
   client.onerror = (error) => protocolErrors.push(error)
   openClients.push(client)
   await client.connect(transport)
+  expect(client.getProtocolEra()).toBe(era)
+  expect(client.getNegotiatedProtocolVersion()).toBe(
+    era === 'legacy' ? LEGACY_PROTOCOL_VERSION : MODERN_PROTOCOL_VERSION,
+  )
   return {
     client,
     transport,
@@ -74,70 +105,103 @@ function toolText(result: Awaited<ReturnType<Client['callTool']>>): string {
 }
 
 describe('built MCP CLI interoperability', () => {
-  it('serves exactly seven read-only tools with protocol-clean stdout', async () => {
-    const root = await temporaryWorkspace()
-    const session = await startBuiltClient(root)
+  it.each(verifiedEras)(
+    'serves exactly seven read-only tools over the %s protocol era',
+    async (era) => {
+      const root = await temporaryWorkspace()
+      const session = await startBuiltClient(root, era)
+      const listed = await session.client.listTools()
 
-    expect(
-      (await session.client.listTools()).tools.map((tool) => tool.name),
-    ).toEqual([
-      'guide',
-      'list',
-      'search',
-      'read',
-      'backlinks',
-      'citations',
-      'build',
-    ])
-    const search = await session.client.callTool({
-      name: 'search',
-      arguments: { query: 'deterministic' },
-    })
-    const preflight = await session.client.callTool({
-      name: 'build',
-      arguments: {},
-    })
-    expect(toolText(search)).toContain('guide/getting-started.mdx')
-    expect(toolText(preflight)).toContain('"outDir": ".silen/dist"')
-    expect(`${toolText(search)}${toolText(preflight)}`).not.toContain(root)
+      expect(listed.tools.map((tool) => tool.name)).toEqual([
+        'guide',
+        'list',
+        'search',
+        'read',
+        'backlinks',
+        'citations',
+        'build',
+      ])
+      const guideTool = listed.tools.find((tool) => tool.name === 'guide')
+      const guide = await session.client.callTool({
+        name: 'guide',
+        arguments: {},
+      })
+      if (era === 'modern') {
+        expect(guide.structuredContent).toContain('read-only')
+        expect(guideTool?.outputSchema).toMatchObject({ type: 'string' })
+      } else {
+        expect(guide.structuredContent).toMatchObject({
+          result: expect.stringContaining('read-only'),
+        })
+        expect(guideTool?.outputSchema).toMatchObject({
+          type: 'object',
+          properties: { result: { type: 'string' } },
+        })
+      }
 
-    await session.assertClean()
-  }, 30_000)
+      const search = await session.client.callTool({
+        name: 'search',
+        arguments: { query: 'deterministic' },
+      })
+      const preflight = await session.client.callTool({
+        name: 'build',
+        arguments: {},
+      })
+      expect(search.structuredContent).toMatchObject({
+        results: [{ path: 'guide/getting-started.mdx' }],
+      })
+      expect(toolText(preflight)).toContain('"outDir": ".silen/dist"')
+      expect(
+        `${toolText(search)}${toolText(preflight)}${JSON.stringify(search.structuredContent)}${JSON.stringify(preflight.structuredContent)}`,
+      ).not.toContain(root)
 
-  it('registers ten tools only with --allow-write and safely writes a temporary workspace', async () => {
-    const root = await temporaryWorkspace()
-    await mkdir(path.join(root, 'wiki'), { recursive: true })
-    const session = await startBuiltClient(root, true)
+      await session.assertClean()
+    },
+    60_000,
+  )
 
-    expect(
-      (await session.client.listTools()).tools.map((tool) => tool.name),
-    ).toEqual([
-      'guide',
-      'list',
-      'search',
-      'read',
-      'backlinks',
-      'citations',
-      'build',
-      'write',
-      'link',
-      'append',
-    ])
-    const written = await session.client.callTool({
-      name: 'write',
-      arguments: {
+  it.each(verifiedEras)(
+    'registers ten tools only with --allow-write over the %s protocol era',
+    async (era) => {
+      const root = await temporaryWorkspace()
+      await mkdir(path.join(root, 'wiki'), { recursive: true })
+      const session = await startBuiltClient(root, era, true)
+
+      expect(
+        (await session.client.listTools()).tools.map((tool) => tool.name),
+      ).toEqual([
+        'guide',
+        'list',
+        'search',
+        'read',
+        'backlinks',
+        'citations',
+        'build',
+        'write',
+        'link',
+        'append',
+      ])
+      const written = await session.client.callTool({
+        name: 'write',
+        arguments: {
+          path: 'wiki/interoperability.md',
+          content:
+            '# Interoperability\n\nWritten through explicit MCP permission.\n',
+        },
+      })
+      expect(written.isError).not.toBe(true)
+      expect(written.structuredContent).toMatchObject({
         path: 'wiki/interoperability.md',
-        content:
-          '# Interoperability\n\nWritten through explicit MCP permission.\n',
-      },
-    })
-    expect(written.isError).not.toBe(true)
-    expect(toolText(written)).toContain('wiki/interoperability.md')
-    expect(toolText(written)).not.toContain(root)
-    expect(
-      await readFile(path.join(root, 'wiki/interoperability.md'), 'utf8'),
-    ).toBe('# Interoperability\n\nWritten through explicit MCP permission.\n')
+      })
+      expect(
+        `${toolText(written)}${JSON.stringify(written.structuredContent)}`,
+      ).not.toContain(root)
+      expect(
+        await readFile(path.join(root, 'wiki/interoperability.md'), 'utf8'),
+      ).toBe('# Interoperability\n\nWritten through explicit MCP permission.\n')
 
-    await session.assertClean()
-  }, 30_000)
+      await session.assertClean()
+    },
+    60_000,
+  )
 })
