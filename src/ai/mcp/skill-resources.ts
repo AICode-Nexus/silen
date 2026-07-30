@@ -55,7 +55,7 @@ export function registerReadOnlyAgentSkillResources(
       description: 'Enumerates the explicitly enabled read-only Silen Skill.',
       mimeType: 'application/json',
     },
-    async (uri) => ({
+    (uri) => ({
       contents: [{ uri: uri.href, mimeType: 'application/json', text: index }],
     }),
   )
@@ -77,7 +77,7 @@ export function registerReadOnlyAgentSkillResources(
           : `Canonical packaged ${bundle.name} file ${relativePath}.`,
         mimeType: 'text/markdown',
       },
-      async (resourceUri) => ({
+      (resourceUri) => ({
         contents: [
           {
             uri: resourceUri.href,
