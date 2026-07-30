@@ -1,4 +1,4 @@
-import { StdioServerTransport } from '@modelcontextprotocol/server/stdio'
+import { serveStdio } from '@modelcontextprotocol/server/stdio'
 import type { Workspace } from '../workspace.js'
 import { createMcpServer } from './server.js'
 
@@ -8,37 +8,33 @@ export interface CreateMcpOptions {
 }
 
 export async function serveMcp(options: CreateMcpOptions): Promise<void> {
-  const server = createMcpServer(options)
-  const transport = new StdioServerTransport()
-  let resolveClosed!: () => void
-  let rejectClosed!: (error: unknown) => void
-  const closed = new Promise<void>((resolve, reject) => {
-    resolveClosed = resolve
-    rejectClosed = reject
+  let resolveStopped!: () => void
+  let rejectStopped!: (error: unknown) => void
+  const stopped = new Promise<void>((resolve, reject) => {
+    resolveStopped = resolve
+    rejectStopped = reject
   })
-  const previousOnClose = transport.onclose
-  transport.onclose = () => {
-    previousOnClose?.()
-    resolveClosed()
-  }
-  let closing = false
+
+  const handle = serveStdio(() => createMcpServer(options), {
+    legacy: 'serve',
+    onerror: rejectStopped,
+  })
+
   let closePromise: Promise<void> | undefined
   const close = (): void => {
-    if (closing) return
-    closing = true
-    closePromise = Promise.resolve().then(() => server.close())
-    void closePromise.catch(rejectClosed)
+    closePromise ??= handle.close()
+    void closePromise.then(resolveStopped, rejectStopped)
   }
+
   process.on('SIGINT', close)
   process.on('SIGTERM', close)
   process.stdin.once('end', close)
   try {
-    await server.connect(transport)
-    await closed
-    if (closePromise) await closePromise
+    await stopped
   } finally {
     process.off('SIGINT', close)
     process.off('SIGTERM', close)
     process.stdin.off('end', close)
+    await (closePromise ?? handle.close())
   }
 }

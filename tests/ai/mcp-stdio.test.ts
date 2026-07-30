@@ -7,22 +7,30 @@ import { SILEN_VERSION } from '../../src/shared/version'
 
 const mocks = vi.hoisted(() => ({
   close: vi.fn(() => Promise.resolve()),
-  connect: vi.fn<(transport: { onclose?: () => void }) => Promise<void>>(),
-  transport: undefined as { onclose?: () => void } | undefined,
+  factory: undefined as (() => unknown) | undefined,
+  options: undefined as
+    | { legacy?: 'serve' | 'reject'; onerror?: (error: Error) => void }
+    | undefined,
 }))
 
 vi.mock('../../src/ai/mcp/server.js', () => ({
-  createMcpServer: () => ({ close: mocks.close, connect: mocks.connect }),
+  createMcpServer: vi.fn(() => ({})),
 }))
 
 vi.mock('@modelcontextprotocol/server/stdio', () => ({
-  StdioServerTransport: class StdioServerTransport {
-    onclose?: () => void
-
-    constructor() {
-      mocks.transport = this
-    }
-  },
+  serveStdio: vi.fn(
+    (
+      factory: () => unknown,
+      options: {
+        legacy?: 'serve' | 'reject'
+        onerror?: (error: Error) => void
+      },
+    ) => {
+      mocks.factory = factory
+      mocks.options = options
+      return { close: mocks.close }
+    },
+  ),
 }))
 
 import { serveMcp } from '../../src/ai/mcp/stdio'
@@ -60,77 +68,36 @@ describe('MCP stdio lifecycle', () => {
   beforeEach(() => {
     mocks.close.mockReset()
     mocks.close.mockResolvedValue()
-    mocks.connect.mockReset()
-    mocks.transport = undefined
+    mocks.factory = undefined
+    mocks.options = undefined
   })
 
-  it('removes signal listeners when connect fails', async () => {
+  it('uses the dual-era entry and removes listeners when it reports an error', async () => {
     const sigint = process.listenerCount('SIGINT')
     const sigterm = process.listenerCount('SIGTERM')
-    mocks.connect.mockRejectedValueOnce(new Error('connect failed'))
-    await expect(
-      serveMcp({ workspace: {} as never, allowWrite: false }),
-    ).rejects.toThrow('connect failed')
-    expect(process.listenerCount('SIGINT')).toBe(sigint)
-    expect(process.listenerCount('SIGTERM')).toBe(sigterm)
-  })
-
-  it('removes signal listeners when the transport session ends', async () => {
-    const sigint = process.listenerCount('SIGINT')
-    const sigterm = process.listenerCount('SIGTERM')
-    mocks.connect.mockResolvedValueOnce()
-    let resolved = false
-    const serving = serveMcp({
-      workspace: {} as never,
-      allowWrite: false,
-    }).then(() => {
-      resolved = true
+    const serving = serveMcp({ workspace: {} as never, allowWrite: false })
+    await vi.waitFor(() => expect(mocks.factory).toBeTypeOf('function'))
+    expect(mocks.options).toMatchObject({
+      legacy: 'serve',
+      onerror: expect.any(Function),
     })
-    await vi.waitFor(() => expect(mocks.connect).toHaveBeenCalledOnce())
-    expect(resolved).toBe(false)
     expect(process.listenerCount('SIGINT')).toBe(sigint + 1)
     expect(process.listenerCount('SIGTERM')).toBe(sigterm + 1)
 
-    mocks.transport?.onclose?.()
-    await serving
+    const failure = new Error('stdio failed')
+    mocks.options?.onerror?.(failure)
+    await expect(serving).rejects.toThrow('stdio failed')
+    expect(mocks.close).toHaveBeenCalledOnce()
     expect(process.listenerCount('SIGINT')).toBe(sigint)
     expect(process.listenerCount('SIGTERM')).toBe(sigterm)
   })
 
-  it('does not miss a transport close that happens before connect resolves', async () => {
-    const sigint = process.listenerCount('SIGINT')
-    const sigterm = process.listenerCount('SIGTERM')
-    mocks.connect.mockImplementationOnce((transport) => {
-      transport.onclose?.()
-      return Promise.resolve()
-    })
-
-    await expect(
-      serveMcp({ workspace: {} as never, allowWrite: false }),
-    ).resolves.toBeUndefined()
-    expect(process.listenerCount('SIGINT')).toBe(sigint)
-    expect(process.listenerCount('SIGTERM')).toBe(sigterm)
-  })
-
-  it('closes the server once when both shutdown signals arrive', async () => {
-    mocks.connect.mockResolvedValueOnce()
-    let finishClose!: () => void
-    mocks.close.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          finishClose = () => {
-            mocks.transport?.onclose?.()
-            resolve()
-          }
-        }),
-    )
+  it('closes the stdio handle once when both shutdown signals arrive', async () => {
     const serving = serveMcp({ workspace: {} as never, allowWrite: false })
-    await vi.waitFor(() => expect(mocks.connect).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(mocks.factory).toBeTypeOf('function'))
 
     process.emit('SIGTERM', 'SIGTERM')
     process.emit('SIGINT', 'SIGINT')
-    await vi.waitFor(() => expect(mocks.close).toHaveBeenCalledOnce())
-    finishClose()
     await serving
 
     expect(mocks.close).toHaveBeenCalledOnce()
@@ -141,19 +108,15 @@ describe('MCP stdio lifecycle', () => {
     async (signal) => {
       const sigint = process.listenerCount('SIGINT')
       const sigterm = process.listenerCount('SIGTERM')
-      mocks.connect.mockResolvedValueOnce()
       let finishClose!: () => void
       mocks.close.mockImplementationOnce(
         () =>
           new Promise<void>((resolve) => {
-            finishClose = () => {
-              mocks.transport?.onclose?.()
-              resolve()
-            }
+            finishClose = resolve
           }),
       )
       const serving = serveMcp({ workspace: {} as never, allowWrite: false })
-      await vi.waitFor(() => expect(mocks.connect).toHaveBeenCalledOnce())
+      await vi.waitFor(() => expect(mocks.factory).toBeTypeOf('function'))
 
       expect(process.emit(signal, signal)).toBe(true)
       await vi.waitFor(() => expect(mocks.close).toHaveBeenCalledOnce())
